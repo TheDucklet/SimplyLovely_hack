@@ -1,0 +1,32 @@
+osm_extract:
+  url: https://download.geofabrik.de/russia/central-fed-district-261013.osm.pbf
+  file: central-fed-district-261013.osm.pbf
+  region: Центральный федеральный округ
+  date: 2026-10-13
+cities:
+  moscow:
+    extract_bbox: [36.80, 55.13, 37.97, 56.03]
+    boundary: mkad
+    district_admin_level: "8"
+    drop_empty_cells: false
+    trudvsem_region: "7700000000000"
+    population_region:
+      name: Москва
+      admin_level: "4"
+      population: 13274285
+      date: 2025-01-01
+      source: https://expert.ru/news/chislennost-naseleniya-moskvy-dostigla-13-3-mln-chelovek/
+  tula:
+    extract_bbox: [35.85, 52.95, 38.95, 54.90]
+    boundary: admin
+    boundary_name: городской округ Тула
+    boundary_admin_level: "6"
+    district_admin_level: "9"
+    drop_empty_cells: true
+    trudvsem_region: "7100000000000"
+    population_region:
+      name: Тульская область
+      admin_level: "4"
+      population: 1471140
+      date: 2024-01-01
+      source: https://71.rosstat.gov.ru/storage/mediabank/Оценка численности населения Тульской области на 01.01.2024 по компонентам изменения(1).pdf

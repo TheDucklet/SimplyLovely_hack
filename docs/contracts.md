@@ -96,6 +96,9 @@ niches:
     osm_tags:
       - {amenity: cafe, cuisine: coffee_shop}
       - {shop: coffee}
+    osm_name_rules:
+      - tags: {amenity: cafe}
+        pattern: "(?i)коф|coffee|cofe|cofix|даблби|дринкит|шоколадница|кофемания"
     okved: ["56.10", "56.30"]
     params_file: research/niche_params/coffee.yaml
   - code: pickup_point
@@ -106,7 +109,7 @@ niches:
     params_file: research/niche_params/pickup_point.yaml
 ```
 
-Теги OpenStreetMap и коды ОКВЭД проверяет Иван в задаче S1-I2, исправления вносит Фёдор.
+Правило `osm_name_rules` добавляет объекты с указанными тегами, в названии или бренде которых встречается регулярное выражение `pattern`. Оно нужно, так как большинство кофеен в OSM отмечено как `amenity=cafe` без кухни. Теги OpenStreetMap и коды ОКВЭД проверяет Иван в задаче S1-I2, исправления вносит Фёдор.
 
 ## Параметры ниши
 
@@ -175,7 +178,9 @@ tula,Центральный,center,900,1400,2200,street_retail,https://...,2026-
 | `source` | str | `osm` или `mos_ru` |
 | `seats` | int, может быть пусто | число посадочных мест (data.mos.ru) |
 
-`wages.parquet`: `profession`, `salary_p25`, `salary_p50`, `salary_p75` (рублей в месяц до вычета НДФЛ), `vacancies_n`, `collected_at`.
+`wages.parquet`: `profession`, `salary_p25`, `salary_p50`, `salary_p75` (рублей в месяц до вычета НДФЛ), `vacancies_n`, `collected_at`, `basis`. Поле `basis` равно `direct`, если зарплата посчитана по вакансиям самой профессии, и `proxy`, если вакансий меньше четырёх и использована соседняя профессия (для бариста – официант, для оператора пункта выдачи – кассир). Модель выводит такие зарплаты в допущения отчёта.
+
+`boundary.geojson`: граница охвата города (контур МКАД или городской округ), нужна интерфейсу и проверкам.
 
 `addresses.parquet`: `address`, `lat`, `lon`, `h3` для поиска адреса в интерфейсе.
 

@@ -29,7 +29,15 @@ HEX_FEATURE_COLUMNS = [
     "metro_dist_m",
 ]
 COMPETITOR_COLUMNS = ["poi_id", "niche", "name", "brand", "lat", "lon", "h3", "source", "seats"]
-WAGE_COLUMNS = ["profession", "salary_p25", "salary_p50", "salary_p75", "vacancies_n", "collected_at"]
+WAGE_COLUMNS = [
+    "profession",
+    "salary_p25",
+    "salary_p50",
+    "salary_p75",
+    "vacancies_n",
+    "collected_at",
+    "basis",
+]
 ADDRESS_COLUMNS = ["address", "lat", "lon", "h3"]
 
 DISTRICTS = {
@@ -171,6 +179,7 @@ def build_wages(city_code: str) -> pd.DataFrame:
             "salary_p75": round(median * 1.2),
             "vacancies_n": int(rng.integers(20, 400)),
             "collected_at": FIXTURE_COLLECTED_AT,
+            "basis": "direct",
         }
         for profession, median in WAGE_MEDIANS[city.code].items()
     ]

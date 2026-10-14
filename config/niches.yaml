@@ -4,6 +4,9 @@ niches:
     osm_tags:
       - {amenity: cafe, cuisine: coffee_shop}
       - {shop: coffee}
+    osm_name_rules:
+      - tags: {amenity: cafe}
+        pattern: "(?i)коф|coffee|cofe|cofix|даблби|дринкит|шоколадница|кофемания"
     okved: ["56.10", "56.30"]
     params_file: research/niche_params/coffee.yaml
   - code: pickup_point
