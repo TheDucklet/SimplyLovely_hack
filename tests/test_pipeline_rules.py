@@ -54,3 +54,29 @@ def test_proxy_wages_are_used_when_direct_vacancies_are_scarce(tmp_path, monkeyp
     assert wages["profession"].tolist() == ["barista", "pickup_operator"]
     assert wages["basis"].tolist() == ["proxy", "proxy"]
     assert wages.loc[wages["profession"] == "barista", "vacancies_n"].item() == 6
+
+
+def test_vacancy_cache_keeps_no_contacts(tmp_path, monkeypatch) -> None:
+    import json
+
+    vacancy = {
+        "id": "v1",
+        "job-name": "Бариста",
+        "salary_min": 70000,
+        "salary_max": 90000,
+        "creation-date": "2026-09-01",
+        "contact_person": "Иванова Анна",
+        "contact_list": [{"contact_type": "Телефон", "contact_value": "+7 900 000-00-00"}],
+        "company": {"email": "hr@example.ru"},
+    }
+    monkeypatch.setattr(trudvsem, "fetch_vacancies", lambda region, query: [vacancy])
+    loaded = trudvsem.load_vacancies("7700000000000", "barista", ["бариста"], tmp_path)
+    cached_text = (tmp_path / "7700000000000_barista.json").read_text(encoding="utf-8")
+    assert set(loaded[0]) == set(trudvsem.CACHED_VACANCY_FIELDS)
+    assert "Иванова" not in cached_text
+    assert "hr@example.ru" not in cached_text
+
+    legacy_path = tmp_path / "7700000000000_legacy.json"
+    legacy_path.write_text(json.dumps([vacancy], ensure_ascii=False), encoding="utf-8")
+    trudvsem.load_vacancies("7700000000000", "legacy", [], tmp_path)
+    assert "+7 900" not in legacy_path.read_text(encoding="utf-8")
