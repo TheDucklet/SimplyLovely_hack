@@ -6,6 +6,7 @@ import pandas as pd
 import pytest
 
 from geostart.model.assumptions import demand_assumptions, resolve_rent, wage_assumptions
+from geostart.model.data import load_demand_inputs, scores_directory
 from geostart.model.demand import (
     cell_demand,
     competitor_attractiveness,
@@ -167,3 +168,22 @@ def test_range_endpoints_are_validated_before_sampling() -> None:
     ranges["outside_option_weight"] = {"p10": 0, "p90": 1}
     with pytest.raises(ValueError, match="положительным"):
         sample_parameters("coffee", ranges, runs=1)
+
+
+def test_model_reads_environment_data_directory(tmp_path: Path, monkeypatch) -> None:
+    directory = tmp_path / "processed" / "tula"
+    write_fixtures("tula", directory)
+    (directory / "boundary.geojson").write_text("{}", encoding="utf-8")
+    monkeypatch.setenv("GEOSTART_DATA_DIR", str(tmp_path))
+    features, competitors = load_demand_inputs("tula")
+    assert len(features) > 0
+    assert len(competitors) > 0
+    assert scores_directory() == tmp_path / "scores"
+
+
+def test_explicit_data_directory_overrides_environment(tmp_path: Path, monkeypatch) -> None:
+    directory = tmp_path / "processed" / "tula"
+    write_fixtures("tula", directory)
+    (directory / "boundary.geojson").write_text("{}", encoding="utf-8")
+    monkeypatch.setenv("GEOSTART_DATA_DIR", str(tmp_path / "missing"))
+    assert not load_demand_inputs("tula", tmp_path)[0].empty

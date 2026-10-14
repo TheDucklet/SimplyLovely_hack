@@ -14,10 +14,10 @@
 
 `assumptions.py:wage_assumptions` объясняет зарплату на основе соседней профессии при `basis = proxy`. `assumptions.py:resolve_rent` берёт ставку p50 района, при её отсутствии возвращает медиану положительных ставок p50 города и допущение. Таблица аренды передаётся для одного города. Финансовая модель и сборка `LocationReport` относятся к следующим задачам. В Туле учтены только известные конкуренты, 38 кофеен отражают неполную разметку OSM.
 
-Проверка и замер выполняются из корня клона. Путь `../data` указывает на реальные файлы рабочего каталога. Команды читают их без записи.
+Проверка и замер выполняются из корня клона. Модель загружает `.env` из корня клона без замены уже заданных переменных окружения. Каталоги определяются через `geostart.settings.processed_dir(city)` и `geostart.settings.data_dir()`. Для данных вне клона задайте `GEOSTART_DATA_DIR` в `.env`. Параметр `--data-dir` служит необязательной заменой для команды замера. Команды читают исходные файлы без записи.
 
 ```powershell
 uv run pytest tests/test_demand.py
-uv run python -m geostart.model.benchmark --data-dir ../data --city moscow --niche coffee
-uv run python -m geostart.model.benchmark --data-dir ../data --city moscow --niche pickup_point
+uv run python -m geostart.model.benchmark --city moscow --niche coffee
+uv run python -m geostart.model.benchmark --city moscow --niche pickup_point
 ```
