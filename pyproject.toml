@@ -10,6 +10,7 @@ dependencies = [
     "h3>=4.1,<5",
     "httpx>=0.27",
     "numpy>=2.0",
+    "osmium>=4.0",
     "pandas>=2.2",
     "pyarrow>=17.0",
     "pydantic>=2.8,<3",

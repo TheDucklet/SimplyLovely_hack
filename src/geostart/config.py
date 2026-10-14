@@ -17,10 +17,16 @@ class CityConfig(BaseModel):
     zoom: int
 
 
+class NameRule(BaseModel):
+    tags: dict[str, str]
+    pattern: str
+
+
 class NicheConfig(BaseModel):
     code: str
     name: str
     osm_tags: list[dict[str, str]]
+    osm_name_rules: list[NameRule] = []
     okved: list[str]
     params_file: str
 

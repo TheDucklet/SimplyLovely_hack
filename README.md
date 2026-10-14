@@ -32,6 +32,12 @@ uv sync
 uv run python -m geostart.pipeline.fixtures --city all
 ```
 
+Реальные данные OpenStreetMap и Работы России собирает конвейер. Первый запуск скачивает 881 МБ и занимает около 5 минут, параметры лежат в `config/pipeline.yaml`:
+
+```
+uv run python -m geostart.pipeline run --city all
+```
+
 API на `http://127.0.0.1:8000`, документация OpenAPI на `http://127.0.0.1:8000/docs`:
 
 ```
