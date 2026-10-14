@@ -69,5 +69,7 @@ uv run pytest
 | [docs/api.md](docs/api.md) | режимы работы API и заглушки |
 | [docs/data-sources.md](docs/data-sources.md) | источники данных и способы оценки признаков |
 | [docs/decisions.md](docs/decisions.md) | журнал решений |
+| [docs/rules.md](docs/rules.md) | правила текста и кода команды |
+| [AGENTS.md](AGENTS.md) | обязательные инструкции для ИИ-агентов |
 
 Порядок работы команды с ветками и pull request описан в `docs/architecture.md`, раздел «Работа с репозиторием».
