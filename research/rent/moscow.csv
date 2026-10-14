@@ -1,0 +1,9 @@
+city,zone,zone_type,rent_rub_m2_month_p10,rent_rub_m2_month_p50,rent_rub_m2_month_p90,property_type,source,date
+moscow,Тверской,center,4500,7000,12000,street_retail,,placeholder
+moscow,Пресненский,center,3500,5500,9000,street_retail,,placeholder
+moscow,Хамовники,center,3500,5500,9000,street_retail,,placeholder
+moscow,Замоскворечье,center,3500,5500,9000,street_retail,,placeholder
+moscow,Таганский,middle,2500,4000,6500,street_retail,,placeholder
+moscow,Басманный,middle,2500,4000,6500,street_retail,,placeholder
+moscow,Мещанский,middle,2500,4000,6500,street_retail,,placeholder
+moscow,Арбат,center,4500,7000,12000,street_retail,,placeholder

@@ -1,0 +1,6 @@
+city,zone,zone_type,rent_rub_m2_month_p10,rent_rub_m2_month_p50,rent_rub_m2_month_p90,property_type,source,date
+tula,Центральный,center,900,1400,2200,street_retail,,placeholder
+tula,Советский,center,800,1200,1900,street_retail,,placeholder
+tula,Привокзальный,middle,600,900,1400,street_retail,,placeholder
+tula,Пролетарский,periphery,500,800,1200,street_retail,,placeholder
+tula,Зареченский,periphery,500,800,1200,street_retail,,placeholder

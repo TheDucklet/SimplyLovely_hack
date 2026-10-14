@@ -1,0 +1,19 @@
+niche: coffee
+currency: RUB
+period: month
+updated: 2026-10-15
+status: placeholder
+demand:
+  avg_check_rub: {p10: 250, p50: 330, p90: 420, source: null, note: "условное значение до S1-I2"}
+  visits_per_resident_month: {p10: 1.0, p50: 2.0, p90: 3.5, source: null, note: "условное значение до S1-I2"}
+  visits_per_worker_month: {p10: 3.0, p50: 6.0, p90: 10.0, source: null, note: "условное значение до S1-I2"}
+  max_walk_distance_m: {p10: 300, p50: 500, p90: 800, source: null, note: "условное значение до S1-I2"}
+  distance_decay_beta: {p10: 1.5, p50: 2.0, p90: 2.5, source: null, note: "условное значение до S1-I2"}
+costs:
+  area_m2: {p10: 25, p50: 40, p90: 70, source: null, note: "условное значение до S1-I2"}
+  staff_count: {p10: 3, p50: 4, p90: 6, source: null, note: "условное значение до S1-I2"}
+  wage_profession: barista
+  cogs_share_of_revenue: {p10: 0.25, p50: 0.30, p90: 0.35, source: null, note: "условное значение до S1-I2"}
+  other_opex_rub: {p10: 30000, p50: 60000, p90: 100000, source: null, note: "условное значение до S1-I2"}
+capex_rub: {p10: 1500000, p50: 3000000, p90: 5000000, source: null, note: "условное значение до S1-I2"}
+tax_regime_default: usn_income_6

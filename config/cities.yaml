@@ -1,0 +1,15 @@
+cities:
+  - code: moscow
+    name: Москва
+    osm_boundary: Москва
+    scope: inside_mkad
+    h3_resolution: 9
+    center: [55.7558, 37.6176]
+    zoom: 11
+  - code: tula
+    name: Тула
+    osm_boundary: городской округ Тула
+    scope: city_boundary
+    h3_resolution: 9
+    center: [54.1931, 37.6173]
+    zoom: 12

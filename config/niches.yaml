@@ -1,0 +1,14 @@
+niches:
+  - code: coffee
+    name: Кофейня
+    osm_tags:
+      - {amenity: cafe, cuisine: coffee_shop}
+      - {shop: coffee}
+    okved: ["56.10", "56.30"]
+    params_file: research/niche_params/coffee.yaml
+  - code: pickup_point
+    name: Пункт выдачи заказов
+    osm_tags:
+      - {shop: outpost}
+    okved: ["52.29", "82.92"]
+    params_file: research/niche_params/pickup_point.yaml

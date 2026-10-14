@@ -1,0 +1,19 @@
+niche: pickup_point
+currency: RUB
+period: month
+updated: 2026-10-15
+status: placeholder
+demand:
+  orders_per_resident_month: {p10: 2.0, p50: 3.5, p90: 5.0, source: null, note: "условное значение до S1-I2"}
+  marketplace_share: {p10: 0.25, p50: 0.35, p90: 0.45, source: null, note: "условное значение до S1-I2"}
+  payout_per_order_rub: {p10: 12, p50: 18, p90: 25, source: null, note: "условное значение до S1-I2"}
+  max_walk_distance_m: {p10: 300, p50: 600, p90: 1000, source: null, note: "условное значение до S1-I2"}
+  distance_decay_beta: {p10: 2.0, p50: 3.0, p90: 4.0, source: null, note: "условное значение до S1-I2"}
+costs:
+  area_m2: {p10: 30, p50: 50, p90: 80, source: null, note: "условное значение до S1-I2"}
+  staff_count: {p10: 1, p50: 2, p90: 3, source: null, note: "условное значение до S1-I2"}
+  wage_profession: pickup_operator
+  cogs_share_of_revenue: {p10: 0.0, p50: 0.0, p90: 0.0, source: null, note: "у пункта выдачи нет себестоимости товара"}
+  other_opex_rub: {p10: 15000, p50: 30000, p90: 50000, source: null, note: "условное значение до S1-I2"}
+capex_rub: {p10: 600000, p50: 1200000, p90: 2000000, source: null, note: "условное значение до S1-I2"}
+tax_regime_default: usn_income_6

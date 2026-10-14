@@ -1,0 +1,7 @@
+year: 2026
+status: placeholder
+usn_income_rate: {value: 0.06, unit: share, applies_to: [coffee, pickup_point], source: null, note: "условное значение до S1-I4"}
+usn_income_minus_expenses_rate: {value: 0.15, unit: share, applies_to: [coffee, pickup_point], source: null, note: "условное значение до S1-I4"}
+employer_contributions_rate: {value: 0.30, unit: share, applies_to: [coffee, pickup_point], source: null, note: "условное значение до S1-I4"}
+vat_threshold_usn_rub_year: {value: 20000000, unit: rub, applies_to: [coffee, pickup_point], source: null, note: "условное значение до S1-I4"}
+moscow_trade_fee_rub_quarter: {value: null, unit: rub, applies_to: [], source: null, note: "уточняет Иван в S1-I4"}
