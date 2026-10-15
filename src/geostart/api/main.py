@@ -1,5 +1,6 @@
 from collections.abc import Callable
 
+import psycopg
 from fastapi import APIRouter, FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
@@ -27,8 +28,13 @@ from geostart.schemas import (
     ReportRequest,
 )
 from geostart.settings import cors_origins, use_mocks
+from geostart.storage import reader
+from geostart.storage.connection import DatabaseNotConfiguredError
 
 GZIP_MINIMUM_BYTES = 1000
+DATABASE_UNAVAILABLE = (
+    "База данных недоступна, проверьте docker compose up -d db и параметры GEOSTART_DB_* в .env"
+)
 
 router = APIRouter(prefix="/api/v1")
 
@@ -50,8 +56,12 @@ def resolve_niche(code: str) -> NicheConfig:
 def from_data[ResponseT](load: Callable[[], ResponseT]) -> ResponseT:
     try:
         return load()
-    except (data_backend.DataNotReadyError, FileNotFoundError) as error:
+    except (data_backend.DataNotReadyError, reader.CityNotLoadedError, FileNotFoundError) as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
+    except DatabaseNotConfiguredError as error:
+        raise HTTPException(status_code=503, detail=str(error)) from error
+    except psycopg.OperationalError as error:
+        raise HTTPException(status_code=503, detail=DATABASE_UNAVAILABLE) from error
 
 
 @router.get("/health")
@@ -59,7 +69,8 @@ def health() -> HealthResponse:
     if use_mocks():
         return HealthResponse(status="ok", mode="mocks", data_version=mocks.MOCK_DATA_VERSION)
     city_codes = [city.code for city in load_cities()]
-    return HealthResponse(status="ok", mode="data", data_version=data_backend.latest_data_version(city_codes))
+    version = from_data(lambda: data_backend.latest_data_version(city_codes))
+    return HealthResponse(status="ok", mode="data", data_version=version)
 
 
 @router.get("/cities")

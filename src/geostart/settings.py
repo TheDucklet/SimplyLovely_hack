@@ -3,6 +3,7 @@ from pathlib import Path
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 TRUE_VALUES = {"1", "true", "yes", "on"}
+STORAGE_MODES = {"files", "postgres"}
 
 
 def config_dir() -> Path:
@@ -28,3 +29,12 @@ def use_mocks() -> bool:
 def cors_origins() -> list[str]:
     raw_origins = os.environ.get("GEOSTART_CORS_ORIGINS", "http://localhost:5173")
     return [origin.strip() for origin in raw_origins.split(",") if origin.strip()]
+
+
+def storage_mode() -> str:
+    mode = os.environ.get("GEOSTART_STORAGE", "files").strip().lower()
+    if mode not in STORAGE_MODES:
+        raise ValueError(
+            f"GEOSTART_STORAGE должен быть одним из {', '.join(sorted(STORAGE_MODES))}, получено {mode}"
+        )
+    return mode

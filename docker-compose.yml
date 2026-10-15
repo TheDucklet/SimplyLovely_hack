@@ -1,0 +1,22 @@
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    environment:
+      POSTGRES_DB: geostart
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Задайте POSTGRES_PASSWORD в .env}
+      GEOSTART_DB_LOADER_PASSWORD: ${GEOSTART_DB_LOADER_PASSWORD:?Задайте GEOSTART_DB_LOADER_PASSWORD в .env}
+      GEOSTART_DB_API_PASSWORD: ${GEOSTART_DB_API_PASSWORD:?Задайте GEOSTART_DB_API_PASSWORD в .env}
+    ports:
+      - "127.0.0.1:${GEOSTART_DB_PORT:-55433}:5432"
+    volumes:
+      - geostart_db:/var/lib/postgresql/data
+      - ./docker/db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d geostart"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  geostart_db:

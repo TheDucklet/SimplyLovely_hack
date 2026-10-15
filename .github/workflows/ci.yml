@@ -33,3 +33,17 @@ jobs:
       - if: ${{ hashFiles('web/package.json') != '' }}
         working-directory: web
         run: npm run build
+
+  storage:
+    runs-on: ubuntu-latest
+    env:
+      POSTGRES_PASSWORD: ci-postgres-test-only
+      GEOSTART_DB_LOADER_PASSWORD: ci-loader-test-only
+      GEOSTART_DB_API_PASSWORD: ci-api-test-only
+      GEOSTART_TEST_DATABASE: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: docker compose up -d --wait db
+      - run: uv sync --locked
+      - run: uv run pytest tests/test_storage.py
