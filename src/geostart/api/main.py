@@ -1,7 +1,10 @@
+from collections.abc import Callable
+
 from fastapi import APIRouter, FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 
-from geostart.api import mocks
+from geostart.api import data_backend, mocks
 from geostart.config import (
     CityConfig,
     NicheConfig,
@@ -12,6 +15,7 @@ from geostart.config import (
     load_cities,
     load_niches,
 )
+from geostart.model.data import configure_environment
 from geostart.schemas import (
     AddressMatch,
     CityInfo,
@@ -24,9 +28,7 @@ from geostart.schemas import (
 )
 from geostart.settings import cors_origins, use_mocks
 
-REAL_DATA_NOT_READY = (
-    "Расчёты на реальных данных ещё не подключены, запустите API с переменной GEOSTART_USE_MOCKS=true"
-)
+GZIP_MINIMUM_BYTES = 1000
 
 router = APIRouter(prefix="/api/v1")
 
@@ -45,15 +47,19 @@ def resolve_niche(code: str) -> NicheConfig:
         raise HTTPException(status_code=404, detail=str(error)) from error
 
 
-def require_mocks() -> None:
-    if not use_mocks():
-        raise HTTPException(status_code=503, detail=REAL_DATA_NOT_READY)
+def from_data[ResponseT](load: Callable[[], ResponseT]) -> ResponseT:
+    try:
+        return load()
+    except (data_backend.DataNotReadyError, FileNotFoundError) as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
 
 
 @router.get("/health")
 def health() -> HealthResponse:
-    mode = "mocks" if use_mocks() else "data"
-    return HealthResponse(status="ok", mode=mode, data_version=mocks.MOCK_DATA_VERSION)
+    if use_mocks():
+        return HealthResponse(status="ok", mode="mocks", data_version=mocks.MOCK_DATA_VERSION)
+    city_codes = [city.code for city in load_cities()]
+    return HealthResponse(status="ok", mode="data", data_version=data_backend.latest_data_version(city_codes))
 
 
 @router.get("/cities")
@@ -70,40 +76,46 @@ def niches() -> list[NicheInfo]:
 
 @router.get("/hexes")
 def hexes(city: str, niche: str) -> HexesResponse:
-    city_config = resolve_city(city)
-    niche_config = resolve_niche(niche)
-    require_mocks()
-    return mocks.mock_hexes(city_config.code, niche_config.code)
+    city_code = resolve_city(city).code
+    niche_code = resolve_niche(niche).code
+    if use_mocks():
+        return mocks.mock_hexes(city_code, niche_code)
+    return from_data(lambda: data_backend.data_hexes(city_code, niche_code))
 
 
 @router.get("/competitors")
 def competitors(city: str, niche: str) -> list[Competitor]:
-    city_config = resolve_city(city)
-    niche_config = resolve_niche(niche)
-    require_mocks()
-    return mocks.mock_competitors(city_config.code, niche_config.code)
+    city_code = resolve_city(city).code
+    niche_code = resolve_niche(niche).code
+    if use_mocks():
+        return mocks.mock_competitors(city_code, niche_code)
+    return from_data(lambda: data_backend.data_competitors(city_code, niche_code))
 
 
 @router.get("/search")
 def search(city: str, q: str = Query(min_length=1)) -> list[AddressMatch]:
-    city_config = resolve_city(city)
-    require_mocks()
-    return mocks.mock_search(city_config.code, q)
+    city_code = resolve_city(city).code
+    if use_mocks():
+        return mocks.mock_search(city_code, q)
+    return from_data(lambda: data_backend.data_search(city_code, q))
 
 
 @router.post("/report")
 def report(request: ReportRequest) -> LocationReport:
     city_config = resolve_city(request.city)
     resolve_niche(request.niche)
-    require_mocks()
     try:
-        return mocks.mock_report(city_config, request)
-    except mocks.PointOutsideCityError as error:
+        if use_mocks():
+            return mocks.mock_report(city_config, request)
+        return from_data(lambda: data_backend.data_report(city_config, request))
+    except (mocks.PointOutsideCityError, ValueError) as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
 
 
-app = FastAPI(title="ГеоСтарт API", version="0.1.0")
+configure_environment()
+app = FastAPI(title="ГеоСтарт API", version="0.2.0")
 app.add_middleware(
     CORSMiddleware, allow_origins=cors_origins(), allow_methods=["GET", "POST"], allow_headers=["*"]
 )
+app.add_middleware(GZipMiddleware, minimum_size=GZIP_MINIMUM_BYTES)
 app.include_router(router)

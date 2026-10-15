@@ -21,6 +21,7 @@ PROXY_QUERIES = {
     "pickup_operator": ["кассир"],
 }
 MIN_VACANCIES_WITH_SALARY = 4
+CACHED_VACANCY_FIELDS = ("id", "job-name", "salary_min", "salary_max", "creation-date")
 PAGE_SIZE = 100
 MAX_PAGES = 20
 REQUEST_TIMEOUT_SECONDS = 60
@@ -62,16 +63,28 @@ def is_recent(vacancy: dict, collected_at: date) -> bool:
     return date.fromisoformat(created[:10]) >= collected_at - timedelta(days=RECENT_VACANCY_DAYS)
 
 
+def minimize_vacancy(vacancy: dict) -> dict:
+    return {field: vacancy.get(field) for field in CACHED_VACANCY_FIELDS}
+
+
+def write_cache(cache_path: Path, vacancies: list[dict]) -> None:
+    cache_path.parent.mkdir(parents=True, exist_ok=True)
+    cache_path.write_text(json.dumps(vacancies, ensure_ascii=False), encoding="utf-8")
+
+
 def load_vacancies(region: str, cache_name: str, queries: list[str], cache_dir: Path) -> list[dict]:
     cache_path = cache_dir / f"{region}_{cache_name}.json"
     if cache_path.exists():
-        return json.loads(cache_path.read_text(encoding="utf-8"))
+        cached = json.loads(cache_path.read_text(encoding="utf-8"))
+        minimized = [minimize_vacancy(vacancy) for vacancy in cached]
+        if minimized != cached:
+            write_cache(cache_path, minimized)
+        return minimized
     vacancies: dict[str, dict] = {}
     for query in queries:
         for vacancy in fetch_vacancies(region, query):
-            vacancies[vacancy["id"]] = vacancy
-    cache_dir.mkdir(parents=True, exist_ok=True)
-    cache_path.write_text(json.dumps(list(vacancies.values()), ensure_ascii=False), encoding="utf-8")
+            vacancies[vacancy["id"]] = minimize_vacancy(vacancy)
+    write_cache(cache_path, list(vacancies.values()))
     return list(vacancies.values())
 
 

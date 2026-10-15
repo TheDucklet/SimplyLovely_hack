@@ -30,6 +30,11 @@ cities:
       population: 1471140
       date: 2024-01-01
       source: https://71.rosstat.gov.ru/storage/mediabank/Оценка численности населения Тульской области на 01.01.2024 по компонентам изменения(1).pdf
+    population_scope:
+      name: городской округ Тула
+      population: 533607
+      date: 2025-01-01
+      source: https://www.tsn24.ru/2025/04/16/329641-chislennost-naseleniya-tuly-za-god-sokratilas-pochti-na-pyat-tysyach-chelovek/
   yaroslavl:
     extract_bbox: [37.30, 56.50, 41.25, 58.95]
     boundary: admin
@@ -44,3 +49,8 @@ cities:
       population: 1187558
       date: 2024-01-01
       source: https://76.rosstat.gov.ru/storage/mediabank/chislennost_naseleniya_yaroslavskoy_oblasti_2024.pdf
+    population_scope:
+      name: городской округ Ярославль
+      population: 563700
+      date: 2025-01-01
+      source: https://76.rosstat.gov.ru/news/document/261374

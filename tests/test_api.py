@@ -7,6 +7,11 @@ from geostart.config import get_city
 client = TestClient(app)
 
 
+@pytest.fixture(autouse=True)
+def mock_mode(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("GEOSTART_USE_MOCKS", "true")
+
+
 def test_health_reports_mock_mode() -> None:
     response = client.get("/api/v1/health")
     assert response.status_code == 200
@@ -80,9 +85,3 @@ def test_unknown_city_returns_404() -> None:
     response = client.get("/api/v1/hexes", params={"city": "kazan", "niche": "coffee"})
     assert response.status_code == 404
     assert "Город kazan не найден" in response.json()["detail"]
-
-
-def test_real_data_mode_is_not_ready(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("GEOSTART_USE_MOCKS", "false")
-    response = client.get("/api/v1/hexes", params={"city": "moscow", "niche": "coffee"})
-    assert response.status_code == 503

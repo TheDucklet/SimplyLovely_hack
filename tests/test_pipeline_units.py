@@ -142,3 +142,29 @@ def test_point_in_overlapping_boxes_belongs_to_both_cities() -> None:
     assert cities_of(boxes, 36.5, 54.0) == ["tula", "kaluga"]
     assert cities_of(boxes, 38.5, 54.0) == ["tula"]
     assert cities_of(boxes, 30.0, 59.9) == []
+
+
+def test_scope_calibration_matches_scope_population() -> None:
+    from shapely.geometry import box
+
+    raw = building_rows(
+        [
+            {
+                "osm_id": "w1",
+                "building": "apartments",
+                "building:levels": "9",
+                "wkb": square_wkb(37.60, 55.75, 0.0002),
+            },
+            {
+                "osm_id": "w2",
+                "building": "apartments",
+                "building:levels": "9",
+                "wkb": square_wkb(37.70, 55.75, 0.0002),
+            },
+        ]
+    )
+    buildings = features.classify_buildings(raw)
+    scope = box(37.55, 55.70, 37.65, 55.80)
+    rate = run.residents_per_m2_in(scope, 1000, buildings, "тестовый округ")
+    inside_residential = features.residential_floor_area(buildings).iloc[0]
+    assert rate * inside_residential == pytest.approx(1000)
