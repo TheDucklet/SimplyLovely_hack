@@ -40,6 +40,13 @@ class PopulationRegion(BaseModel):
     source: str
 
 
+class PopulationScope(BaseModel):
+    name: str
+    population: int
+    date: date
+    source: str
+
+
 class CityPipelineConfig(BaseModel):
     extract_bbox: tuple[float, float, float, float]
     boundary: Literal["mkad", "admin"]
@@ -49,6 +56,7 @@ class CityPipelineConfig(BaseModel):
     drop_empty_cells: bool
     trudvsem_region: str
     population_region: PopulationRegion
+    population_scope: PopulationScope | None = None
 
 
 class ExtractConfig(BaseModel):
@@ -157,15 +165,28 @@ def is_metro_entrance(pois: pd.DataFrame) -> pd.Series:
     return (pois["railway"] == "subway_entrance") | (pois["station"] == "subway")
 
 
-def residents_per_residential_m2(
-    buildings: pd.DataFrame, region: PopulationRegion, layers: dict[str, pd.DataFrame]
+def residents_per_m2_in(
+    polygon: Polygon | MultiPolygon, population: int, buildings: pd.DataFrame, label: str
 ) -> float:
+    inside = shapely.contains_xy(polygon, buildings["lon"].to_numpy(), buildings["lat"].to_numpy())
+    residential_m2 = float(features.residential_floor_area(buildings[inside]).sum())
+    if residential_m2 <= 0:
+        raise geometry.BoundaryNotFoundError(f"В границах «{label}» не найдено жилых зданий OSM")
+    return population / residential_m2
+
+
+def calibration_rate(
+    city_config: CityPipelineConfig,
+    buildings: pd.DataFrame,
+    layers: dict[str, pd.DataFrame],
+    boundary: Polygon | MultiPolygon,
+) -> float:
+    scope = city_config.population_scope
+    if scope is not None:
+        return residents_per_m2_in(boundary, scope.population, buildings, scope.name)
+    region = city_config.population_region
     region_polygon = geometry.admin_polygon(layers["boundaries"], region.name, (region.admin_level,))
-    inside = shapely.contains_xy(region_polygon, buildings["lon"].to_numpy(), buildings["lat"].to_numpy())
-    region_residential_m2 = float(features.residential_floor_area(buildings[inside]).sum())
-    if region_residential_m2 <= 0:
-        raise geometry.BoundaryNotFoundError(f"В границах «{region.name}» не найдено жилых зданий OSM")
-    return region.population / region_residential_m2
+    return residents_per_m2_in(region_polygon, region.population, buildings, region.name)
 
 
 def build_osm_hex_features(
@@ -180,7 +201,7 @@ def build_osm_hex_features(
     region_buildings = features.classify_buildings(
         layers["buildings"][layers["buildings"]["city"] == city.code]
     )
-    residents_per_m2 = residents_per_residential_m2(region_buildings, city_config.population_region, layers)
+    residents_per_m2 = calibration_rate(city_config, region_buildings, layers, boundary)
     buildings = with_cells(region_buildings, city.h3_resolution, set(cells))
     pois = with_cells(layers["pois"][layers["pois"]["city"] == city.code], city.h3_resolution, set(cells))
     residential = features.sum_by_cell(
