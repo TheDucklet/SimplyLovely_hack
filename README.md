@@ -65,6 +65,7 @@ uv run pytest
 | Переменная | По умолчанию | Назначение |
 | --- | --- | --- |
 | `GEOSTART_USE_MOCKS` | `false` | `true` включает ответы по синтетическим данным для разработки интерфейса без данных |
+| `GEOSTART_STORAGE` | `files` | `postgres` переключает карту, конкурентов и поиск на базу, параметры базы описаны в docs/storage.md |
 | `GEOSTART_DATA_DIR` | `data/` в корне репозитория | каталог данных |
 | `GEOSTART_CONFIG_DIR` | `config/` в корне репозитория | каталог с `cities.yaml` и `niches.yaml` |
 | `GEOSTART_CORS_ORIGINS` | `http://localhost:5173` | адреса интерфейса, которым разрешены запросы к API, через запятую |
@@ -82,6 +83,7 @@ uv run pytest
 | [docs/data-sources.md](docs/data-sources.md) | источники данных и способы оценки признаков |
 | [docs/decisions.md](docs/decisions.md) | журнал решений |
 | [docs/security.md](docs/security.md) | защита данных и развёртывание в контуре банка |
+| [docs/storage.md](docs/storage.md) | хранилище PostgreSQL с PostGIS, роли, загрузка |
 | [docs/rules.md](docs/rules.md) | правила текста и кода команды |
 | [AGENTS.md](AGENTS.md) | обязательные инструкции для ИИ-агентов |
 

@@ -6,7 +6,8 @@ import pandas as pd
 from geostart.config import CityConfig
 from geostart.model import evaluate_location
 from geostart.schemas import AddressMatch, Competitor, HexesResponse, HexScore, LocationReport, ReportRequest
-from geostart.settings import data_dir, processed_dir
+from geostart.settings import data_dir, processed_dir, storage_mode
+from geostart.storage import reader
 
 SEARCH_LIMIT = 10
 UNKNOWN_DATA_VERSION = "нет данных"
@@ -51,6 +52,8 @@ def city_data_version(city_code: str) -> str:
 
 
 def latest_data_version(city_codes: list[str]) -> str:
+    if storage_mode() == "postgres":
+        return reader.latest_data_version()
     versions = [
         version for code in city_codes if (version := city_data_version(code)) != UNKNOWN_DATA_VERSION
     ]
@@ -66,6 +69,8 @@ def optional_text(value: object) -> str | None:
 
 
 def data_hexes(city_code: str, niche_code: str) -> HexesResponse:
+    if storage_mode() == "postgres":
+        return reader.db_hexes(city_code, niche_code)
     scores = read_parquet(
         scores_path(city_code, niche_code),
         f"Город {city_code} ещё не рассчитан для ниши {niche_code}, запустите "
@@ -87,6 +92,8 @@ def data_hexes(city_code: str, niche_code: str) -> HexesResponse:
 
 
 def data_competitors(city_code: str, niche_code: str) -> list[Competitor]:
+    if storage_mode() == "postgres":
+        return reader.db_competitors(city_code, niche_code)
     competitors = processed_file(city_code, "competitors.parquet")
     selected = competitors[competitors["niche"] == niche_code]
     return [
@@ -108,6 +115,8 @@ def normalized(text: pd.Series | str) -> pd.Series | str:
 
 
 def data_search(city_code: str, query: str) -> list[AddressMatch]:
+    if storage_mode() == "postgres":
+        return reader.db_search(city_code, query)
     addresses = processed_file(city_code, "addresses.parquet")
     tokens = [token.strip(",.") for token in normalized(query).split() if token.strip(",.")]
     if not tokens:
