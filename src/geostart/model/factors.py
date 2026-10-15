@@ -8,6 +8,7 @@ from geostart.model.demand import DemandModel, competitor_attractiveness, distan
 from geostart.schemas import Factor
 
 COMPETITOR_RADIUS_M = 500.0
+MIN_DISTRICT_CELLS = 30
 FACTOR_NAMES = {
     "residents": ("Жители ячейки", "чел."),
     "workers": ("Рабочие места ячейки", "мест"),
@@ -18,6 +19,16 @@ FACTOR_NAMES = {
     "transit_stops_n": ("Остановки ячейки", "шт."),
     "metro_dist_m": ("Расстояние до метро", "м"),
 }
+
+
+def competition_reference(city_features: pd.DataFrame, counts: np.ndarray, district: str) -> float:
+    district_mask = city_features["district"].eq(district).to_numpy()
+    reference = counts[district_mask] if district_mask.sum() >= MIN_DISTRICT_CELLS else counts
+    return float(np.median(reference))
+
+
+def bounded_competition_effect(baseline: float, counterfactual: float) -> float:
+    return float(np.clip(baseline - counterfactual, -baseline, baseline))
 
 
 def competition_counterfactual(
@@ -74,12 +85,14 @@ def explain_factors(
                 model,
                 candidate_index,
                 competitors,
-                float(np.median(competitor_counts)),
+                competition_reference(city_features, competitor_counts, str(candidate["district"])),
             )
         else:
             factors.append(Factor(code=code, name=name, value=float(value), unit=unit, effect_rub=0))
             continue
         revenues = [counterfactual.revenue(item)[candidate_index] for item in parameters]
         effect = baseline_p50 - float(np.median(revenues))
+        if code == "competitors_500m":
+            effect = bounded_competition_effect(baseline_p50, float(np.median(revenues)))
         factors.append(Factor(code=code, name=name, value=float(value), unit=unit, effect_rub=effect))
     return sorted(factors, key=lambda factor: abs(factor.effect_rub), reverse=True)

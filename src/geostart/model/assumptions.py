@@ -4,7 +4,7 @@ from enum import StrEnum
 import numpy as np
 import pandas as pd
 
-from geostart.model.demand import DEFAULT_OUTSIDE_OPTION_WEIGHT, MIN_DISTANCE_M, SEATS_SCALE
+from geostart.model.demand import MIN_DISTANCE_M, SEATS_SCALE, niche_defaults
 from geostart.schemas import Assumption
 
 
@@ -49,8 +49,9 @@ def demand_assumptions(parameters: Mapping[str, object]) -> list[Assumption]:
                 )
             )
     if "outside_option_weight" not in parameters["demand"]:
-        lower = DEFAULT_OUTSIDE_OPTION_WEIGHT["p10"]
-        upper = DEFAULT_OUTSIDE_OPTION_WEIGHT["p90"]
+        defaults = niche_defaults(parameters.get("niche", "coffee"))["outside_option_weight"]
+        lower = defaults["p10"]
+        upper = defaults["p90"]
         assumptions.append(
             Assumption(
                 name="Вес внешней альтернативы",
