@@ -17,7 +17,7 @@ from pydantic import BaseModel
 from shapely.geometry import MultiPolygon, Polygon
 
 from geostart.config import CityConfig, NicheConfig, get_city, load_niches, read_yaml
-from geostart.pipeline import features, geometry, osm_extract, trudvsem
+from geostart.pipeline import features, geometry, mos_ru, osm_extract, trudvsem
 from geostart.pipeline.fixtures import ADDRESS_COLUMNS, COMPETITOR_COLUMNS, HEX_FEATURE_COLUMNS
 from geostart.settings import config_dir, data_dir, processed_dir
 
@@ -57,6 +57,7 @@ class CityPipelineConfig(BaseModel):
     trudvsem_region: str
     population_region: PopulationRegion
     population_scope: PopulationScope | None = None
+    mos_ru_catering: mos_ru.MosRuDataset | None = None
 
 
 class ExtractConfig(BaseModel):
@@ -291,6 +292,30 @@ def build_osm_competitors(
     return pd.concat(frames, ignore_index=True)[COMPETITOR_COLUMNS]
 
 
+def build_mos_ru_competitors(
+    city: CityConfig, niches: list[NicheConfig], catering: pd.DataFrame, cells: set[str]
+) -> pd.DataFrame:
+    located = with_cells(catering, city.h3_resolution, cells)
+    frames = [
+        mos_ru.select_by_name(located, niche.mos_ru_name_pattern).assign(niche=niche.code, source="mos_ru")
+        for niche in niches
+        if niche.mos_ru_name_pattern
+    ]
+    if not frames:
+        return pd.DataFrame(columns=COMPETITOR_COLUMNS)
+    combined = pd.concat(frames, ignore_index=True)
+    return combined.assign(lat=combined["lat"].round(6), lon=combined["lon"].round(6))[COMPETITOR_COLUMNS]
+
+
+def combine_competitors(osm: pd.DataFrame, official: pd.DataFrame) -> pd.DataFrame:
+    frames = [
+        mos_ru.merge_competitors(osm[osm["niche"] == niche], official[official["niche"] == niche])
+        for niche in pd.unique(pd.concat([osm["niche"], official["niche"]]))
+    ]
+    combined = pd.concat(frames, ignore_index=True)
+    return combined.assign(seats=combined["seats"].astype("Int64"))[COMPETITOR_COLUMNS]
+
+
 def build_osm_addresses(city: CityConfig, addresses: pd.DataFrame, cells: set[str]) -> pd.DataFrame:
     located = with_cells(addresses[addresses["city"] == city.code], city.h3_resolution, cells)
     located["address"] = located["street"].str.strip() + ", " + located["housenumber"].str.strip()
@@ -315,7 +340,15 @@ def run_city(city_code: str, collected_at: date | None = None) -> dict[str, floa
         hex_features = build_osm_hex_features(city, city_config, layers, boundary)
     cells = set(hex_features["h3"])
     with timer.step("конкуренты"):
-        competitors = build_osm_competitors(city, load_niches(), layers["pois"], cells)
+        niches = load_niches()
+        competitors = build_osm_competitors(city, niches, layers["pois"], cells)
+        osm_coffee = int((competitors["niche"] == "coffee").sum())
+        if city_config.mos_ru_catering is not None:
+            dataset_path = mos_ru.ensure_dataset(city_config.mos_ru_catering, data_dir() / "raw" / "mos_ru")
+            catering = mos_ru.catering_frame(mos_ru.read_records(dataset_path))
+            competitors = combine_competitors(
+                competitors, build_mos_ru_competitors(city, niches, catering, cells)
+            )
     with timer.step("адреса"):
         addresses = build_osm_addresses(city, layers["addresses"], cells)
     with timer.step("зарплаты"):
@@ -336,6 +369,8 @@ def run_city(city_code: str, collected_at: date | None = None) -> dict[str, floa
         "residents": round(float(hex_features["residents"].sum())),
         "workers": round(float(hex_features["workers"].sum())),
         "competitors_coffee": int((competitors["niche"] == "coffee").sum()),
+        "competitors_coffee_osm_only": osm_coffee,
+        "competitors_mos_ru": int((competitors["source"] == "mos_ru").sum()),
         "competitors_pickup_point": int((competitors["niche"] == "pickup_point").sum()),
         "addresses": len(addresses),
         "metro_cells_within_1km": int((hex_features["metro_dist_m"] <= 1000).sum()),

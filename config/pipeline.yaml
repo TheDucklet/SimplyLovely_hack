@@ -16,6 +16,12 @@ cities:
       population: 13274285
       date: 2025-01-01
       source: https://expert.ru/news/chislennost-naseleniya-moskvy-dostigla-13-3-mln-chelovek/
+    mos_ru_catering:
+      dataset_id: 1903
+      url: https://data-v2.mos.ru/api/v2/odata/export/catalog?idFile=38236891
+      file: data-1903-13-10-2026.zip
+      date: 2026-10-13
+      page: https://data.mos.ru/opendata/1903
   tula:
     extract_bbox: [35.85, 52.95, 38.95, 54.90]
     boundary: admin

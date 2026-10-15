@@ -99,6 +99,7 @@ niches:
     osm_name_rules:
       - tags: {amenity: cafe}
         pattern: "(?i)коф|coffee|cofe|cofix|даблби|дринкит|шоколадница|кофемания"
+    mos_ru_name_pattern: "(?i)коф|coffee|cofe|cofix|даблби|дринкит|шоколадница|кофемания"
     okved: ["56.10", "56.30"]
     params_file: research/niche_params/coffee.yaml
   - code: pickup_point
@@ -109,7 +110,7 @@ niches:
     params_file: research/niche_params/pickup_point.yaml
 ```
 
-Правило `osm_name_rules` добавляет объекты с указанными тегами, в названии или бренде которых встречается регулярное выражение `pattern`. Оно нужно, так как большинство кофеен в OSM отмечено как `amenity=cafe` без кухни. Теги OpenStreetMap и коды ОКВЭД проверяет Иван в задаче S1-I2, исправления вносит Фёдор.
+Правило `osm_name_rules` добавляет объекты с указанными тегами, в названии или бренде которых встречается регулярное выражение `pattern`. Оно нужно, так как большинство кофеен в OSM отмечено как `amenity=cafe` без кухни. Поле `mos_ru_name_pattern` задаёт выражение для отбора заведений ниши из набора общепита data.mos.ru по названию, ниши без поля из набора не берутся. Теги OpenStreetMap и коды ОКВЭД проверяет Иван в задаче S1-I2, исправления вносит Фёдор.
 
 ## Параметры ниши
 
