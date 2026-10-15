@@ -27,7 +27,10 @@ PARAMETER_NAMES = {
 
 def save_figure(figure: plt.Figure, output: Path, name: str) -> None:
     figure.savefig(output / f"{name}.png", dpi=180, bbox_inches="tight")
-    figure.savefig(output / f"{name}.svg", bbox_inches="tight")
+    vector_path = output / f"{name}.svg"
+    figure.savefig(vector_path, bbox_inches="tight")
+    content = vector_path.read_text(encoding="utf-8")
+    vector_path.write_text("\n".join(line.rstrip() for line in content.splitlines()) + "\n", encoding="utf-8")
     plt.close(figure)
 
 
