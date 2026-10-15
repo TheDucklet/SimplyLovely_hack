@@ -22,7 +22,7 @@ def processed_dir(city_code: str) -> Path:
 
 
 def use_mocks() -> bool:
-    return os.environ.get("GEOSTART_USE_MOCKS", "true").strip().lower() in TRUE_VALUES
+    return os.environ.get("GEOSTART_USE_MOCKS", "false").strip().lower() in TRUE_VALUES
 
 
 def cors_origins() -> list[str]:
