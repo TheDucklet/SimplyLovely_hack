@@ -27,6 +27,7 @@ class NicheConfig(BaseModel):
     name: str
     osm_tags: list[dict[str, str]]
     osm_name_rules: list[NameRule] = []
+    mos_ru_name_pattern: str | None = None
     okved: list[str]
     params_file: str
 
