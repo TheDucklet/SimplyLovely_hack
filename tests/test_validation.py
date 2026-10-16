@@ -1,3 +1,5 @@
+import subprocess
+import sys
 from pathlib import Path
 
 import h3
@@ -27,6 +29,21 @@ PARAMETERS = {
     "distance_decay_beta": 3.0,
     "outside_option_weight": 1.0,
 }
+
+
+def test_model_and_plotting_module_import_without_matplotlib() -> None:
+    program = "\n".join(
+        [
+            "import sys",
+            "sys.modules['matplotlib'] = None",
+            "from geostart.model import score_city",
+            "import geostart.model.validation_plots",
+            "assert callable(score_city)",
+            "assert 'matplotlib.pyplot' not in sys.modules",
+        ]
+    )
+    result = subprocess.run([sys.executable, "-c", program], capture_output=True, text=True, check=False)
+    assert result.returncode == 0, result.stderr
 
 
 @pytest.fixture

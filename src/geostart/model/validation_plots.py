@@ -1,14 +1,15 @@
+from __future__ import annotations
+
 import argparse
 import json
 from pathlib import Path
+from typing import TYPE_CHECKING
 
-import matplotlib
-
-matplotlib.use("Agg")
-
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+
+if TYPE_CHECKING:
+    from matplotlib.figure import Figure
 
 CITY_NAMES = {"moscow": "Москва", "tula": "Тула"}
 NICHE_NAMES = {"coffee": "Кофейни", "pickup_point": "Пункты выдачи"}
@@ -25,7 +26,9 @@ PARAMETER_NAMES = {
 }
 
 
-def save_figure(figure: plt.Figure, output: Path, name: str) -> None:
+def save_figure(figure: Figure, output: Path, name: str) -> None:
+    import matplotlib.pyplot as plt
+
     figure.savefig(output / f"{name}.png", dpi=180, bbox_inches="tight")
     vector_path = output / f"{name}.svg"
     figure.savefig(vector_path, bbox_inches="tight")
@@ -35,6 +38,11 @@ def save_figure(figure: plt.Figure, output: Path, name: str) -> None:
 
 
 def plot_metrics(results: list[dict], output: Path) -> None:
+    import matplotlib
+
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
     labels = [f"{CITY_NAMES[item['city']]}\n{NICHE_NAMES[item['niche']]}" for item in results]
     figure, axes = plt.subplots(1, 2, figsize=(12, 4.5), constrained_layout=True)
     positions = np.arange(len(results))
@@ -56,6 +64,11 @@ def plot_metrics(results: list[dict], output: Path) -> None:
 
 
 def plot_sensitivity(results: list[dict], output: Path) -> None:
+    import matplotlib
+
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
     figure, axes = plt.subplots(2, 2, figsize=(13, 9), constrained_layout=True)
     for result, axis in zip(results, axes.flat, strict=True):
         sensitivity = pd.DataFrame(result["sensitivity"]).head(5).iloc[::-1]
@@ -72,6 +85,11 @@ def plot_sensitivity(results: list[dict], output: Path) -> None:
 
 
 def plot_pickup_scale(results: list[dict], output: Path) -> None:
+    import matplotlib
+
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
     pickups = [item for item in results if item["niche"] == "pickup_point"]
     figure, axes = plt.subplots(1, 2, figsize=(11, 4.5), constrained_layout=True)
     for result, axis in zip(pickups, axes, strict=True):
