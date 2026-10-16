@@ -28,6 +28,8 @@ export function ComparisonPanel({
   onSelectSlot,
   onClose,
   onBankAction,
+  cityName,
+  nicheName,
 }: {
   first: ReportState;
   second: ReportState;
@@ -35,6 +37,8 @@ export function ComparisonPanel({
   onSelectSlot: (slot: ReportSlot) => void;
   onClose: () => void;
   onBankAction: (action: string) => void;
+  cityName: string;
+  nicheName: string;
 }): ReactElement {
   const compatible =
     first.report?.city === second.report?.city &&
@@ -105,6 +109,8 @@ export function ComparisonPanel({
       <div className="comparison-reports">
         <ReportPanel
           state={first}
+          cityName={cityName}
+          nicheName={nicheName}
           onBankAction={onBankAction}
           heading="Отчёт 1"
           titleId="report-first-title"
@@ -116,6 +122,8 @@ export function ComparisonPanel({
         {second.location ? (
           <ReportPanel
             state={second}
+            cityName={cityName}
+            nicheName={nicheName}
             onBankAction={onBankAction}
             heading="Отчёт 2"
             titleId="report-second-title"

@@ -3,6 +3,7 @@ import type { Assumption, MonthlyCosts, RiskLevel } from '../api/types';
 import type { useLocationReport } from '../hooks/useLocationReport';
 import { decimal, months, number, rubles } from '../format';
 import { useMocks } from '../api/client';
+import { BusinessPlanButton } from './BusinessPlanButton';
 
 const RISK_LABELS: Record<RiskLevel, string> = {
   low: 'Низкий риск',
@@ -35,6 +36,8 @@ function Source({ assumption }: { assumption: Assumption }) {
 export function ReportPanel({
   state,
   onBankAction,
+  cityName,
+  nicheName,
   heading = 'Отчёт по адресу',
   titleId = 'report-title',
   onClose,
@@ -42,6 +45,8 @@ export function ReportPanel({
 }: {
   state: ReturnType<typeof useLocationReport>;
   onBankAction: (action: string) => void;
+  cityName: string;
+  nicheName: string;
   heading?: string;
   titleId?: string;
   onClose?: () => void;
@@ -289,6 +294,18 @@ export function ReportPanel({
                 </button>
               ))}
             </section>
+            {state.calculatedAt && (
+              <BusinessPlanButton
+                snapshot={{
+                  report,
+                  calculatedAt: state.calculatedAt,
+                  cityName,
+                  nicheName,
+                  isDemo: useMocks,
+                }}
+                disabled={pending || invalid || !!error || !state.reportIsCurrent}
+              />
+            )}
             <p className="report-disclaimer">
               Оценка ориентировочная и не гарантирует финансовый результат. Версия данных{' '}
               {report.data_version}.

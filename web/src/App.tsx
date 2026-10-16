@@ -277,11 +277,15 @@ export function App() {
             onSelectSlot={setActiveSlot}
             onClose={stopComparison}
             onBankAction={setBankAction}
+            cityName={city?.name || cityCode}
+            nicheName={niche?.name || nicheCode}
           />
         ) : reportState.location ? (
           <ReportPanel
             state={reportState}
             onBankAction={setBankAction}
+            cityName={city?.name || cityCode}
+            nicheName={niche?.name || nicheCode}
             onCompare={() => {
               setComparisonEnabled(true);
               setActiveSlot('second');

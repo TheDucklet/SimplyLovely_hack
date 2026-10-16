@@ -1570,3 +1570,29 @@ h1 {
     min-height: 0;
   }
 }
+.business-plan-export {
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid #e1e4de;
+}
+.business-plan-export button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  font-size: 12px;
+  line-height: 1.5;
+  padding: 12px;
+  background: #f5f4ef;
+  border-color: #d8dcd6;
+}
+.business-plan-export button:hover:not(:disabled) {
+  border-color: #b5541c;
+}
+.business-plan-export .section-note {
+  margin: 9px 0 0;
+}
+.business-plan-export .inline-error {
+  margin-bottom: 0;
+}

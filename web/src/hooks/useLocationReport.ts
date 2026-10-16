@@ -13,6 +13,7 @@ export interface SelectedLocation {
 export function useLocationReport(city: string, niche: string) {
   const [location, setLocation] = useState<SelectedLocation | null>(null);
   const [report, setReport] = useState<LocationReport | null>(null);
+  const [calculatedAt, setCalculatedAt] = useState<string | null>(null);
   const [completedRequest, setCompletedRequest] = useState<ReportRequest | null>(null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState('');
@@ -49,6 +50,7 @@ export function useLocationReport(city: string, niche: string) {
           const result = await api.report(next);
           if (mounted.current && context === epoch.current && !queued.current) {
             setReport(result);
+            setCalculatedAt(new Date().toISOString());
             setCompletedRequest(next);
             setError('');
           }
@@ -68,6 +70,7 @@ export function useLocationReport(city: string, niche: string) {
     lastRequest.current = '';
     setLocation(null);
     setReport(null);
+    setCalculatedAt(null);
     setCompletedRequest(null);
     setError('');
     setArea('');
@@ -83,6 +86,7 @@ export function useLocationReport(city: string, niche: string) {
       lastRequest.current = '';
       setLocation(point);
       setReport(null);
+      setCalculatedAt(null);
       setCompletedRequest(null);
       setArea('');
       setRent('');
@@ -142,6 +146,7 @@ export function useLocationReport(city: string, niche: string) {
   return {
     location,
     report,
+    calculatedAt,
     reportIsCurrent,
     pending,
     error,
