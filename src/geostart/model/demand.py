@@ -1,11 +1,14 @@
 from collections.abc import Mapping
 from dataclasses import dataclass
 from enum import StrEnum
+from functools import cache
 from math import ceil
+from pathlib import Path
 
 import h3
 import numpy as np
 import pandas as pd
+import yaml
 
 DEFAULT_RUNS = 200
 DEFAULT_SEED = 2026
@@ -16,7 +19,6 @@ SEATS_SCALE = 20.0
 GRID_RADIUS_MARGIN = 2
 GRID_EDGE_SAFETY_FACTOR = 0.5
 QUANTILES = (0.1, 0.5, 0.9)
-DEFAULT_OUTSIDE_OPTION_WEIGHT = {"p10": 0.5, "p50": 1.0, "p90": 1.5}
 
 
 class Niche(StrEnum):
@@ -43,15 +45,28 @@ def parse_niche(niche: str) -> Niche:
         raise ValueError("Неизвестная ниша, выберите coffee или pickup_point") from error
 
 
+@cache
+def niche_defaults(niche: str) -> dict:
+    selected = parse_niche(niche)
+    with Path(__file__).with_name("niche_defaults.yaml").open(encoding="utf-8") as stream:
+        return yaml.safe_load(stream)[selected]
+
+
+def demand_ranges(niche: str, ranges: Mapping[str, Mapping[str, object]]) -> dict:
+    return {**niche_defaults(niche), **ranges}
+
+
 def validate_parameters(niche: str, parameters: Mapping[str, float]) -> None:
     selected = parse_niche(niche)
     for name in (*REQUIRED_PARAMETERS[selected], *COMMON_PARAMETERS):
         value = parameters[name]
         if not np.isfinite(value) or value < 0:
             raise ValueError(f"Параметр {name} должен быть конечным и неотрицательным")
-    for name in COMMON_PARAMETERS:
+    for name in ("max_walk_distance_m", "distance_decay_beta"):
         if parameters[name] <= 0:
             raise ValueError(f"Параметр {name} должен быть положительным")
+    if selected == Niche.COFFEE and parameters["outside_option_weight"] <= 0:
+        raise ValueError("Параметр outside_option_weight для кофейни должен быть положительным")
     if selected == Niche.PICKUP_POINT and parameters["marketplace_share"] > 1:
         raise ValueError("Доля маркетплейса должна быть от 0 до 1")
 
@@ -118,8 +133,12 @@ class DemandModel:
         origins = self.origin_indices[candidate_edges]
         destinations = self.destination_indices[candidate_edges]
         candidate_weights = weights[candidate_edges] * candidate_attraction
-        shares = candidate_weights / (
-            candidate_weights + pressure[origins] + parameters["outside_option_weight"]
+        denominators = candidate_weights + pressure[origins] + parameters["outside_option_weight"]
+        shares = np.divide(
+            candidate_weights,
+            denominators,
+            out=np.zeros_like(candidate_weights),
+            where=denominators > 0,
         )
         return np.bincount(
             destinations,
@@ -188,7 +207,7 @@ def sample_parameters(
     selected = parse_niche(niche)
     if isinstance(runs, bool) or not isinstance(runs, int) or runs <= 0:
         raise ValueError("Число прогонов должно быть положительным целым")
-    supplied_ranges = {"outside_option_weight": DEFAULT_OUTSIDE_OPTION_WEIGHT, **ranges}
+    supplied_ranges = demand_ranges(selected, ranges)
     generator = np.random.default_rng(seed)
     samples = {}
     lower_parameters = {}

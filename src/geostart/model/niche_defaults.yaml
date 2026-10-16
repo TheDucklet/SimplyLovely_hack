@@ -1,0 +1,14 @@
+coffee:
+  outside_option_weight:
+    p10: 0.5
+    p50: 1.0
+    p90: 1.5
+    source: null
+    note: условный вес внешней альтернативы до калибровки
+pickup_point:
+  outside_option_weight:
+    p10: 0.0
+    p50: 0.000001
+    p90: 0.000002
+    source: null
+    note: заказ получают в одном из пунктов, вес внешней альтернативы близок к нулю
