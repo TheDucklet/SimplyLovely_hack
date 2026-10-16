@@ -241,7 +241,14 @@ export function App() {
             {reportState.pending ? 'Рассчитываем отчёт…' : 'Нажмите на участок для оценки'}
           </div>
         </section>
-        {reportState.location && <ReportPanel state={reportState} onBankAction={setBankAction} />}
+        {reportState.location && (
+          <ReportPanel
+            state={reportState}
+            onBankAction={setBankAction}
+            cityName={city?.name || cityCode}
+            nicheName={niche?.name || nicheCode}
+          />
+        )}
       </main>
       <footer className="footer">
         <span>Simply Lovely · ГеоСтарт</span>
