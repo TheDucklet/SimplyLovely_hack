@@ -26,8 +26,11 @@ def use_mocks() -> bool:
     return os.environ.get("GEOSTART_USE_MOCKS", "false").strip().lower() in TRUE_VALUES
 
 
+DEFAULT_CORS_ORIGINS = "http://localhost:5173,http://localhost:4173"
+
+
 def cors_origins() -> list[str]:
-    raw_origins = os.environ.get("GEOSTART_CORS_ORIGINS", "http://localhost:5173")
+    raw_origins = os.environ.get("GEOSTART_CORS_ORIGINS", DEFAULT_CORS_ORIGINS)
     return [origin.strip() for origin in raw_origins.split(",") if origin.strip()]
 
 
