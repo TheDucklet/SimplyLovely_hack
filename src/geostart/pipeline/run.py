@@ -47,6 +47,12 @@ class PopulationScope(BaseModel):
     source: str
 
 
+class PopulationDistricts(BaseModel):
+    file: str
+    date: date
+    source: str
+
+
 class CityPipelineConfig(BaseModel):
     extract_bbox: tuple[float, float, float, float]
     boundary: Literal["mkad", "admin"]
@@ -57,6 +63,7 @@ class CityPipelineConfig(BaseModel):
     trudvsem_region: str
     population_region: PopulationRegion
     population_scope: PopulationScope | None = None
+    population_districts: PopulationDistricts | None = None
     mos_ru_catering: mos_ru.MosRuDataset | None = None
 
 
@@ -190,6 +197,57 @@ def calibration_rate(
     return residents_per_m2_in(region_polygon, region.population, buildings, region.name)
 
 
+def normalized_district(name: str) -> str:
+    return short_district_name(name).replace("ё", "е").replace("Ё", "Е").strip().lower()
+
+
+def district_polygons(boundaries: pd.DataFrame, admin_level: str, names: set[str]) -> gpd.GeoDataFrame:
+    districts = boundaries[(boundaries["admin_level"] == admin_level) & boundaries["name"].notna()]
+    frame = gpd.GeoDataFrame(
+        {"district": districts["name"].map(normalized_district).to_numpy()},
+        geometry=shapely.from_wkb(districts["wkb"].to_numpy()),
+        crs=geometry.GEOGRAPHIC_CRS,
+    )
+    return frame[frame["district"].isin(names)].dissolve(by="district").reset_index()
+
+
+def buildings_district(buildings: pd.DataFrame, polygons: gpd.GeoDataFrame) -> pd.Series:
+    points = geometry.points_frame(buildings[["lon", "lat"]].reset_index(drop=True))
+    joined = gpd.sjoin(points, polygons[["district", "geometry"]], how="left", predicate="within")
+    return pd.Series(
+        joined.groupby(level=0)["district"].first().reindex(points.index).to_numpy(), index=buildings.index
+    )
+
+
+def district_residents_rates(
+    city_config: CityPipelineConfig, region_buildings: pd.DataFrame, boundaries: pd.DataFrame
+) -> tuple[gpd.GeoDataFrame, dict[str, float]]:
+    table_config = city_config.population_districts
+    if table_config is None:
+        return gpd.GeoDataFrame(columns=["district", "geometry"], geometry="geometry"), {}
+    table = pd.read_csv(config_dir() / table_config.file)
+    population = dict(zip(table["district"].map(normalized_district), table["population"], strict=True))
+    polygons = district_polygons(boundaries, city_config.district_admin_level, set(population))
+    residential = features.residential_floor_area(region_buildings)
+    area_by_district = residential.groupby(buildings_district(region_buildings, polygons)).sum()
+    rates = {
+        district: population[district] / area
+        for district, area in area_by_district.items()
+        if area > 0 and district in population
+    }
+    return polygons, rates
+
+
+def residents_by_building(
+    buildings: pd.DataFrame, polygons: gpd.GeoDataFrame, rates: dict[str, float], fallback_rate: float
+) -> pd.Series:
+    residential = features.residential_floor_area(buildings)
+    if not rates:
+        return residential * fallback_rate
+    building_rates = buildings_district(buildings, polygons).map(rates).fillna(fallback_rate)
+    return residential * building_rates.astype(float)
+
+
 def build_osm_hex_features(
     city: CityConfig,
     city_config: CityPipelineConfig,
@@ -203,12 +261,14 @@ def build_osm_hex_features(
         layers["buildings"][layers["buildings"]["city"] == city.code]
     )
     residents_per_m2 = calibration_rate(city_config, region_buildings, layers, boundary)
+    polygons, district_rates = district_residents_rates(city_config, region_buildings, layers["boundaries"])
     buildings = with_cells(region_buildings, city.h3_resolution, set(cells))
     pois = with_cells(layers["pois"][layers["pois"]["city"] == city.code], city.h3_resolution, set(cells))
-    residential = features.sum_by_cell(
-        features.residential_floor_area(buildings), buildings["h3"], cell_index
+    residents = features.sum_by_cell(
+        residents_by_building(buildings, polygons, district_rates, residents_per_m2),
+        buildings["h3"],
+        cell_index,
     )
-    residents = residential * residents_per_m2
     workers = features.sum_by_cell(features.worker_capacity(buildings), buildings["h3"], cell_index)
     office_buildings = features.count_by_cell(
         buildings["use"] == features.BuildingUse.OFFICE, buildings["h3"], cell_index
