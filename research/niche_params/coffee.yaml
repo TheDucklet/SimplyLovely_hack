@@ -1,19 +1,123 @@
 niche: coffee
 currency: RUB
 period: month
-updated: 2026-10-15
-status: placeholder
+updated: 2026-10-16
 demand:
-  avg_check_rub: {p10: 250, p50: 330, p90: 420, source: null, note: "условное значение до S1-I2"}
-  visits_per_resident_month: {p10: 1.0, p50: 2.0, p90: 3.5, source: null, note: "условное значение до S1-I2"}
-  visits_per_worker_month: {p10: 3.0, p50: 6.0, p90: 10.0, source: null, note: "условное значение до S1-I2"}
-  max_walk_distance_m: {p10: 300, p50: 500, p90: 800, source: null, note: "условное значение до S1-I2"}
-  distance_decay_beta: {p10: 1.5, p50: 2.0, p90: 2.5, source: null, note: "условное значение до S1-I2"}
+  avg_check_rub:
+    p10: 220
+    p50: 320
+    p90: 500
+    source: "https://retailer.ru/chislo-kofe-pojntov-v-produktovyh-setjah-dostiglo-42-tys/"
+    note: "по данным Чек Индекс за январь-сентябрь 2026 года средний чек по РФ составил 284 руб. (12.10.2026), по данным Sostav.ru от 16.01.2026 средний чек по Москве составил 501 руб."
+  avg_check_rub_moscow:
+    p10: 250
+    p50: 380
+    p90: 550
+    source: "https://www.sostav.ru/publication/v-moskve-stalo-menshe-kofeen-81024.html"
+    note: "в статье Sostav.ru от 16.01.2026 указан средний чек по всем кофейням Москвы 501 руб. и по спальным районам 222-242 руб., значение p50 (380 руб.) получено как расчётная оценка команды между 222-242 и 501 руб. для малого формата у дома и у офиса"
+  avg_check_rub_tula:
+    p10: 190
+    p50: 280
+    p90: 390
+    source: "https://retailer.ru/chislo-kofe-pojntov-v-produktovyh-setjah-dostiglo-42-tys/"
+    note: "по данным Чек Индекс за январь-сентябрь 2026 года средний чек кофейни и кофе-пойнта в России составил 284 руб. (публикация от 12.10.2026)"
+  visits_per_resident_month:
+    p10: 1.0
+    p50: 2.2
+    p90: 4.0
+    source: null
+    note: "допущение: расчётная оценка команды для всех жителей зоны охвата с учётом доли покупателей кофе навынос (35-45% взрослого населения) и частоты 4-6 покупок в месяц"
+  visits_per_worker_month:
+    p10: 3.0
+    p50: 6.5
+    p90: 12.0
+    source: null
+    note: "допущение: расчётная оценка команды для офисных сотрудников при 20-22 рабочих днях в месяц и покупке кофе 1-3 раза в неделю"
+  max_walk_distance_m:
+    p10: 250
+    p50: 450
+    p90: 750
+    source: "https://www.mktpraxis.com/apps/advanced/huff_model/main_huff_model"
+    note: "радиус пешеходной доступности (3-8 минут пешком) для заведений повседневного спроса по руководству модели Хаффа от 12.03.2026"
+  distance_decay_beta:
+    p10: 1.8
+    p50: 2.3
+    p90: 3.0
+    source: "https://www.mktpraxis.com/apps/advanced/huff_model/main_huff_model"
+    note: "прямых оценок для России нет, взяты калибровки модели Хаффа для зарубежной розницы и общепита повседневного спроса (публикация от 12.03.2026)"
+  outside_option_weight:
+    p10: 0.5
+    p50: 1.0
+    p90: 1.5
+    source: null
+    note: "допущение: вес внешней альтернативы в модели Хаффа (отказ от покупки, приготовление кофе дома или в офисе)"
 costs:
-  area_m2: {p10: 25, p50: 40, p90: 70, source: null, note: "условное значение до S1-I2"}
-  staff_count: {p10: 3, p50: 4, p90: 6, source: null, note: "условное значение до S1-I2"}
+  area_m2:
+    p10: 20
+    p50: 38
+    p90: 65
+    source: "https://vc.ru/id5732351/2787128-investitsii-v-kofeynyu-v-tsentre-moskvy"
+    note: "площадь малой кофейни у дома или офиса в рамках диапазона задания 20-70 м2 (обзор экономики кофеен от 10.03.2026)"
+  staff_count:
+    p10: 2
+    p50: 4
+    p90: 6
+    source: "https://vc.ru/id5732351/2787128-investitsii-v-kofeynyu-v-tsentre-moskvy"
+    note: "сменный график 2/2 по 1-2 бариста в смену плюс при необходимости управляющий (публикация от 10.03.2026)"
   wage_profession: barista
-  cogs_share_of_revenue: {p10: 0.25, p50: 0.30, p90: 0.35, source: null, note: "условное значение до S1-I2"}
-  other_opex_rub: {p10: 30000, p50: 60000, p90: 100000, source: null, note: "условное значение до S1-I2"}
-capex_rub: {p10: 1500000, p50: 3000000, p90: 5000000, source: null, note: "условное значение до S1-I2"}
+  cogs_share_of_revenue:
+    p10: 0.25
+    p50: 0.32
+    p90: 0.38
+    source: "https://www.retail.ru/news/zatraty-na-produkty-dostigli-v-srednem-33-ot-stoimosti-blyud-v-restoranakh-7-iyulya-2025-266572/"
+    note: "доля себестоимости продуктов и упаковки в общепите в 2025-2026 годах составляет в среднем 33% (исследование от 07.07.2025)"
+  other_opex_rub:
+    p10: 35000
+    p50: 65000
+    p90: 110000
+    source: "https://vc.ru/id5732351/2787128-investitsii-v-kofeynyu-v-tsentre-moskvy"
+    note: "коммунальные услуги, эквайринг (1,5-2,2% от оборота), связь, обслуживание кофемашины, бухгалтерия и маркетинг (обзор от 10.03.2026)"
+  other_opex_rub_moscow:
+    p10: 45000
+    p50: 75000
+    p90: 120000
+    source: "https://vc.ru/id5732351/2787128-investitsii-v-kofeynyu-v-tsentre-moskvy"
+    note: "прочие ежемесячные расходы в Москве с учётом большего оборота по эквайрингу и стоимости обслуживания (обзор от 10.03.2026)"
+  other_opex_rub_tula:
+    p10: 25000
+    p50: 45000
+    p90: 75000
+    source: null
+    note: "допущение: пересчёт прочих операционных расходов для регионального центра пропорционально выручке (эквайринг) и тарифам на услуги"
+capex_rub:
+  p10: 1500000
+  p50: 2800000
+  p90: 4800000
+  source: "https://topfranchise.ru/products/franshiza-seti-kofeen-one-price-coffee/"
+  note: "стартовые вложения в ремонт, профессиональное кофейное оборудование, мебель и вывеску по данным франшизы One Price Coffee на 2026 год"
+capex_rub_moscow:
+  p10: 1800000
+  p50: 3200000
+  p90: 5500000
+  source: "https://topfranchise.ru/products/franshiza-seti-kofeen-one-price-coffee/"
+  note: "капитальные затраты в Москве с учётом повышенной стоимости строительно-монтажных работ и аренды на период ремонта (данные на 2026 год)"
+capex_rub_tula:
+  p10: 1200000
+  p50: 2200000
+  p90: 3600000
+  source: "https://topfranchise.ru/products/franshiza-seti-kofeen-one-price-coffee/"
+  note: "капитальные затраты в регионах (от 1,2 млн руб. для малого формата по данным One Price Coffee на 2026 год)"
 tax_regime_default: usn_income_6
+benchmarks:
+  revenue_rub_month_moscow:
+    p10: 600000
+    p50: 1100000
+    p90: 1800000
+    source: "https://franshiza.ru/franchise/read/cofix/"
+    note: "ориентир месячной выручки кофейни в Москве на 2026 год (от 600-750 тыс. руб. для малых несетевых точек по обзору на vc.ru от 10.03.2026 до 1,2-1,8 млн руб. у сетей One Price Coffee и Cofix)"
+  revenue_rub_month_tula:
+    p10: 380000
+    p50: 650000
+    p90: 1100000
+    source: "https://topfranchise.ru/products/franshiza-seti-kofeen-one-price-coffee/"
+    note: "ориентир месячной выручки кофейни в региональном городе на 2026 год (по данным One Price Coffee выручка малого формата составляет от 504 тыс. руб. в месяц)"

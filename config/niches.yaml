@@ -3,16 +3,21 @@ niches:
     name: Кофейня
     osm_tags:
       - {amenity: cafe, cuisine: coffee_shop}
+      - {amenity: cafe, cuisine: coffee}
+      - {amenity: fast_food, cuisine: coffee_shop}
+      - {amenity: fast_food, cuisine: coffee}
       - {shop: coffee}
     osm_name_rules:
       - tags: {amenity: cafe}
-        pattern: "(?i)коф|coffee|cofe|cofix|даблби|дринкит|шоколадница|кофемания"
-    mos_ru_name_pattern: "(?i)коф|coffee|cofe|cofix|даблби|дринкит|шоколадница|кофемания"
+        pattern: "(?i)коф|coffee|cofe|cofix|даблби|дринкит|шоколадница|кофемания|skuratov"
+      - tags: {amenity: fast_food}
+        pattern: "(?i)коф|coffee|cofe|cofix|даблби|дринкит|skuratov"
+    mos_ru_name_pattern: "(?i)коф|coffee|cofe|cofix|даблби|дринкит|шоколадница|кофемания|skuratov"
     okved: ["56.10", "56.30"]
     params_file: research/niche_params/coffee.yaml
   - code: pickup_point
     name: Пункт выдачи заказов
     osm_tags:
       - {shop: outpost}
-    okved: ["52.29", "82.92"]
+    okved: ["47.91", "52.29", "53.20", "82.92"]
     params_file: research/niche_params/pickup_point.yaml
