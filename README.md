@@ -70,6 +70,16 @@ npm run dev
 
 Откройте http://localhost:5173. Интерфейс использует реальные данные API по умолчанию. Переменные VITE_API_URL, VITE_USE_MOCKS и VITE_MAP_STYLE_URL задаются в web/.env.local по образцу web/.env.example. Устройство, автономный режим, проверки и production-сборка описаны в [docs/web.md](docs/web.md).
 
+### Демо-стенд в Docker
+
+API и собранный интерфейс поднимаются одной командой, если архив данных распакован в корень репозитория:
+
+```
+docker compose -f compose.demo.yml up -d --build --wait
+```
+
+Интерфейс открывается на `http://127.0.0.1:8080`, подробности в [docs/demo.md](docs/demo.md).
+
 ## Настройка
 
 Параметры задаются переменными окружения, пример лежит в `.env.example`.
@@ -95,6 +105,7 @@ npm run dev
 | [docs/data-sources.md](docs/data-sources.md) | источники данных и способы оценки признаков |
 | [docs/decisions.md](docs/decisions.md) | журнал решений |
 | [docs/security.md](docs/security.md) | защита данных и развёртывание в контуре банка |
+| [docs/demo.md](docs/demo.md) | демо-стенд в Docker, запуск и работа без интернета |
 | [docs/storage.md](docs/storage.md) | хранилище PostgreSQL с PostGIS, роли, загрузка |
 | [docs/rules.md](docs/rules.md) | правила текста и кода команды |
 | [AGENTS.md](AGENTS.md) | обязательные инструкции для ИИ-агентов |
