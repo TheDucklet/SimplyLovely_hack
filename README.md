@@ -68,7 +68,7 @@ uv run pytest
 | `GEOSTART_STORAGE` | `files` | `postgres` переключает карту, конкурентов и поиск на базу, параметры базы описаны в docs/storage.md |
 | `GEOSTART_DATA_DIR` | `data/` в корне репозитория | каталог данных |
 | `GEOSTART_CONFIG_DIR` | `config/` в корне репозитория | каталог с `cities.yaml` и `niches.yaml` |
-| `GEOSTART_CORS_ORIGINS` | `http://localhost:5173` | адреса интерфейса, которым разрешены запросы к API, через запятую |
+| `GEOSTART_CORS_ORIGINS` | `http://localhost:5173,http://localhost:4173` | адреса интерфейса, которым разрешены запросы к API, через запятую |
 
 Города и ниши описаны в `config/cities.yaml` и `config/niches.yaml`. Параметры ниш, ставки аренды и налоги лежат в `research/`, до результатов исследования там стоят условные значения с пометкой `status: placeholder`.
 
