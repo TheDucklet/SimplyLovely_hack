@@ -9,6 +9,10 @@ export default ts.config(
   js.configs.recommended,
   ...ts.configs.recommended,
   {
+    files: ['tests/**/*.mjs'],
+    languageOptions: { globals: globals.node },
+  },
+  {
     files: ['**/*.{ts,tsx}'],
     languageOptions: { globals: globals.browser },
     plugins: { 'react-hooks': hooks, 'react-refresh': refresh },
