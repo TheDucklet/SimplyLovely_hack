@@ -1,38 +1,84 @@
 import { useEffect, useState } from 'react';
 import { api, useMocks } from './api/client';
-import type { CityInfo, HexesResponse, NicheInfo } from './api/types';
+import type { CityInfo, Competitor, HexesResponse, NicheInfo } from './api/types';
 import { MapView } from './components/MapView';
+import { Search } from './components/Search';
+import { Legend } from './components/Legend';
+import { ReportPanel } from './components/ReportPanel';
+import { BankModal } from './components/BankModal';
+import { useLocationReport } from './hooks/useLocationReport';
 import { message, number, rubles } from './format';
+import type { Metric } from './mapStyle';
 
 export function App() {
-  const [city, setCity] = useState<CityInfo>();
-  const [niche, setNiche] = useState<NicheInfo>();
+  const [cities, setCities] = useState<CityInfo[]>([]);
+  const [niches, setNiches] = useState<NicheInfo[]>([]);
+  const [cityCode, setCityCode] = useState('moscow');
+  const [nicheCode, setNicheCode] = useState('coffee');
   const [hexes, setHexes] = useState<HexesResponse>();
+  const [competitors, setCompetitors] = useState<Competitor[]>([]);
+  const [metric, setMetric] = useState<Metric>('revenue');
+  const [showCompetitors, setShowCompetitors] = useState(true);
   const [error, setError] = useState('');
+  const [bootError, setBootError] = useState('');
+  const [version, setVersion] = useState('');
   const [reload, setReload] = useState(0);
+  const [bankAction, setBankAction] = useState<string | null>(null);
+  const reportState = useLocationReport(cityCode, nicheCode);
+  const city = cities.find((item) => item.code === cityCode);
+  const niche = niches.find((item) => item.code === nicheCode);
 
   useEffect(() => {
-    const controller = new AbortController();
+    let active = true;
+    setBootError('');
     void Promise.all([api.cities(), api.niches(), api.health()])
-      .then(async ([cities, niches]) => {
-        if (controller.signal.aborted) return;
-        const initialCity = cities.find((item) => item.code === 'moscow') || cities[0];
-        const initialNiche = niches.find((item) => item.code === 'coffee') || niches[0];
-        if (!initialCity || !initialNiche) throw new Error('Список городов или ниш пуст');
-        setCity(initialCity);
-        setNiche(initialNiche);
-        setError('');
-        const response = await api.hexes(initialCity.code, initialNiche.code, controller.signal);
-        if (!controller.signal.aborted) setHexes(response);
+      .then(([nextCities, nextNiches, health]) => {
+        if (!active) return;
+        if (!nextCities.length || !nextNiches.length)
+          throw new Error('Список городов или ниш пуст');
+        setCities(nextCities);
+        setNiches(nextNiches);
+        setVersion(health.data_version);
+        setCityCode((current) =>
+          nextCities.some((item) => item.code === current) ? current : nextCities[0].code,
+        );
+        setNicheCode((current) =>
+          nextNiches.some((item) => item.code === current) ? current : nextNiches[0].code,
+        );
       })
-      .catch((error: unknown) => {
-        if (!controller.signal.aborted) setError(message(error));
+      .catch((cause: unknown) => {
+        if (active) setBootError(message(cause));
+      });
+    return () => {
+      active = false;
+    };
+  }, [reload]);
+  useEffect(() => {
+    if (!city || !niche) return;
+    const controller = new AbortController();
+    setHexes(undefined);
+    setCompetitors([]);
+    setError('');
+    void Promise.all([
+      api.hexes(city.code, niche.code, controller.signal),
+      api.competitors(city.code, niche.code, controller.signal),
+    ])
+      .then(([response, points]) => {
+        if (!controller.signal.aborted) {
+          setHexes(response);
+          setCompetitors(points);
+          setVersion(response.data_version);
+        }
+      })
+      .catch((cause: unknown) => {
+        if (!controller.signal.aborted) setError(message(cause));
       });
     return () => controller.abort();
-  }, [reload]);
-
-  const revenues = hexes?.items.map((item) => item.revenue_p50).sort((left, right) => left - right);
+  }, [city, niche, reload]);
+  const data = hexes?.city === cityCode && hexes.niche === nicheCode ? hexes : undefined;
+  const revenues = data?.items.map((item) => item.revenue_p50).sort((a, b) => a - b);
   const median = revenues?.[Math.floor(revenues.length / 2)];
+  const currentError = bootError || error;
 
   return (
     <div className="app">
@@ -51,9 +97,60 @@ export function App() {
           </span>
           ГеоСтарт<span className="brand-note">Место имеет значение</span>
         </a>
-        <span className="pilot-label">Пилот для малого бизнеса</span>
+        <span className="pilot-label">
+          {useMocks ? 'Демонстрация · Москва, кофейня' : 'Пилот для малого бизнеса'}
+        </span>
       </header>
-      <main className="workspace">
+      <div className="toolbar" aria-label="Настройки карты">
+        <label className="select-field">
+          <span className="field-label">Город</span>
+          <select
+            aria-label="Город"
+            value={cityCode}
+            onChange={(event) => setCityCode(event.target.value)}
+            disabled={!cities.length}
+          >
+            {cities.map((item) => (
+              <option key={item.code} value={item.code}>
+                {item.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="select-field niche-field">
+          <span className="field-label">Бизнес</span>
+          <select
+            aria-label="Бизнес"
+            value={nicheCode}
+            onChange={(event) => setNicheCode(event.target.value)}
+            disabled={!niches.length}
+          >
+            {niches.map((item) => (
+              <option key={item.code} value={item.code}>
+                {item.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <Search
+          key={cityCode}
+          city={cityCode}
+          disabled={reportState.pending || !data}
+          onSelect={reportState.select}
+        />
+        <div className="metric-field">
+          <span className="field-label">Показать на карте</span>
+          <div className="metric-toggle" role="group" aria-label="Метрика карты">
+            <button aria-pressed={metric === 'revenue'} onClick={() => setMetric('revenue')}>
+              Выручка
+            </button>
+            <button aria-pressed={metric === 'payback'} onClick={() => setMetric('payback')}>
+              Окупаемость
+            </button>
+          </div>
+        </div>
+      </div>
+      <main className={`workspace${reportState.location ? ' has-report' : ''}`}>
         <aside className="intro-panel">
           <p className="eyebrow">ОТКРЫВАЙТЕ С ПОНИМАНИЕМ</p>
           <h1>
@@ -64,15 +161,13 @@ export function App() {
           <p className="intro-copy">
             Оцените будущую выручку и окупаемость бизнеса до того, как подпишете договор аренды.
           </p>
-          <div className="selection-summary">
-            <span>Город</span>
-            <strong>{city?.name || 'Загрузка'}</strong>
-            <span>Бизнес</span>
-            <strong>{niche?.name || 'Загрузка'}</strong>
+          <div className="map-instruction">
+            <span className="instruction-number">01</span>
+            <p>Выберите участок на карте или найдите адрес, чтобы получить оценку.</p>
           </div>
           <div className="stat-block">
             <span>Участков на карте</span>
-            <strong>{hexes ? number(hexes.items.length) : '…'}</strong>
+            <strong>{data ? number(data.items.length) : '…'}</strong>
           </div>
           <div className="stat-block">
             <span>Медиана выручки по городу</span>
@@ -81,51 +176,81 @@ export function App() {
               <small>/ месяц</small>
             </strong>
           </div>
+          <div className="stat-block">
+            <span>Конкурентов в доступных данных</span>
+            <strong>{data ? number(competitors.length) : '…'}</strong>
+          </div>
           <p className="footnote">
             Прогноз основан на открытых данных. Значения ориентировочные и зависят от допущений
             модели.
           </p>
         </aside>
-        <section className="map-region" aria-label="Карта прогноза выручки">
-          {city && <MapView city={city} items={hexes?.items || []} />}
+        <section className="map-region" aria-label="Карта прогноза">
+          {reportState.location && (
+            <a className="skip-map" href="#report-title">
+              Перейти к отчёту
+            </a>
+          )}
+          {city && (
+            <MapView
+              city={city}
+              items={data?.items || []}
+              competitors={data && showCompetitors ? competitors : []}
+              metric={metric}
+              selected={reportState.location}
+              disabled={reportState.pending || !data}
+              onSelect={reportState.select}
+            />
+          )}
           <div className="map-heading">
-            <span className="eyebrow">ПРОГНОЗ НА КАРТЕ</span>
+            <span className="eyebrow">{useMocks ? 'ДЕМОНСТРАЦИЯ' : 'ПРОГНОЗ НА КАРТЕ'}</span>
             <h2>{city?.name || 'Загружаем карту'}</h2>
-            <span>{niche?.name} · выручка в месяц</span>
+            <span>
+              {niche?.name} · {metric === 'revenue' ? 'выручка в месяц' : 'окупаемость'}
+            </span>
           </div>
-          {!hexes && !error && (
+          <label className="competitors-toggle">
+            <input
+              type="checkbox"
+              checked={showCompetitors}
+              onChange={(event) => setShowCompetitors(event.target.checked)}
+            />
+            <span className="competitor-dot" />
+            Конкуренты{data ? ` · ${number(competitors.length)}` : ''}
+          </label>
+          {!data && !currentError && (
             <div className="map-status" role="status">
               <span className="spinner" />
               Загружаем прогноз
             </div>
           )}
-          {error && (
+          {currentError && (
             <div className="map-status error" role="alert">
               <strong>Данные недоступны</strong>
-              <p>{error}</p>
+              <p>{currentError}</p>
               <button onClick={() => setReload((value) => value + 1)}>Повторить</button>
             </div>
           )}
-          {revenues && revenues.length > 0 && (
-            <div className="legend">
-              <strong>Выручка, ₽ / месяц</strong>
-              <div className="legend-gradient" />
-              <div className="legend-labels">
-                <span>{number(revenues[0])}</span>
-                <span>{number(revenues[revenues.length - 1])}</span>
-              </div>
-              <small>От меньшей к большей внутри города</small>
+          {data && !data.items.length && (
+            <div className="map-status" role="status">
+              Для этого города и ниши пока нет ячеек
             </div>
           )}
+          {data && <Legend items={data.items} metric={metric} />}
+          <div className="map-hint" role="status">
+            {reportState.pending ? 'Рассчитываем отчёт…' : 'Нажмите на участок для оценки'}
+          </div>
         </section>
+        {reportState.location && <ReportPanel state={reportState} onBankAction={setBankAction} />}
       </main>
       <footer className="footer">
         <span>Simply Lovely · ГеоСтарт</span>
         <span>
           {useMocks ? 'Демонстрационные данные' : 'Открытые данные'}
-          {hexes ? ` · версия ${hexes.data_version}` : ''}
+          {version ? ` · версия ${version}` : ''}
         </span>
       </footer>
+      {bankAction && <BankModal action={bankAction} onClose={() => setBankAction(null)} />}
     </div>
   );
 }
