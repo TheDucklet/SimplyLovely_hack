@@ -1,4 +1,5 @@
 from collections.abc import Mapping
+from dataclasses import dataclass
 from math import ceil
 
 import numpy as np
@@ -34,11 +35,18 @@ def edge_weights(model: DemandModel, parameters: Mapping[str, float]) -> np.ndar
     return weights * (model.distances <= parameters["max_walk_distance_m"])
 
 
-def leave_one_out_potentials(
+@dataclass(frozen=True)
+class PointSimulation:
+    revenues: np.ndarray
+    reachable_demand: np.ndarray
+
+
+def point_simulation(
     model: DemandModel,
     competitors: pd.DataFrame,
     samples: pd.DataFrame,
-) -> np.ndarray:
+    candidate_attractions: np.ndarray | None = None,
+) -> PointSimulation:
     selected = competitors.loc[competitors["niche"].eq(model.niche)]
     indices = pd.Series(np.arange(len(model.features)), index=model.features["h3"])
     point_indices = selected["h3"].map(indices)
@@ -46,10 +54,21 @@ def leave_one_out_potentials(
         raise ValueError("Для каждой точки нужна ячейка кандидата, добавьте недостающие ячейки")
     point_indices = point_indices.to_numpy(dtype=int)
     attractions = competitor_attractiveness(selected)
-    candidate_edges = model.destination_indices < len(model.features)
-    origins = model.origin_indices[candidate_edges]
-    destinations = model.destination_indices[candidate_edges]
-    results = np.empty((len(samples), len(selected)))
+    candidates = (
+        np.ones(len(selected)) if candidate_attractions is None else np.asarray(candidate_attractions)
+    )
+    if candidates.shape != attractions.shape or not np.isfinite(candidates).all() or (candidates <= 0).any():
+        raise ValueError("Для каждой точки нужна положительная конечная привлекательность")
+    candidate_edges = np.flatnonzero(model.destination_indices < len(model.features))
+    edge_order = candidate_edges[np.argsort(model.destination_indices[candidate_edges], kind="stable")]
+    edge_counts = np.bincount(model.destination_indices[candidate_edges], minlength=len(model.features))
+    offsets = np.concatenate([[0], np.cumsum(edge_counts)])
+    point_edges = [edge_order[offsets[index] : offsets[index + 1]] for index in point_indices]
+    point_edges = np.concatenate(point_edges) if point_edges else np.array([], dtype=int)
+    slots = np.repeat(np.arange(len(selected)), edge_counts[point_indices])
+    origins = model.origin_indices[point_edges]
+    results = np.zeros((len(samples), len(selected)))
+    reachable = np.zeros_like(results)
     for run_index, parameters in enumerate(samples.to_dict("records")):
         weights = edge_weights(model, parameters)
         pressure = np.bincount(
@@ -57,20 +76,27 @@ def leave_one_out_potentials(
             weights=weights * model.attraction[model.destination_indices],
             minlength=len(model.features),
         )
-        candidate_weights = weights[candidate_edges]
+        point_weights = weights[point_edges]
         demand = cell_demand(model.features, model.niche, parameters)
-        for attractiveness in np.unique(attractions):
-            remaining = np.maximum(pressure[origins] - attractiveness * candidate_weights, 0)
-            denominators = remaining + candidate_weights + parameters["outside_option_weight"]
-            shares = np.divide(
-                candidate_weights, denominators, out=np.zeros_like(candidate_weights), where=denominators > 0
-            )
-            revenue = np.bincount(
-                destinations, weights=demand[origins] * shares, minlength=len(model.features)
-            )
-            selected_points = attractions == attractiveness
-            results[run_index, selected_points] = revenue[point_indices[selected_points]]
-    return np.median(results, axis=0)
+        remaining = np.maximum(pressure[origins] - attractions[slots] * point_weights, 0)
+        candidate_weights = candidates[slots] * point_weights
+        denominators = remaining + candidate_weights + parameters["outside_option_weight"]
+        shares = np.divide(
+            candidate_weights, denominators, out=np.zeros_like(candidate_weights), where=denominators > 0
+        )
+        results[run_index] = np.bincount(slots, weights=demand[origins] * shares, minlength=len(selected))
+        reachable[run_index] = np.bincount(
+            slots, weights=demand[origins] * (point_weights > 0), minlength=len(selected)
+        )
+    return PointSimulation(results, reachable)
+
+
+def leave_one_out_potentials(
+    model: DemandModel,
+    competitors: pd.DataFrame,
+    samples: pd.DataFrame,
+) -> np.ndarray:
+    return np.median(point_simulation(model, competitors, samples).revenues, axis=0)
 
 
 def validation_metrics(

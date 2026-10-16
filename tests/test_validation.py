@@ -38,6 +38,7 @@ def test_model_and_plotting_module_import_without_matplotlib() -> None:
             "sys.modules['matplotlib'] = None",
             "from geostart.model import score_city",
             "import geostart.model.validation_plots",
+            "import geostart.model.recheck_plots",
             "assert callable(score_city)",
             "assert 'matplotlib.pyplot' not in sys.modules",
         ]
