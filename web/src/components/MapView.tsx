@@ -3,11 +3,15 @@ import { Map, NavigationControl, setWorkerUrl, type StyleSpecification } from 'm
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url';
 import { MapboxOverlay } from '@deck.gl/mapbox';
 import { H3HexagonLayer } from '@deck.gl/geo-layers';
-import type { CityInfo, HexScore } from '../api/types';
-import { rubles } from '../format';
+import { ScatterplotLayer } from '@deck.gl/layers';
+import type { PickingInfo } from '@deck.gl/core';
+import { cellToLatLng } from 'h3-js';
+import type { CityInfo, Competitor, HexScore } from '../api/types';
+import type { SelectedLocation } from '../hooks/useLocationReport';
+import { metricScale, type Metric } from '../mapStyle';
 
 setWorkerUrl(workerUrl);
-
+const HEX_OPACITY = 0.6;
 const MAP_STYLE: string | StyleSpecification = import.meta.env.VITE_MAP_STYLE_URL || {
   version: 8,
   sources: {
@@ -27,27 +31,36 @@ const MAP_STYLE: string | StyleSpecification = import.meta.env.VITE_MAP_STYLE_UR
     },
   ],
 };
-const HEX_OPACITY = 0.58;
-const REVENUE_COLORS: [number, number, number][] = [
-  [230, 189, 152],
-  [211, 161, 113],
-  [145, 175, 147],
-  [83, 140, 122],
-  [32, 105, 93],
-];
-
 export interface MapViewProps {
   city: CityInfo;
   items: HexScore[];
+  competitors: Competitor[];
+  metric: Metric;
+  selected: SelectedLocation | null;
+  disabled: boolean;
+  onSelect: (point: SelectedLocation) => void;
 }
 
-export function MapView({ city, items }: MapViewProps) {
+export function MapView({
+  city,
+  items,
+  competitors,
+  metric,
+  selected,
+  disabled,
+  onSelect,
+}: MapViewProps) {
   const container = useRef<HTMLDivElement>(null);
   const initialCity = useRef(city);
   const map = useRef<Map | null>(null);
   const overlay = useRef<MapboxOverlay | null>(null);
+  const selectRef = useRef(onSelect);
+  const disabledRef = useRef(disabled);
   const [mapError, setMapError] = useState(false);
-
+  useEffect(() => {
+    selectRef.current = onSelect;
+    disabledRef.current = disabled;
+  }, [onSelect, disabled]);
   useEffect(() => {
     if (!container.current) return;
     const instance = new Map({
@@ -61,50 +74,104 @@ export function MapView({ city, items }: MapViewProps) {
     instance.addControl(deckOverlay);
     instance.addControl(new NavigationControl({ showCompass: false }), 'bottom-right');
     instance.on('error', () => setMapError(true));
+    instance.on('idle', () => setMapError(false));
+    instance.on('click', (event) => {
+      if (disabledRef.current) return;
+      const picked = deckOverlay.pickObject({ x: event.point.x, y: event.point.y, radius: 3 });
+      if (!picked?.object) selectRef.current({ lat: event.lngLat.lat, lon: event.lngLat.lng });
+    });
     map.current = instance;
     overlay.current = deckOverlay;
-    const resizeObserver = new ResizeObserver(() => instance.resize());
-    resizeObserver.observe(container.current);
+    const observer = new ResizeObserver(() => instance.resize());
+    observer.observe(container.current);
     return () => {
-      resizeObserver.disconnect();
+      observer.disconnect();
       overlay.current = null;
       map.current = null;
       instance.remove();
     };
   }, []);
-
   useEffect(() => {
-    map.current?.flyTo({ center: [city.center[1], city.center[0]], zoom: city.zoom });
+    map.current?.flyTo({
+      center: [city.center[1], city.center[0]],
+      zoom: city.zoom,
+      essential: false,
+    });
   }, [city]);
-
   useEffect(() => {
-    const sorted = items.map((item) => item.revenue_p50).sort((left, right) => left - right);
-    const thresholds = REVENUE_COLORS.slice(1).map((_, index) =>
-      sorted.length
-        ? sorted[Math.floor(((index + 1) * (sorted.length - 1)) / REVENUE_COLORS.length)]
-        : 0,
-    );
+    if (selected)
+      map.current?.easeTo({
+        center: [selected.lon, selected.lat],
+        duration: 600,
+        essential: false,
+      });
+  }, [selected]);
+  useEffect(() => {
+    const scale = metricScale(items, metric);
     overlay.current?.setProps({
       layers: [
         new H3HexagonLayer<HexScore>({
-          id: 'revenue-hexagons',
+          id: 'forecast-hexagons',
           data: items,
           getHexagon: (item) => item.h3,
-          getFillColor: (item) =>
-            REVENUE_COLORS[thresholds.filter((threshold) => item.revenue_p50 >= threshold).length],
-          getLineColor: [255, 255, 255, 110],
+          getFillColor: scale.color,
+          getLineColor: [255, 255, 255, 105],
           lineWidthMinPixels: 0.5,
           extruded: false,
           pickable: true,
           opacity: HEX_OPACITY,
-          updateTriggers: { getFillColor: [items] },
+          updateTriggers: { getFillColor: [items, metric] },
+          onClick: ({ object }: PickingInfo<HexScore>) => {
+            if (object && !disabledRef.current) {
+              const [lat, lon] = cellToLatLng(object.h3);
+              selectRef.current({ lat, lon });
+            }
+            return true;
+          },
+        }),
+        new ScatterplotLayer<Competitor>({
+          id: 'competitors',
+          data: competitors,
+          getPosition: (item) => [item.lon, item.lat],
+          getFillColor: [20, 35, 58, 235],
+          getLineColor: [255, 255, 255],
+          stroked: true,
+          lineWidthMinPixels: 1,
+          getRadius: 4,
+          radiusUnits: 'pixels',
+          pickable: true,
+          onClick: ({ object }: PickingInfo<Competitor>) => {
+            if (object && !disabledRef.current)
+              selectRef.current({ lat: object.lat, lon: object.lon });
+            return true;
+          },
+        }),
+        new ScatterplotLayer<SelectedLocation>({
+          id: 'selected-location',
+          data: selected ? [selected] : [],
+          getPosition: (item) => [item.lon, item.lat],
+          getRadius: 9,
+          radiusUnits: 'pixels',
+          getFillColor: [181, 84, 28],
+          getLineColor: [255, 255, 255],
+          stroked: true,
+          lineWidthMinPixels: 3,
+          pickable: false,
         }),
       ],
-      getTooltip: ({ object }: { object?: HexScore }) =>
-        object ? { text: `Выручка в месяц\n${rubles(object.revenue_p50)}` } : null,
+      getTooltip: ({ object }: PickingInfo<HexScore | Competitor>) =>
+        object
+          ? {
+              text:
+                'source' in object
+                  ? `${object.name}\nИсточник: ${object.source === 'osm' ? 'OpenStreetMap' : 'data.mos.ru'}`
+                  : `${metric === 'revenue' ? 'Выручка в месяц' : 'Окупаемость'}\n${scale.format(metric === 'revenue' ? object.revenue_p50 : object.payback_months_p50)}`,
+            }
+          : null,
+      getCursor: ({ isHovering }: { isHovering: boolean }) =>
+        disabled ? 'progress' : isHovering ? 'pointer' : 'grab',
     });
-  }, [items]);
-
+  }, [items, competitors, metric, selected, disabled]);
   return (
     <>
       <div ref={container} className="map-canvas" aria-label={`Карта ${city.name}`} />
