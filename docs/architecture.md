@@ -15,6 +15,7 @@ research/ (параметры ниш, аренда, налоги) → model
 | Модель | `src/geostart/model/` | Роман | `data/processed/`, `research/` | `data/scores/<city>_<niche>.parquet`, `LocationReport` |
 | API | `src/geostart/api/` | Фёдор | `data/processed/`, `data/scores/`, функции модели | HTTP `/api/v1` |
 | Интерфейс | `web/` | Алексей | HTTP `/api/v1` | карта и отчёт в браузере |
+| Продукт | `docs/product/` | Никита, переносит Фёдор | интервью, опрос, открытые источники | проблема, рынок, метрики, опрос |
 
 Общие модели ответов (`CityInfo`, `HexesResponse`, `LocationReport` и другие) лежат в `src/geostart/schemas.py:LocationReport` и используются моделью и API одновременно, поэтому формат ответа задаётся в одном месте. Чтение конфигурации городов и ниш выполняет `src/geostart/config.py:load_cities` и `load_niches`, пути к каталогам задаёт `src/geostart/settings.py`.
 
