@@ -1,4 +1,5 @@
 import argparse
+import json
 from functools import cache
 from pathlib import Path
 
@@ -210,6 +211,10 @@ def build_addresses(city_code: str) -> pd.DataFrame:
     return frame[ADDRESS_COLUMNS]
 
 
+def fixture_boundary(city_code: str) -> dict:
+    return h3.cells_to_geo(fixture_cells(get_city(city_code)))
+
+
 def write_fixtures(city_code: str, target_dir: Path | None = None) -> Path:
     target = target_dir or processed_dir(city_code)
     target.mkdir(parents=True, exist_ok=True)
@@ -217,6 +222,7 @@ def write_fixtures(city_code: str, target_dir: Path | None = None) -> Path:
     build_competitors(city_code).to_parquet(target / "competitors.parquet", index=False)
     build_wages(city_code).to_parquet(target / "wages.parquet", index=False)
     build_addresses(city_code).to_parquet(target / "addresses.parquet", index=False)
+    (target / "boundary.geojson").write_text(json.dumps(fixture_boundary(city_code)), encoding="utf-8")
     return target
 
 
