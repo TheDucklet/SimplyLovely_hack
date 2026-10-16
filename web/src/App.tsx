@@ -26,6 +26,7 @@ export function App() {
   const [version, setVersion] = useState('');
   const [reload, setReload] = useState(0);
   const [bankAction, setBankAction] = useState<string | null>(null);
+  const [creditMode, setCreditMode] = useState(false);
   const reportState = useLocationReport(cityCode, nicheCode);
   const secondReportState = useLocationReport(cityCode, nicheCode);
   const [comparisonEnabled, setComparisonEnabled] = useState(false);
@@ -110,9 +111,18 @@ export function App() {
           </span>
           ГеоСтарт<span className="brand-note">Место имеет значение</span>
         </a>
-        <span className="pilot-label">
-          {useMocks ? 'Демонстрация · Москва, кофейня' : 'Пилот для малого бизнеса'}
-        </span>
+        <div className="header-actions">
+          <button
+            className="credit-mode-toggle"
+            aria-pressed={creditMode}
+            onClick={() => setCreditMode((enabled) => !enabled)}
+          >
+            Кредитный специалист
+          </button>
+          <span className="pilot-label">
+            {useMocks ? 'Демонстрация · Москва, кофейня' : 'Пилот для малого бизнеса'}
+          </span>
+        </div>
       </header>
       <div className="toolbar" aria-label="Настройки карты">
         <label className="select-field">
@@ -271,6 +281,7 @@ export function App() {
         </section>
         {comparisonEnabled ? (
           <ComparisonPanel
+            creditMode={creditMode}
             first={reportState}
             second={secondReportState}
             activeSlot={activeSlot}
@@ -282,6 +293,7 @@ export function App() {
           />
         ) : reportState.location ? (
           <ReportPanel
+            creditMode={creditMode}
             state={reportState}
             onBankAction={setBankAction}
             cityName={city?.name || cityCode}

@@ -30,6 +30,7 @@ export function ComparisonPanel({
   onBankAction,
   cityName,
   nicheName,
+  creditMode,
 }: {
   first: ReportState;
   second: ReportState;
@@ -39,6 +40,7 @@ export function ComparisonPanel({
   onBankAction: (action: string) => void;
   cityName: string;
   nicheName: string;
+  creditMode: boolean;
 }): ReactElement {
   const compatible =
     first.report?.city === second.report?.city &&
@@ -109,6 +111,7 @@ export function ComparisonPanel({
       <div className="comparison-reports">
         <ReportPanel
           state={first}
+          creditMode={creditMode}
           cityName={cityName}
           nicheName={nicheName}
           onBankAction={onBankAction}
@@ -122,6 +125,7 @@ export function ComparisonPanel({
         {second.location ? (
           <ReportPanel
             state={second}
+            creditMode={creditMode}
             cityName={cityName}
             nicheName={nicheName}
             onBankAction={onBankAction}

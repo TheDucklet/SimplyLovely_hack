@@ -1596,3 +1596,170 @@ h1 {
 .business-plan-export .inline-error {
   margin-bottom: 0;
 }
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.credit-mode-toggle {
+  font-size: 12px;
+  line-height: 1.35;
+  padding: 9px 12px;
+  max-width: 170px;
+}
+.credit-mode-toggle[aria-pressed='true'] {
+  border-color: #b5541c;
+  background: #f5f4ef;
+  box-shadow: inset 0 0 0 1px #b5541c;
+}
+.credit-assessment {
+  margin: 18px 0 24px;
+  border: 1px solid #d8dcd6;
+  border-radius: 10px;
+  padding: 16px;
+  background: #f9f9f6;
+}
+.credit-assessment h3 {
+  font-size: 15px;
+  margin: 0 0 16px;
+}
+.credit-assessment > label {
+  display: block;
+  font-size: 11px;
+  margin-bottom: 7px;
+}
+.credit-assessment > input {
+  width: 100%;
+  min-width: 0;
+  padding: 11px;
+  border: 1px solid #c4cbc3;
+  border-radius: 7px;
+  background: #fff;
+  color: #14233a;
+  font-size: 15px;
+}
+.credit-assessment > input[aria-invalid='true'] {
+  border-color: #9d3c26;
+}
+.credit-assessment .section-note {
+  font-size: 10px;
+  margin: 8px 0 12px;
+}
+.credit-verdict {
+  padding: 12px;
+  background: #e8f1e9;
+  border-left: 3px solid #21634a;
+  border-radius: 4px;
+  font-size: 12px;
+  line-height: 1.55;
+  margin-top: 15px;
+}
+.credit-verdict p {
+  margin: 6px 0 0;
+}
+.credit-below,
+.credit-above {
+  background: #f6e8dc;
+  border-left-color: #8a431b;
+}
+.revenue-chart {
+  margin-top: 24px;
+}
+.revenue-chart-track {
+  position: relative;
+  height: 24px;
+  border-radius: 4px;
+  background: #e2e6df;
+}
+.revenue-chart-range {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  min-width: 2px;
+  background: #8eae99;
+  border-radius: 3px;
+}
+.revenue-chart-median {
+  position: absolute;
+  top: -4px;
+  bottom: -4px;
+  border-left: 2px dashed #21634a;
+}
+.revenue-chart-plan {
+  position: absolute;
+  top: -6px;
+  height: 36px;
+  width: 4px;
+  background: #14233a;
+  border-radius: 3px;
+  transform: translateX(-50%);
+}
+.revenue-chart-scale {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 9px;
+  color: #58645e;
+  margin-top: 10px;
+}
+.revenue-chart-scale span {
+  max-width: 60%;
+  overflow-wrap: anywhere;
+}
+.revenue-chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px 14px;
+  font-size: 10px;
+  line-height: 1.5;
+  margin-top: 14px;
+}
+.revenue-chart-legend > span {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.revenue-chart-legend i {
+  width: 10px;
+  height: 10px;
+  flex-shrink: 0;
+}
+.range-key {
+  background: #8eae99;
+}
+.median-key {
+  border-left: 2px dashed #21634a;
+}
+.plan-key {
+  background: #14233a;
+}
+.credit-range-values {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px solid #d8dcd6;
+  margin: 16px 0 0;
+}
+.credit-range-values dt {
+  font-size: 10px;
+  color: #58645e;
+}
+.credit-range-values dd {
+  font-size: 11px;
+  margin: 5px 0 0;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 760px) {
+  .header-actions {
+    gap: 0;
+  }
+  .credit-mode-toggle {
+    max-width: 140px;
+    padding: 7px 9px;
+    font-size: 10px;
+  }
+  .credit-assessment {
+    padding: 12px;
+  }
+}

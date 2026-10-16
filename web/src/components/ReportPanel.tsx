@@ -4,6 +4,7 @@ import type { useLocationReport } from '../hooks/useLocationReport';
 import { decimal, months, number, rubles } from '../format';
 import { useMocks } from '../api/client';
 import { BusinessPlanButton } from './BusinessPlanButton';
+import { CreditAssessment } from './CreditAssessment';
 
 const RISK_LABELS: Record<RiskLevel, string> = {
   low: 'Низкий риск',
@@ -42,6 +43,7 @@ export function ReportPanel({
   titleId = 'report-title',
   onClose,
   onCompare,
+  creditMode,
 }: {
   state: ReturnType<typeof useLocationReport>;
   onBankAction: (action: string) => void;
@@ -51,6 +53,7 @@ export function ReportPanel({
   titleId?: string;
   onClose?: () => void;
   onCompare?: () => void;
+  creditMode: boolean;
 }) {
   const { location, report, pending, error, area, rent, setArea, setRent, invalid, close, retry } =
     state;
@@ -162,6 +165,14 @@ export function ReportPanel({
               <i />
               {RISK_LABELS[report.risk_level]}
             </span>
+            {creditMode && (
+              <CreditAssessment
+                range={report.revenue_month}
+                value={state.planRevenue}
+                onChange={state.setPlanRevenue}
+                ready={state.reportIsCurrent && !pending && !invalid && !error}
+              />
+            )}
             <section className="report-section">
               <h3>Расходы в месяц</h3>
               <table className="costs-table">

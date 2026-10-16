@@ -19,6 +19,7 @@ export function useLocationReport(city: string, niche: string) {
   const [error, setError] = useState('');
   const [area, setArea] = useState('');
   const [rent, setRent] = useState('');
+  const [planRevenue, setPlanRevenue] = useState('');
   const busy = useRef(false);
   const queued = useRef<ReportRequest | null>(null);
   const epoch = useRef(0);
@@ -75,6 +76,7 @@ export function useLocationReport(city: string, niche: string) {
     setError('');
     setArea('');
     setRent('');
+    setPlanRevenue('');
   }, []);
   useEffect(() => {
     close();
@@ -90,6 +92,7 @@ export function useLocationReport(city: string, niche: string) {
       setCompletedRequest(null);
       setArea('');
       setRent('');
+      setPlanRevenue('');
       request({
         city,
         niche,
@@ -154,6 +157,8 @@ export function useLocationReport(city: string, niche: string) {
     rent,
     setArea,
     setRent,
+    planRevenue,
+    setPlanRevenue,
     invalid,
     select,
     close,
