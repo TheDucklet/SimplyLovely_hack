@@ -58,6 +58,18 @@ uv run ruff check
 uv run pytest
 ```
 
+### Веб-интерфейс
+
+После запуска API откройте второй терминал:
+
+```powershell
+cd web
+npm ci
+npm run dev
+```
+
+Откройте http://localhost:5173. Интерфейс использует реальные данные API по умолчанию. Переменные VITE_API_URL, VITE_USE_MOCKS и VITE_MAP_STYLE_URL задаются в web/.env.local по образцу web/.env.example. Устройство, автономный режим, проверки и production-сборка описаны в [docs/web.md](docs/web.md).
+
 ## Настройка
 
 Параметры задаются переменными окружения, пример лежит в `.env.example`.
@@ -79,6 +91,7 @@ uv run pytest
 | [docs/architecture.md](docs/architecture.md) | компоненты, поток данных, владельцы каталогов |
 | [docs/contracts.md](docs/contracts.md) | схемы данных, интерфейс модели, HTTP API |
 | [docs/api.md](docs/api.md) | режимы работы API и заглушки |
+| [docs/web.md](docs/web.md) | интерфейс, настройки, запуск и сборка |
 | [docs/data-sources.md](docs/data-sources.md) | источники данных и способы оценки признаков |
 | [docs/decisions.md](docs/decisions.md) | журнал решений |
 | [docs/security.md](docs/security.md) | защита данных и развёртывание в контуре банка |
