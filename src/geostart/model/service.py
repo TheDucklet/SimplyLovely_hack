@@ -33,6 +33,7 @@ from geostart.model.finance import (
     risk_levels,
     sample_finance_parameters,
 )
+from geostart.research import city_parameters
 from geostart.schemas import (
     Assumption,
     LocationReport,
@@ -77,7 +78,7 @@ def load_inputs(city: str, niche: str) -> CityInputs:
     directory = city_directory(city)
     root = settings.research_dir()
     with (root / "niche_params" / f"{niche}.yaml").open(encoding="utf-8") as stream:
-        parameters = yaml.safe_load(stream)
+        parameters = city_parameters(yaml.safe_load(stream), city)
     with (root / "taxes" / "2026.yaml").open(encoding="utf-8") as stream:
         taxes = yaml.safe_load(stream)
     features = pd.read_parquet(directory / "hex_features.parquet")

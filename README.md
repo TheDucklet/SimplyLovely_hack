@@ -82,7 +82,7 @@ npm run dev
 | `GEOSTART_CONFIG_DIR` | `config/` в корне репозитория | каталог с `cities.yaml` и `niches.yaml` |
 | `GEOSTART_CORS_ORIGINS` | `http://localhost:5173,http://localhost:4173` | адреса интерфейса, которым разрешены запросы к API, через запятую |
 
-Города и ниши описаны в `config/cities.yaml` и `config/niches.yaml`. Параметры ниш, ставки аренды и налоги лежат в `research/`, до результатов исследования там стоят условные значения с пометкой `status: placeholder`.
+Города и ниши описаны в `config/cities.yaml` и `config/niches.yaml`. Параметры ниш, ставки аренды и налоги лежат в `research/`. Параметры ниш с 2026-10-16 взяты из исследования Ивана (S1-I2), а ставки аренды и налоги до задач S1-I3 и S1-I4 остаются условными значениями с пометкой `status: placeholder`.
 
 ## Устройство
 
