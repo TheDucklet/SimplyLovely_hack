@@ -16,6 +16,10 @@ cities:
       population: 13274285
       date: 2025-01-01
       source: https://expert.ru/news/chislennost-naseleniya-moskvy-dostigla-13-3-mln-chelovek/
+    population_districts:
+      file: population/moscow_districts.csv
+      date: 2025-01-01
+      source: https://ru.wikipedia.org/wiki/Районы_Москвы
     mos_ru_catering:
       dataset_id: 1903
       url: https://data-v2.mos.ru/api/v2/odata/export/catalog?idFile=38236891
