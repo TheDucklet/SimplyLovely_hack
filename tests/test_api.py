@@ -81,6 +81,36 @@ def test_report_outside_city_is_rejected_in_russian() -> None:
     assert response.json()["detail"] == "Точка вне границ города moscow, выберите место внутри МКАД"
 
 
+def test_invalid_area_is_rejected_in_russian() -> None:
+    payload = {"city": "moscow", "niche": "coffee", "lat": 55.7558, "lon": 37.6176, "area_m2": 0}
+    response = client.post("/api/v1/report", json=payload)
+    assert response.status_code == 422
+    assert response.json()["detail"] == "Значение поля «площадь» должно быть больше 0"
+
+
+def test_missing_and_malformed_fields_are_listed_in_russian() -> None:
+    payload = {"city": "moscow", "niche": "coffee", "lat": "север"}
+    response = client.post("/api/v1/report", json=payload)
+    detail = response.json()["detail"]
+    assert response.status_code == 422
+    assert "Значение поля «широта» должно быть числом" in detail
+    assert "Не указано поле «долгота»" in detail
+
+
+def test_invalid_json_is_rejected_in_russian() -> None:
+    response = client.post("/api/v1/report", content="{", headers={"Content-Type": "application/json"})
+    assert response.status_code == 422
+    assert response.json()["detail"] == "Тело запроса не является корректным JSON"
+
+
+def test_preview_origin_is_allowed_by_default() -> None:
+    response = client.options(
+        "/api/v1/cities",
+        headers={"Origin": "http://localhost:4173", "Access-Control-Request-Method": "GET"},
+    )
+    assert response.headers["access-control-allow-origin"] == "http://localhost:4173"
+
+
 def test_unknown_city_returns_404() -> None:
     response = client.get("/api/v1/hexes", params={"city": "kazan", "niche": "coffee"})
     assert response.status_code == 404

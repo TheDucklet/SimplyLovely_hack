@@ -2,10 +2,12 @@ from collections.abc import Callable
 
 import psycopg
 from fastapi import APIRouter, FastAPI, HTTPException, Query
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 
 from geostart.api import data_backend, mocks
+from geostart.api.validation import validation_error_handler
 from geostart.config import (
     CityConfig,
     NicheConfig,
@@ -129,4 +131,5 @@ app.add_middleware(
     CORSMiddleware, allow_origins=cors_origins(), allow_methods=["GET", "POST"], allow_headers=["*"]
 )
 app.add_middleware(GZipMiddleware, minimum_size=GZIP_MINIMUM_BYTES)
+app.add_exception_handler(RequestValidationError, validation_error_handler)
 app.include_router(router)
