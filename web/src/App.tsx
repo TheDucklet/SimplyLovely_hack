@@ -5,6 +5,8 @@ import { MapView } from './components/MapView';
 import { Search } from './components/Search';
 import { Legend } from './components/Legend';
 import { ReportPanel } from './components/ReportPanel';
+import { ComparisonPanel } from './components/ComparisonPanel';
+import type { ReportSlot } from './comparison';
 import { BankModal } from './components/BankModal';
 import { useLocationReport } from './hooks/useLocationReport';
 import { message, number, rubles } from './format';
@@ -25,6 +27,17 @@ export function App() {
   const [reload, setReload] = useState(0);
   const [bankAction, setBankAction] = useState<string | null>(null);
   const reportState = useLocationReport(cityCode, nicheCode);
+  const secondReportState = useLocationReport(cityCode, nicheCode);
+  const [comparisonEnabled, setComparisonEnabled] = useState(false);
+  const [activeSlot, setActiveSlot] = useState<ReportSlot>('first');
+  const activeReport =
+    comparisonEnabled && activeSlot === 'second' ? secondReportState : reportState;
+  const reportPending = reportState.pending || secondReportState.pending;
+  function stopComparison(): void {
+    setComparisonEnabled(false);
+    setActiveSlot('first');
+    secondReportState.close();
+  }
   const city = cities.find((item) => item.code === cityCode);
   const niche = niches.find((item) => item.code === nicheCode);
 
@@ -107,7 +120,10 @@ export function App() {
           <select
             aria-label="Город"
             value={cityCode}
-            onChange={(event) => setCityCode(event.target.value)}
+            onChange={(event) => {
+              setCityCode(event.target.value);
+              stopComparison();
+            }}
             disabled={!cities.length}
           >
             {cities.map((item) => (
@@ -122,7 +138,10 @@ export function App() {
           <select
             aria-label="Бизнес"
             value={nicheCode}
-            onChange={(event) => setNicheCode(event.target.value)}
+            onChange={(event) => {
+              setNicheCode(event.target.value);
+              stopComparison();
+            }}
             disabled={!niches.length}
           >
             {niches.map((item) => (
@@ -133,10 +152,10 @@ export function App() {
           </select>
         </label>
         <Search
-          key={cityCode}
+          key={`${cityCode}-${nicheCode}-${comparisonEnabled ? activeSlot : 'single'}`}
           city={cityCode}
-          disabled={reportState.pending || !data}
-          onSelect={reportState.select}
+          disabled={reportPending || !data}
+          onSelect={activeReport.select}
         />
         <div className="metric-field">
           <span className="field-label">Показать на карте</span>
@@ -150,7 +169,9 @@ export function App() {
           </div>
         </div>
       </div>
-      <main className={`workspace${reportState.location ? ' has-report' : ''}`}>
+      <main
+        className={`workspace${reportState.location ? ' has-report' : ''}${comparisonEnabled ? ' is-comparing' : ''}`}
+      >
         <aside className="intro-panel">
           <p className="eyebrow">ОТКРЫВАЙТЕ С ПОНИМАНИЕМ</p>
           <h1>
@@ -187,7 +208,10 @@ export function App() {
         </aside>
         <section className="map-region" aria-label="Карта прогноза">
           {reportState.location && (
-            <a className="skip-map" href="#report-title">
+            <a
+              className="skip-map"
+              href={comparisonEnabled ? `#report-${activeSlot}-title` : '#report-title'}
+            >
               Перейти к отчёту
             </a>
           )}
@@ -197,9 +221,9 @@ export function App() {
               items={data?.items || []}
               competitors={data && showCompetitors ? competitors : []}
               metric={metric}
-              selected={reportState.location}
-              disabled={reportState.pending || !data}
-              onSelect={reportState.select}
+              selected={activeReport.location}
+              disabled={reportPending || !data}
+              onSelect={activeReport.select}
             />
           )}
           <div className="map-heading">
@@ -238,10 +262,32 @@ export function App() {
           )}
           {data && <Legend items={data.items} metric={metric} />}
           <div className="map-hint" role="status">
-            {reportState.pending ? 'Рассчитываем отчёт…' : 'Нажмите на участок для оценки'}
+            {reportPending
+              ? 'Рассчитываем отчёт…'
+              : comparisonEnabled
+                ? `Выберите адрес ${activeSlot === 'first' ? '1' : '2'} для сравнения`
+                : 'Нажмите на участок для оценки'}
           </div>
         </section>
-        {reportState.location && <ReportPanel state={reportState} onBankAction={setBankAction} />}
+        {comparisonEnabled ? (
+          <ComparisonPanel
+            first={reportState}
+            second={secondReportState}
+            activeSlot={activeSlot}
+            onSelectSlot={setActiveSlot}
+            onClose={stopComparison}
+            onBankAction={setBankAction}
+          />
+        ) : reportState.location ? (
+          <ReportPanel
+            state={reportState}
+            onBankAction={setBankAction}
+            onCompare={() => {
+              setComparisonEnabled(true);
+              setActiveSlot('second');
+            }}
+          />
+        ) : null}
       </main>
       <footer className="footer">
         <span>Simply Lovely · ГеоСтарт</span>

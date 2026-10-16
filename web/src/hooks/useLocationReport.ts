@@ -13,6 +13,7 @@ export interface SelectedLocation {
 export function useLocationReport(city: string, niche: string) {
   const [location, setLocation] = useState<SelectedLocation | null>(null);
   const [report, setReport] = useState<LocationReport | null>(null);
+  const [completedRequest, setCompletedRequest] = useState<ReportRequest | null>(null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState('');
   const [area, setArea] = useState('');
@@ -48,6 +49,7 @@ export function useLocationReport(city: string, niche: string) {
           const result = await api.report(next);
           if (mounted.current && context === epoch.current && !queued.current) {
             setReport(result);
+            setCompletedRequest(next);
             setError('');
           }
         } catch (cause) {
@@ -66,6 +68,7 @@ export function useLocationReport(city: string, niche: string) {
     lastRequest.current = '';
     setLocation(null);
     setReport(null);
+    setCompletedRequest(null);
     setError('');
     setArea('');
     setRent('');
@@ -80,6 +83,7 @@ export function useLocationReport(city: string, niche: string) {
       lastRequest.current = '';
       setLocation(point);
       setReport(null);
+      setCompletedRequest(null);
       setArea('');
       setRent('');
       request({
@@ -126,9 +130,19 @@ export function useLocationReport(city: string, niche: string) {
         true,
       );
   };
+  const reportIsCurrent =
+    !!completedRequest &&
+    !!location &&
+    completedRequest.city === city &&
+    completedRequest.niche === niche &&
+    completedRequest.lat === location.lat &&
+    completedRequest.lon === location.lon &&
+    completedRequest.area_m2 === (area === '' ? null : Number(area)) &&
+    completedRequest.rent_rub_m2_month === (rent === '' ? null : Number(rent));
   return {
     location,
     report,
+    reportIsCurrent,
     pending,
     error,
     area,

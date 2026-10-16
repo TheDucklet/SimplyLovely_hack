@@ -35,9 +35,17 @@ function Source({ assumption }: { assumption: Assumption }) {
 export function ReportPanel({
   state,
   onBankAction,
+  heading = 'Отчёт по адресу',
+  titleId = 'report-title',
+  onClose,
+  onCompare,
 }: {
   state: ReturnType<typeof useLocationReport>;
   onBankAction: (action: string) => void;
+  heading?: string;
+  titleId?: string;
+  onClose?: () => void;
+  onCompare?: () => void;
 }) {
   const { location, report, pending, error, area, rent, setArea, setRent, invalid, close, retry } =
     state;
@@ -51,20 +59,37 @@ export function ReportPanel({
     location.address ||
     `${location.lat.toFixed(5)}, ${location.lon.toFixed(5)}`;
   return (
-    <aside className="report-panel" aria-labelledby="report-title">
+    <aside className="report-panel" aria-labelledby={titleId}>
       <header className="report-heading">
         <div>
           <span className="eyebrow">ОЦЕНКА МЕСТА</span>
-          <h2 id="report-title" ref={title} tabIndex={-1}>
-            Отчёт по адресу
+          <h2 id={titleId} ref={title} tabIndex={-1}>
+            {heading}
           </h2>
         </div>
-        <button className="icon-button" aria-label="Закрыть отчёт" onClick={close}>
+        <button
+          className="icon-button"
+          aria-label={
+            titleId === 'report-title'
+              ? 'Закрыть отчёт'
+              : `Закрыть ${heading.toLocaleLowerCase('ru')}`
+          }
+          onClick={onClose || close}
+        >
           ×
         </button>
       </header>
       <div className="report-content">
         <p className="report-address">{address}</p>
+        {onCompare && report && (
+          <button
+            className="start-comparison"
+            onClick={onCompare}
+            disabled={pending || invalid || !!error || !state.reportIsCurrent || useMocks}
+          >
+            Сравнить с другим адресом
+          </button>
+        )}
         <div className="report-controls">
           <label>
             Площадь, м²

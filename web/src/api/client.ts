@@ -8,10 +8,12 @@ import type {
   NicheInfo,
   ReportRequest,
 } from './types';
+import { createRequestQueue } from './requestQueue';
 
 export const useMocks = import.meta.env.VITE_USE_MOCKS === 'true';
 const apiUrl = (import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000').replace(/\/$/, '');
 const fixtures = import.meta.glob('../mocks/*.json', { import: 'default' });
+const queueReport = createRequestQueue<LocationReport>();
 
 export class ApiError extends Error {
   constructor(
@@ -84,12 +86,14 @@ export const api = {
         )
       : request(`/search?${new URLSearchParams({ city, q })}`, { signal }),
   report: (body: ReportRequest, signal?: AbortSignal): Promise<LocationReport> =>
-    useMocks
-      ? fixture('report')
-      : request('/report', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
-          signal,
-        }),
+    queueReport(() =>
+      useMocks
+        ? fixture('report')
+        : request('/report', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+            signal,
+          }),
+    ),
 };
