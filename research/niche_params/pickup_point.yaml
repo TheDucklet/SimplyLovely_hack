@@ -1,19 +1,111 @@
 niche: pickup_point
 currency: RUB
 period: month
-updated: 2026-10-15
-status: placeholder
+updated: 2026-10-16
 demand:
-  orders_per_resident_month: {p10: 2.0, p50: 3.5, p90: 5.0, source: null, note: "условное значение до S1-I2"}
-  marketplace_share: {p10: 0.25, p50: 0.35, p90: 0.45, source: null, note: "условное значение до S1-I2"}
-  payout_per_order_rub: {p10: 12, p50: 18, p90: 25, source: null, note: "условное значение до S1-I2"}
-  max_walk_distance_m: {p10: 300, p50: 600, p90: 1000, source: null, note: "условное значение до S1-I2"}
-  distance_decay_beta: {p10: 2.0, p50: 3.0, p90: 4.0, source: null, note: "условное значение до S1-I2"}
+  orders_per_resident_month:
+    p10: 2.8
+    p50: 3.8
+    p90: 5.0
+    source: "https://www.forbes.ru/biznes/558355-rost-cisla-internet-zakazov-v-2025-godu-okazalsa-minimal-nym-za-vosem-let"
+    note: "пересчёт данных Data Insight (опубликовано в Forbes 31.03.2026): 8,3 млрд заказов интернет-торговли в 2025 году, доля маркетплейсов 81% (6,723 млрд заказов в год или 560,25 млн в месяц), население РФ по Росстату 146,1 млн чел., среднее 3,83 заказа на жителя в месяц"
+  orders_per_resident_month_moscow:
+    p10: 3.5
+    p50: 4.5
+    p90: 5.8
+    source: null
+    note: "допущение: расчётная оценка команды на базе среднего по РФ (3,83 заказа по данным Data Insight в Forbes от 31.03.2026) с поправкой на повышенную частоту онлайн-покупок в Москве"
+  orders_per_resident_month_tula:
+    p10: 2.5
+    p50: 3.4
+    p90: 4.4
+    source: null
+    note: "допущение: расчётная оценка команды на базе среднего по РФ (3,83 заказа по данным Data Insight в Forbes от 31.03.2026) для регионального центра"
+  marketplace_share:
+    p10: 0.78
+    p50: 0.85
+    p90: 0.90
+    source: null
+    note: "допущение: расчётная оценка команды доли классических ПВЗ в выдаче заказов всех маркетплейсов (в открытых выдержках из отчёта Data Insight за февраль 2026 года приведена общая доля самовывоза около 90% вместе с постаматами, за вычетом 4-6% постаматов и 8-12% курьерской доставки медиана классических ПВЗ принята равной 0,85)"
+  payout_per_order_rub:
+    p10: 50
+    p50: 70
+    p90: 95
+    source: "https://www.sravni.ru/registraciya-ip-yur-lic/info/kak-otkryt-pvz-wildberries-v-2026-godu/"
+    note: "средневзвешенная выплата за заказ по тарифам Wildberries (2-6% в зависимости от зоны, 3-5% для крупного города по обзору Сравни.ру от 06.10.2026), Ozon (5% от оборота, не более 250 руб. за товар по обзору Банки.ру от 19.08.2026) и Яндекс Маркета (10%, не более 750 руб. за заказ по обзору Сравни.ру от 16.04.2026) при среднем чеке заказа 1615 руб. (Forbes от 31.03.2026)"
+  max_walk_distance_m:
+    p10: 250
+    p50: 500
+    p90: 800
+    source: "https://pay.yandex.ru/blog/articles/kak-otkryt-pvz-ozon-s-nulya"
+    note: "типичный радиус охвата ПВЗ в городах составляет 500 м, минимальная дистанция между точками одного бренда 250 м (руководство Яндекс Пэй от 16.01.2026)"
+  distance_decay_beta:
+    p10: 2.0
+    p50: 2.5
+    p90: 3.0
+    source: "https://www.mktpraxis.com/apps/advanced/huff_model/main_huff_model"
+    note: "прямых оценок для России нет, взяты параметры модели Хаффа для точек шаговой доступности, где покупатель выбирает ближайший объект (публикация от 12.03.2026)"
+  outside_option_weight:
+    p10: 0.01
+    p50: 0.05
+    p90: 0.10
+    source: null
+    note: "допущение: вес внешней альтернативы около нуля, поскольку доля ПВЗ уже учтена в marketplace_share и покупатель выбирает среди пунктов поблизости"
 costs:
-  area_m2: {p10: 30, p50: 50, p90: 80, source: null, note: "условное значение до S1-I2"}
-  staff_count: {p10: 1, p50: 2, p90: 3, source: null, note: "условное значение до S1-I2"}
+  area_m2:
+    p10: 25
+    p50: 35
+    p90: 55
+    source: "https://www.sravni.ru/registraciya-ip-yur-lic/info/kak-otkryt-pvz-wildberries-v-2026-godu/"
+    note: "требования к площади ПВЗ в городах в 2026 году: от 20 м2 у Ozon и от 30-50 м2 у Wildberries (обзор Сравни.ру, обновлено 06.10.2026)"
+  staff_count:
+    p10: 2
+    p50: 2
+    p90: 3
+    source: "https://www.sravni.ru/registraciya-ip-yur-lic/info/kak-otkryt-pvz-wildberries-v-2026-godu/"
+    note: "два оператора в сменном графике 2/2 при ежедневной работе с 9:00 до 21:00, третий сотрудник на пиковые нагрузки (обзор Сравни.ру, обновлено 06.10.2026)"
   wage_profession: pickup_operator
-  cogs_share_of_revenue: {p10: 0.0, p50: 0.0, p90: 0.0, source: null, note: "у пункта выдачи нет себестоимости товара"}
-  other_opex_rub: {p10: 15000, p50: 30000, p90: 50000, source: null, note: "условное значение до S1-I2"}
-capex_rub: {p10: 600000, p50: 1200000, p90: 2000000, source: null, note: "условное значение до S1-I2"}
+  cogs_share_of_revenue:
+    p10: 0.01
+    p50: 0.02
+    p90: 0.04
+    source: null
+    note: "допущение: у ПВЗ нет себестоимости товаров, учитываются только расходные материалы (пакеты, скотч, термоэтикетки, канцелярия)"
+  other_opex_rub:
+    p10: 15000
+    p50: 25000
+    p90: 45000
+    source: "https://www.sravni.ru/registraciya-ip-yur-lic/info/kak-otkryt-pvz-wildberries-v-2026-godu/"
+    note: "коммунальные услуги, интернет, облачное хранение видеоархива (не менее 90 дней), пультовая охрана, уборка и резерв на штрафы (обзор Сравни.ру, обновлено 06.10.2026)"
+capex_rub:
+  p10: 230000
+  p50: 450000
+  p90: 800000
+  source: "https://www.sostav.ru/blogs/284331/78854"
+  note: "ремонт по стандарту бренда, мебель, складские стеллажи, оргтехника, видеонаблюдение и обеспечительный платёж (обзор Sostav.ru от 03.03.2026 и Яндекс Пэй от 16.01.2026)"
+capex_rub_moscow:
+  p10: 350000
+  p50: 600000
+  p90: 950000
+  source: "https://www.sostav.ru/blogs/284331/78854"
+  note: "стартовые затраты в Москве выше из-за стоимости ремонта, большего депозита по аренде и требований к площади (обзор Sostav.ru от 03.03.2026)"
+capex_rub_tula:
+  p10: 230000
+  p50: 400000
+  p90: 650000
+  source: "https://pay.yandex.ru/blog/articles/kak-otkryt-pvz-ozon-s-nulya"
+  note: "стартовые затраты в региональном городе от 230 тыс. руб. по данным Яндекс Пэй от 16.01.2026 и до 650-800 тыс. руб. по данным Sostav.ru от 03.03.2026"
 tax_regime_default: usn_income_6
+benchmarks:
+  revenue_rub_month_moscow:
+    p10: 300000
+    p50: 375000
+    p90: 450000
+    source: "https://www.sravni.ru/registraciya-ip-yur-lic/info/kak-otkryt-pvz-wildberries-v-2026-godu/"
+    note: "по данным Сравни.ру (обновлено 06.10.2026) месячный доход ПВЗ в городе-миллионнике составляет 300 000-450 000 руб., а дневная выручка составляет 6 000-26 250 руб. (в среднем 15 000 руб. в день или 450 000 руб. за 30 дней): за p10 взята нижняя граница месячного диапазона 300 000 руб., за p50 взята середина диапазона 300 000-450 000 руб. (375 000 руб.), за p90 взята верхняя граница 450 000 руб. (совпадающая со средней дневной выручкой 15 000 руб., умноженной на 30 дней)"
+  revenue_rub_month_tula:
+    p10: 200000
+    p50: 233000
+    p90: 294000
+    source: "https://oborot.ru/articles/83-tysyachi-rublej-v-mesyac-skolko-deneg-srednij-pvz-prinosit-svoemu-vladelcu-i-za-skolko-takie-biznesy-mozhno-kupit-i254460.html"
+    note: "по исследованию 65 действующих ПВЗ на Oborot.ru от 15.10.2025 средняя месячная выручка составила 200 000 руб. у Ozon, 215 000 руб. у Яндекс Маркета, 233 000 руб. у Wildberries и 294 000 руб. в среднем по всей выборке: за p10 взято среднее значение Ozon (200 000 руб.), за p50 взято среднее значение самой массовой сети Wildberries (233 000 руб., при этом у Яндекс Маркета 215 000 руб.), за p90 взято среднее по всей выборке с учётом крупных точек (294 000 руб.)"

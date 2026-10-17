@@ -8,6 +8,7 @@ import yaml
 from geostart import settings
 from geostart.model.data import load_demand_inputs
 from geostart.model.demand import DEFAULT_RUNS, DEFAULT_SEED, Niche, simulate_demand
+from geostart.research import city_parameters
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -25,7 +26,7 @@ def main(argv: list[str] | None = None) -> None:
     with (arguments.research_dir / "niche_params" / f"{arguments.niche}.yaml").open(
         encoding="utf-8"
     ) as stream:
-        parameters = yaml.safe_load(stream)
+        parameters = city_parameters(yaml.safe_load(stream), arguments.city)
     result = simulate_demand(
         features,
         competitors,

@@ -58,6 +58,28 @@ uv run ruff check
 uv run pytest
 ```
 
+### Веб-интерфейс
+
+После запуска API откройте второй терминал:
+
+```powershell
+cd web
+npm ci
+npm run dev
+```
+
+Откройте http://localhost:5173. Интерфейс использует реальные данные API по умолчанию. Переменные VITE_API_URL, VITE_USE_MOCKS и VITE_MAP_STYLE_URL задаются в web/.env.local по образцу web/.env.example. Устройство, автономный режим, проверки и production-сборка описаны в [docs/web.md](docs/web.md).
+
+### Демо-стенд в Docker
+
+API и собранный интерфейс поднимаются одной командой, если архив данных распакован в корень репозитория:
+
+```
+docker compose -f compose.demo.yml up -d --build --wait
+```
+
+Интерфейс открывается на `http://127.0.0.1:8080`, подробности в [docs/demo.md](docs/demo.md).
+
 ## Настройка
 
 Параметры задаются переменными окружения, пример лежит в `.env.example`.
@@ -68,9 +90,9 @@ uv run pytest
 | `GEOSTART_STORAGE` | `files` | `postgres` переключает карту, конкурентов и поиск на базу, параметры базы описаны в docs/storage.md |
 | `GEOSTART_DATA_DIR` | `data/` в корне репозитория | каталог данных |
 | `GEOSTART_CONFIG_DIR` | `config/` в корне репозитория | каталог с `cities.yaml` и `niches.yaml` |
-| `GEOSTART_CORS_ORIGINS` | `http://localhost:5173` | адреса интерфейса, которым разрешены запросы к API, через запятую |
+| `GEOSTART_CORS_ORIGINS` | `http://localhost:5173,http://localhost:4173` | адреса интерфейса, которым разрешены запросы к API, через запятую |
 
-Города и ниши описаны в `config/cities.yaml` и `config/niches.yaml`. Параметры ниш, ставки аренды и налоги лежат в `research/`, до результатов исследования там стоят условные значения с пометкой `status: placeholder`.
+Города и ниши описаны в `config/cities.yaml` и `config/niches.yaml`. Параметры ниш, ставки аренды и налоги лежат в `research/`. Параметры ниш с 2026-10-16 взяты из исследования Ивана (S1-I2), ставки аренды с 2026-10-16 построены по выборке объявлений Циан (`research/rent/notes.md`), а налоги до задачи S1-I4 остаются условными значениями с пометкой `status: placeholder`.
 
 ## Устройство
 
@@ -79,9 +101,12 @@ uv run pytest
 | [docs/architecture.md](docs/architecture.md) | компоненты, поток данных, владельцы каталогов |
 | [docs/contracts.md](docs/contracts.md) | схемы данных, интерфейс модели, HTTP API |
 | [docs/api.md](docs/api.md) | режимы работы API и заглушки |
+| [docs/web.md](docs/web.md) | интерфейс, настройки, запуск и сборка |
 | [docs/data-sources.md](docs/data-sources.md) | источники данных и способы оценки признаков |
 | [docs/decisions.md](docs/decisions.md) | журнал решений |
 | [docs/security.md](docs/security.md) | защита данных и развёртывание в контуре банка |
+| [docs/product/](docs/product/README.md) | проблема, рынок, конкуренты, метрики и опрос (материалы Никиты) |
+| [docs/demo.md](docs/demo.md) | демо-стенд в Docker, запуск и работа без интернета |
 | [docs/storage.md](docs/storage.md) | хранилище PostgreSQL с PostGIS, роли, загрузка |
 | [docs/rules.md](docs/rules.md) | правила текста и кода команды |
 | [AGENTS.md](AGENTS.md) | обязательные инструкции для ИИ-агентов |

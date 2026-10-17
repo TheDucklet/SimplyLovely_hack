@@ -1,5 +1,6 @@
 from datetime import date
 
+import geopandas as gpd
 import numpy as np
 import pandas as pd
 import pytest
@@ -159,3 +160,40 @@ def test_scope_calibration_matches_scope_population() -> None:
     rate = run.residents_per_m2_in(scope, 1000, buildings, "тестовый округ")
     inside_residential = features.residential_floor_area(buildings).iloc[0]
     assert rate * inside_residential == pytest.approx(1000)
+
+
+def test_district_calibration_matches_each_district_population() -> None:
+    from shapely.geometry import box
+
+    raw = building_rows(
+        [
+            {
+                "osm_id": f"w{index}",
+                "building": "apartments",
+                "building:levels": "9",
+                "wkb": square_wkb(lon, 55.75, 0.0002),
+            }
+            for index, lon in enumerate((37.60, 37.61, 37.70, 37.80))
+        ]
+    )
+    buildings = features.classify_buildings(raw)
+    polygons = gpd.GeoDataFrame(
+        {"district": ["арбат", "тверской"]},
+        geometry=[box(37.55, 55.70, 37.65, 55.80), box(37.66, 55.70, 37.75, 55.80)],
+        crs=geometry.GEOGRAPHIC_CRS,
+    )
+    district = run.buildings_district(buildings, polygons)
+    residential = features.residential_floor_area(buildings)
+    rates = {
+        "арбат": 1000 / residential[district == "арбат"].sum(),
+        "тверской": 300 / residential[district == "тверской"].sum(),
+    }
+    residents = run.residents_by_building(buildings, polygons, rates, fallback_rate=0.01)
+    assert residents[district == "арбат"].sum() == pytest.approx(1000)
+    assert residents[district == "тверской"].sum() == pytest.approx(300)
+    assert residents[district.isna()].sum() == pytest.approx(residential[district.isna()].sum() * 0.01)
+
+
+def test_district_names_match_regardless_of_admin_words_and_yo() -> None:
+    assert run.normalized_district("район Тёплый Стан") == run.normalized_district("Теплый Стан")
+    assert run.normalized_district("Пресненский район") == "пресненский"
