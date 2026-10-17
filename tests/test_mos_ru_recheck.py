@@ -1,4 +1,5 @@
 import hashlib
+import importlib.util
 import json
 from pathlib import Path
 
@@ -7,14 +8,13 @@ import pandas as pd
 import pytest
 
 from geostart.model.demand import cell_demand, competitor_attractiveness, prepare_model
-from geostart.model.recheck import (
-    binary_label_comparison,
-    competitors_for_scale,
-    input_changes_since_baseline,
-    legacy_osm_points,
-)
 from geostart.model.validation import edge_weights, point_simulation
 from geostart.pipeline.fixtures import write_fixtures
+
+SCRIPT_PATH = Path(__file__).resolve().parents[1] / "scripts" / "recheck.py"
+SCRIPT_SPEC = importlib.util.spec_from_file_location("recheck", SCRIPT_PATH)
+recheck = importlib.util.module_from_spec(SCRIPT_SPEC)
+SCRIPT_SPEC.loader.exec_module(recheck)
 
 PARAMETERS = {
     "visits_per_resident_month": 2.0,
@@ -46,7 +46,7 @@ def seat_data(tmp_path: Path) -> tuple[pd.DataFrame, pd.DataFrame]:
 def test_seat_experiments_keep_production_formula_and_input(scale: float, expected: list[float]) -> None:
     points = pd.DataFrame({"source": ["mos_ru", "mos_ru", "mos_ru", "osm"], "seats": [0, 6, 50, 100]})
     unchanged = points.copy(deep=True)
-    changed = competitors_for_scale(points, scale)
+    changed = recheck.competitors_for_scale(points, scale)
     np.testing.assert_allclose(competitor_attractiveness(changed), [*expected, 1])
     pd.testing.assert_frame_equal(points, unchanged)
 
@@ -54,7 +54,7 @@ def test_seat_experiments_keep_production_formula_and_input(scale: float, expect
 def test_legacy_reconstruction_preserves_colocated_osm_points(seat_data) -> None:
     _, points = seat_data
     labels = points[["poi_id", "h3"]]
-    rebuilt = legacy_osm_points(labels)
+    rebuilt = recheck.legacy_osm_points(labels)
     assert rebuilt.poi_id.tolist() == labels.poi_id.tolist()
     assert rebuilt.h3.value_counts().equals(labels.h3.value_counts())
     np.testing.assert_array_equal(competitor_attractiveness(rebuilt), np.ones(len(points)))
@@ -64,7 +64,7 @@ def test_binary_comparison_uses_same_controls_across_models_and_labels() -> None
     features = pd.DataFrame({"h3": [f"cell-{index}" for index in range(10)]})
     old = pd.DataFrame({"h3": ["cell-8"]})
     new = pd.DataFrame({"h3": ["cell-8", "cell-9"]})
-    results = binary_label_comparison(features, old, new, np.arange(10)[::-1], np.arange(10))
+    results = recheck.binary_label_comparison(features, old, new, np.arange(10)[::-1], np.arange(10))
     assert len(results) == 4
     assert {row["controls"] for row in results} == {1}
     assert [row["positive_cells"] for row in results] == [1, 2, 1, 2]
@@ -111,8 +111,6 @@ def test_seat_scenarios_change_one_point_at_a_time(seat_data) -> None:
 
 
 def test_baseline_paths_resolve_against_current_data_root(tmp_path: Path, monkeypatch) -> None:
-    from geostart.model import recheck
-
     directory = write_fixtures("moscow", tmp_path / "current")
     monkeypatch.setattr(recheck, "city_directory", lambda city: directory)
     data_file = directory / "competitors.parquet"
@@ -120,6 +118,6 @@ def test_baseline_paths_resolve_against_current_data_root(tmp_path: Path, monkey
     manifest = tmp_path / "old_manifest.json"
     key = "C:/old-data/processed/moscow/competitors.parquet"
     manifest.write_text(json.dumps({key: digest}), encoding="utf-8")
-    assert input_changes_since_baseline(manifest) == []
+    assert recheck.input_changes_since_baseline(manifest) == []
     manifest.write_text(json.dumps({key: "different"}), encoding="utf-8")
-    assert input_changes_since_baseline(manifest) == ["moscow/competitors.parquet"]
+    assert recheck.input_changes_since_baseline(manifest) == ["moscow/competitors.parquet"]

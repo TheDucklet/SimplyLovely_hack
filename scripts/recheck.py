@@ -23,7 +23,7 @@ from geostart.model.demand import (
     prepare_model,
     sample_parameters,
 )
-from geostart.model.factors import competition_reference
+from geostart.model.factors import MIN_DISTRICT_CELLS, competition_reference
 from geostart.model.service import CityInputs, load_inputs, nearby_indices
 from geostart.model.validation import (
     TOP_FRACTION,
@@ -203,6 +203,19 @@ def address_checks(inputs: CityInputs, output: Path) -> list[dict]:
             factor = next(factor for factor in report.factors if factor.code == "competitors_500m")
             if abs(factor.effect_rub) > report.revenue_month.p50 + REVENUE_TOLERANCE_RUB:
                 raise ValueError("Эффект конкурентов превысил выручку")
+            reference = competition_reference(inputs.features, counts, district)
+            difference = reference - factor.value
+            if difference * factor.effect_rub < -REVENUE_TOLERANCE_RUB:
+                raise ValueError("Знак эффекта конкурентов не соответствует сравнению с базой")
+            if difference == 0 and abs(factor.effect_rub) > REVENUE_TOLERANCE_RUB:
+                raise ValueError("При равенстве конкурентов базе эффект должен быть нулевым")
+            if (
+                factor.value == 0
+                and report.revenue_month.p50 > 0
+                and abs(factor.effect_rub) >= report.revenue_month.p50
+            ):
+                raise ValueError("На адресе без конкурентов сработало ограничение эффекта")
+            district_cells = int(inputs.features.district.eq(district).sum())
             name = f"address_{len(results) + 1}.json"
             (output / name).write_text(report.model_dump_json(indent=2), encoding="utf-8")
             results.append(
@@ -213,8 +226,10 @@ def address_checks(inputs: CityInputs, output: Path) -> list[dict]:
                     "district": district,
                     "revenue_p50": report.revenue_month.p50,
                     "competitor_effect": factor.effect_rub,
-                    "district_cells": int(inputs.features.district.eq(district).sum()),
-                    "reference_count": competition_reference(inputs.features, counts, district),
+                    "district_cells": district_cells,
+                    "actual_count": int(factor.value),
+                    "reference_count": reference,
+                    "reference_scope": "district" if district_cells >= MIN_DISTRICT_CELLS else "city",
                     "top5": [factor.model_dump() for factor in report.factors[:5]],
                 }
             )

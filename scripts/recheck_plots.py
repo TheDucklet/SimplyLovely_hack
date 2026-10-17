@@ -139,7 +139,9 @@ def plot_addresses(result: dict, output: Path) -> None:
         axis.margins(x=0.2)
         axis.axvline(0, color="#555555", linewidth=0.7)
         axis.set_title(
-            fill(row["address"], 35) + f"\n{row['district']} – {row['revenue_p50'] / 1e6:.2f} млн ₽/мес."
+            fill(row["address"], 35)
+            + f"\n{row['district']} – {row['revenue_p50'] / 1e6:.2f} млн ₽/мес."
+            + f"\nКонкуренты {row['actual_count']}, база {row['reference_count']:g}"
         )
         axis.set_xlabel("Эффект, тыс. ₽/месяц")
         axis.grid(axis="x", alpha=0.2)
