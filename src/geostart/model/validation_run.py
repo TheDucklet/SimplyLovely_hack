@@ -10,12 +10,14 @@ import pandas as pd
 
 from geostart import settings
 from geostart.model import evaluate_location, score_city
+from geostart.model.benchmark import benchmark_comparison
 from geostart.model.data import city_directory, configure_environment
 from geostart.model.demand import (
     DEFAULT_SEED,
     DemandModel,
     demand_ranges,
     niche_defaults,
+    preparation_distance,
     prepare_model,
     sample_parameters,
 )
@@ -97,7 +99,12 @@ def run_validation(output: Path, include_sensitivity: bool = True) -> list[dict]
             effective = demand_ranges(niche, inputs.parameters["demand"])
             samples = sample_parameters(niche, effective)
             model = prepare_model(
-                inputs.features, inputs.competitors, niche, float(effective["max_walk_distance_m"]["p90"])
+                inputs.features,
+                inputs.competitors,
+                niche,
+                preparation_distance(
+                    pd.DataFrame([{name: bounds["p90"] for name, bounds in effective.items()}])
+                ),
             )
             potentials = leave_one_out_potentials(model, inputs.competitors, samples)
             seed = DEFAULT_SEED + sum(map(ord, label))
@@ -150,10 +157,7 @@ def run_validation(output: Path, include_sensitivity: bool = True) -> list[dict]
                 changes.to_csv(output / f"{label}_sensitivity.csv", index=False)
                 result["sensitivity"] = changes.to_dict("records")
                 logging.info("%s чувствительность завершена", label)
-            result["industry_reference"] = {
-                "available": "revenue_month_rub" in inputs.parameters,
-                "note": "В исследовании нет оценки месячной выручки и её источника",
-            }
+            result["industry_reference"] = benchmark_comparison(city, niche, scores)
             if niche == "pickup_point":
                 chosen = int(
                     np.argmin(np.abs(previous_scores.revenue_p50 - previous_scores.revenue_p50.median()))

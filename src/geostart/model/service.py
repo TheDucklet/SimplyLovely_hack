@@ -21,6 +21,7 @@ from geostart.model.demand import (
     QUANTILES,
     DemandModel,
     distances_m,
+    preparation_distance,
     prepare_model,
     sample_parameters,
 )
@@ -156,12 +157,13 @@ def nearby_indices(features: pd.DataFrame, competitors: pd.DataFrame, niche: str
 def score_city(city: str, niche: str) -> pd.DataFrame:
     inputs = load_inputs(city, niche)
     samples = sample_parameters(niche, inputs.parameters["demand"])
-    model = prepare_model(
-        inputs.features, inputs.competitors, niche, float(samples.max_walk_distance_m.max())
-    )
+    model = prepare_model(inputs.features, inputs.competitors, niche, preparation_distance(samples))
     revenues, finance = run_simulation(inputs, model, samples)
     quantiles = np.quantile(revenues, QUANTILES, axis=0)
-    profit_p50 = np.median(finance.profits, axis=0)
+    displayed_costs = sum(
+        np.median(getattr(finance, name), axis=0) for name in ("rent", "payroll", "cogs", "taxes", "other")
+    )
+    profit_p50 = quantiles[1] - displayed_costs
     capex_p50 = np.median(finance.capex, axis=0)
     counts = [len(indices) for indices in nearby_indices(inputs.features, inputs.competitors, niche)]
     scores = pd.DataFrame(
@@ -285,7 +287,10 @@ def report_assumptions(inputs: CityInputs, district: str, revenue_p50: float, ci
         assumptions.append(
             Assumption(
                 name="Неполная разметка кофеен OSM",
-                value="В Туле известно 38 кофеен, конкуренция занижена источником",
+                value=(
+                    f"В Туле известно {int(inputs.competitors.niche.eq('coffee').sum())} кофеен, "
+                    "разметка источника неполная"
+                ),
                 unit="",
                 source=None,
             )
@@ -316,18 +321,18 @@ def evaluate_location(
     validate_location(inputs, lat, lon, city)
     cell = h3.latlng_to_cell(lat, lon, get_city(city).h3_resolution)
     samples = sample_parameters(niche, inputs.parameters["demand"])
-    radius_m = float(samples.max_walk_distance_m.max())
+    radius_m = preparation_distance(samples)
     features, candidate_index = local_features(inputs, cell, radius_m)
     model = prepare_model(features, inputs.competitors, niche, radius_m)
     revenues, finance = run_simulation(inputs, model, samples, area_m2, rent_rub_m2_month)
     quantiles = np.quantile(revenues[:, candidate_index], QUANTILES)
-    profit_p50 = float(np.median(finance.profits[:, candidate_index]))
     capex_p50 = float(np.median(finance.capex[:, candidate_index]))
     components = {
         name: float(np.median(getattr(finance, name)[:, candidate_index]))
         for name in ("rent", "payroll", "cogs", "taxes", "other")
     }
     components["total"] = sum(components.values())
+    profit_p50 = float(quantiles[1]) - components["total"]
     selected = inputs.competitors.loc[inputs.competitors["niche"].eq(niche)].reset_index(drop=True)
     nearby = nearby_indices(features.iloc[[candidate_index]], inputs.competitors, niche)[0]
     center = np.array(h3.cell_to_latlng(cell))
