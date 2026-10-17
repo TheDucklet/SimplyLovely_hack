@@ -8,7 +8,7 @@ import pandas as pd
 import pytest
 
 from geostart.model.demand import prepare_model, sample_parameters
-from geostart.model.factors import bounded_competition_effect, competition_reference
+from geostart.model.factors import bounded_competition_effect, competition_reference, explain_factors
 from geostart.model.validation import (
     leave_one_out_potentials,
     pickup_decomposition,
@@ -35,9 +35,11 @@ def test_model_and_plotting_module_import_without_matplotlib() -> None:
     program = "\n".join(
         [
             "import sys",
+            "import runpy",
             "sys.modules['matplotlib'] = None",
             "from geostart.model import score_city",
             "import geostart.model.validation_plots",
+            "runpy.run_path('scripts/recheck_plots.py')",
             "assert callable(score_city)",
             "assert 'matplotlib.pyplot' not in sys.modules",
         ]
@@ -82,6 +84,36 @@ def test_competition_effect_cannot_exceed_cell_revenue(
     revenue: float, counterfactual: float, expected: float
 ) -> None:
     assert bounded_competition_effect(revenue, counterfactual) == expected
+
+
+@pytest.mark.parametrize("actual,reference", [(0, 2), (3, 1), (0, 0), (2, 2)])
+@pytest.mark.parametrize("outside_weight", [1.0, 0.000001])
+def test_competition_factor_direction_follows_count_reference(
+    city_data, actual: int, reference: int, outside_weight: float
+) -> None:
+    features, template = city_data
+    features = features.copy()
+    features["district"] = "Тестовый район"
+    competitors = (
+        pd.concat([template.iloc[[0]]] * actual, ignore_index=True) if actual else template.iloc[:0].copy()
+    )
+    if actual:
+        competitors["source"] = "mos_ru"
+        competitors["seats"] = np.arange(actual) * 50
+    samples = pd.DataFrame([{**PARAMETERS, "outside_option_weight": outside_weight}])
+    model = prepare_model(features, competitors, "coffee", 500)
+    baseline = float(model.revenue(samples.iloc[0].to_dict())[0])
+    factors = explain_factors(
+        model, 0, features, competitors, np.full(len(features), reference), actual, samples, baseline
+    )
+    effect = next(factor.effect_rub for factor in factors if factor.code == "competitors_500m")
+    assert abs(effect) <= baseline
+    if actual < reference:
+        assert 0 < effect < baseline
+    elif actual > reference:
+        assert effect < 0
+    else:
+        assert effect == pytest.approx(0, abs=1e-6)
 
 
 def test_pickup_default_is_near_zero_and_explicit_research_wins() -> None:
