@@ -81,6 +81,7 @@ def rental_comparison(city: str, niche: str) -> dict:
                 inputs.salary,
                 inputs.parameters["tax_regime_default"],
                 inputs.taxes,
+                niche=niche,
             )
         )
     eligible = rent_multipliers(inputs, inputs.features) < 1

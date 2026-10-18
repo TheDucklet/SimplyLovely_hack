@@ -135,6 +135,11 @@ def test_score_file_and_location_report_agree(model_data: Path, city: str, niche
     assert report.costs_month.total == pytest.approx(
         sum(getattr(report.costs_month, name) for name in ("rent", "payroll", "cogs", "taxes", "other"))
     )
+    tax_details = {item.name: item.value for item in report.assumptions}
+    assert report.costs_month.taxes == pytest.approx(
+        tax_details["Налог УСН в месяц"] + tax_details["НДС в месяц"]
+    )
+    assert tax_details["Эффективный тариф взносов работодателя"] > 0
     assert report.profit_month_p50 == pytest.approx(report.revenue_month.p50 - report.costs_month.total)
     if report.profit_month_p50 > 0:
         assert report.payback_months_p50 == pytest.approx(report.capex_rub_p50 / report.profit_month_p50)
@@ -222,14 +227,30 @@ def test_resident_factor_is_exact_cell_counterfactual(model_data: Path) -> None:
     assert factor.effect_rub == pytest.approx(report.revenue_month.p50 - counterfactual.revenue_month.p50)
 
 
-def test_vat_threshold_warning_is_present(model_data: Path) -> None:
+def test_vat_above_supported_band_has_warning(model_data: Path) -> None:
     root = settings.research_dir()
     path = root / "taxes" / "2026.yaml"
     taxes = yaml.safe_load(path.read_text(encoding="utf-8"))
-    taxes["vat_threshold_usn_rub_year"]["value"] = 1
+    taxes["vat_on_usn"]["exemption_revenue_threshold"]["value"] = 0
+    taxes["vat_on_usn"]["special_rate_tier1_max_revenue"]["value"] = 1
     path.write_text(yaml.safe_dump(taxes), encoding="utf-8")
     report = evaluate_location("tula", "coffee", 54.1931, 37.6173)
     assert any(assumption.name == "Предупреждение о НДС" for assumption in report.assumptions)
+    assert next(item.value for item in report.assumptions if item.name == "НДС в месяц") == 0
+
+
+def test_vat_scenario_breakdown_is_consistent_with_score(model_data: Path) -> None:
+    path = settings.research_dir() / "taxes/2026.yaml"
+    taxes = yaml.safe_load(path.read_text(encoding="utf-8"))
+    taxes["vat_on_usn"]["exemption_revenue_threshold"]["value"] = 0
+    path.write_text(yaml.safe_dump(taxes), encoding="utf-8")
+    scores = score_city("tula", "coffee")
+    row = scores.iloc[0]
+    report = evaluate_location("tula", "coffee", *h3.cell_to_latlng(row.h3))
+    details = {item.name: item.value for item in report.assumptions}
+    assert details["НДС в месяц"] == pytest.approx(report.revenue_month.p50 * 0.05)
+    assert report.costs_month.taxes == pytest.approx(details["Налог УСН в месяц"] + details["НДС в месяц"])
+    assert report.profit_month_p50 == pytest.approx(row.profit_p50)
 
 
 def test_more_residents_increase_revenue(model_data: Path) -> None:

@@ -26,6 +26,56 @@ class Risk(StrEnum):
     HIGH = "high"
 
 
+def employee_contributions(salary: float, taxes: Mapping[str, object], niche: str) -> float:
+    if not np.isfinite(salary) or salary < 0:
+        raise ValueError("Зарплата должна быть конечной и неотрицательной")
+    rules = taxes.get("social_contributions_employer")
+    if not rules:
+        return salary * float(taxes["employer_contributions_rate"]["value"])
+    standard = rules["standard_rate"]
+    injury = rules["injury_rate_min"]
+    standard_rate = float(standard["value"]) if niche in standard["applies_to"] else 0.0
+    injury_rate = float(injury["value"]) if niche in injury["applies_to"] else 0.0
+    threshold = rules["msp_threshold_1_5_mrot"]
+    reduced = rules["msp_reduced_rate_above_1_5_mrot"]
+    if niche in threshold["applies_to"] and niche in reduced["applies_to"]:
+        below = min(salary, float(threshold["value"]))
+        unified = below * standard_rate + (salary - below) * float(reduced["value"])
+    else:
+        unified = salary * standard_rate
+    return unified + salary * injury_rate
+
+
+@dataclass(frozen=True)
+class VatBand:
+    lower: float
+    upper: float
+    rate: float
+    source: str | None
+
+
+def vat_band(taxes: Mapping[str, object], niche: str) -> VatBand | None:
+    rules = taxes.get("vat_on_usn")
+    if not rules:
+        return None
+    names = ("exemption_revenue_threshold", "special_rate_tier1_max_revenue", "special_rate_tier1")
+    if any(niche not in rules[name]["applies_to"] for name in names):
+        return None
+    lower, upper, rate = (float(rules[name]["value"]) for name in names)
+    if not np.isfinite([lower, upper, rate]).all() or lower < 0 or upper <= lower or not 0 <= rate <= 1:
+        raise ValueError("Проверьте пороги и специальную ставку НДС в исследовании")
+    return VatBand(lower, upper, rate, rules["special_rate_tier1"].get("source"))
+
+
+def monthly_vat(revenues: np.ndarray, taxes: Mapping[str, object], niche: str) -> np.ndarray:
+    band = vat_band(taxes, niche)
+    if band is None:
+        return np.zeros_like(revenues)
+    annual = revenues * MONTHS_PER_YEAR
+    applicable = (annual > band.lower) & (annual <= band.upper)
+    return np.where(applicable, revenues * band.rate, 0.0)
+
+
 def sample_finance_parameters(
     parameters: Mapping[str, object], runs: int = DEFAULT_RUNS, seed: int = DEFAULT_SEED
 ) -> pd.DataFrame:
@@ -87,6 +137,9 @@ class FinanceResult:
     total: np.ndarray
     profits: np.ndarray
     capex: np.ndarray
+    contributions: np.ndarray
+    usn_taxes: np.ndarray
+    vat: np.ndarray
 
 
 def calculate_finance(
@@ -96,6 +149,8 @@ def calculate_finance(
     salary: float,
     regime: str,
     taxes: Mapping[str, object],
+    *,
+    niche: str,
 ) -> FinanceResult:
     if not np.isfinite(revenues).all() or (revenues < 0).any():
         raise ValueError("Выручка должна быть конечной и неотрицательной")
@@ -103,15 +158,21 @@ def calculate_finance(
         raise ValueError("Зарплата должна быть конечной и неотрицательной")
     if not np.isfinite(rent_rates).all() or (rent_rates <= 0).any():
         raise ValueError("Ставки аренды должны быть положительными и конечными")
-    contribution_rate = float(taxes["employer_contributions_rate"]["value"])
     rent = samples["area_m2"].to_numpy()[:, None] * rent_rates[None, :]
     base_payroll = samples["staff_count"].to_numpy()[:, None] * salary
-    contributions = base_payroll * contribution_rate
+    contributions = np.broadcast_to(
+        samples["staff_count"].to_numpy()[:, None] * employee_contributions(salary, taxes, niche),
+        revenues.shape,
+    )
     payroll = np.broadcast_to(base_payroll + contributions, revenues.shape)
     cogs = revenues * samples["cogs_share_of_revenue"].to_numpy()[:, None]
     other = np.broadcast_to(samples["other_opex_rub"].to_numpy()[:, None], revenues.shape)
     expenses = rent + payroll + cogs + other
-    tax = monthly_tax(revenues, expenses, contributions, regime, taxes)
+    usn_tax = monthly_tax(revenues, expenses, contributions, regime, taxes)
+    vat = monthly_vat(revenues, taxes, niche)
+    tax = usn_tax + vat
     total = expenses + tax
     capex = np.broadcast_to(samples["capex_rub"].to_numpy()[:, None], revenues.shape)
-    return FinanceResult(rent, payroll, cogs, tax, other, total, revenues - total, capex)
+    return FinanceResult(
+        rent, payroll, cogs, tax, other, total, revenues - total, capex, contributions, usn_tax, vat
+    )

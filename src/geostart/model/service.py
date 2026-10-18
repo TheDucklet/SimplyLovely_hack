@@ -13,7 +13,13 @@ from shapely.ops import unary_union
 
 from geostart import settings
 from geostart.config import get_city, get_niche
-from geostart.model.assumptions import PARAMETER_NAMES, demand_assumptions, resolve_rent, wage_assumptions
+from geostart.model.assumptions import (
+    PARAMETER_NAMES,
+    demand_assumptions,
+    resolve_rent,
+    tax_assumptions,
+    wage_assumptions,
+)
 from geostart.model.data import city_directory, scores_directory
 from geostart.model.demand import (
     DEFAULT_SEED,
@@ -28,7 +34,6 @@ from geostart.model.demand import (
 )
 from geostart.model.factors import COMPETITOR_RADIUS_M, explain_factors
 from geostart.model.finance import (
-    MONTHS_PER_YEAR,
     FinanceResult,
     calculate_finance,
     payback_months,
@@ -57,7 +62,6 @@ ASSUMPTION_NAMES = {
 TAX_NAMES = {
     "usn_income_rate": "Ставка УСН с доходов",
     "usn_income_minus_expenses_rate": "Ставка УСН с разницы",
-    "employer_contributions_rate": "Взносы работодателя",
     "vat_threshold_usn_rub_year": "Порог НДС исследования",
     "moscow_trade_fee_rub_quarter": "Торговый сбор исследования",
 }
@@ -279,6 +283,7 @@ def run_simulation(
         inputs.salary,
         inputs.parameters["tax_regime_default"],
         inputs.taxes,
+        niche=str(inputs.parameters["niche"]),
     )
     return revenues, finance
 
@@ -311,7 +316,8 @@ def score_city(city: str, niche: str) -> pd.DataFrame:
     revenues, finance = run_simulation(inputs, model, samples)
     quantiles = np.quantile(revenues, QUANTILES, axis=0)
     displayed_costs = sum(
-        np.median(getattr(finance, name), axis=0) for name in ("rent", "payroll", "cogs", "taxes", "other")
+        np.median(getattr(finance, name), axis=0)
+        for name in ("rent", "payroll", "cogs", "usn_taxes", "vat", "other")
     )
     profit_p50 = quantiles[1] - displayed_costs
     capex_p50 = np.median(finance.capex, axis=0)
@@ -362,7 +368,7 @@ def local_features(inputs: CityInputs, cell: str, radius_m: float) -> tuple[pd.D
     return features, candidate_index
 
 
-def report_assumptions(inputs: CityInputs, district: str, revenue_p50: float, city: str) -> list[Assumption]:
+def report_assumptions(inputs: CityInputs, district: str, city: str) -> list[Assumption]:
     parameters = inputs.parameters
     assumptions = demand_assumptions(parameters)
     for name, bounds in parameters["demand"].items():
@@ -424,15 +430,6 @@ def report_assumptions(inputs: CityInputs, district: str, revenue_p50: float, ci
         assumptions.append(
             Assumption(name="Ставки аренды", value="Условные значения до исследования", unit="", source=None)
         )
-    if revenue_p50 * MONTHS_PER_YEAR > float(inputs.taxes["vat_threshold_usn_rub_year"]["value"]):
-        assumptions.append(
-            Assumption(
-                name="Предупреждение о НДС",
-                value="Годовая выручка выше порога исследования, расходы НДС не рассчитаны",
-                unit="",
-                source=inputs.taxes["vat_threshold_usn_rub_year"].get("source"),
-            )
-        )
     if city == "tula" and parameters["niche"] == "coffee":
         assumptions.append(
             Assumption(
@@ -448,7 +445,11 @@ def report_assumptions(inputs: CityInputs, district: str, revenue_p50: float, ci
     assumptions.append(
         Assumption(
             name="Границы финансового расчёта",
-            value="Постоянный месяц, взносы ИП и сезонность не учтены, НДС только предупреждается",
+            value=(
+                "Постоянный месяц, взносы ИП и сезонность не учтены. "
+                "НДС считается по годовому эквиваленту каждого сценария, "
+                "месяц перехода и освобождение общепита по зарплатному критерию не моделируются."
+            ),
             unit="",
             source=None,
         )
@@ -480,6 +481,9 @@ def evaluate_location(
         name: float(np.median(getattr(finance, name)[:, candidate_index]))
         for name in ("rent", "payroll", "cogs", "taxes", "other")
     }
+    usn_p50 = float(np.median(finance.usn_taxes[:, candidate_index]))
+    vat_p50 = float(np.median(finance.vat[:, candidate_index]))
+    components["taxes"] = usn_p50 + vat_p50
     components["total"] = sum(components.values())
     profit_p50 = float(quantiles[1]) - components["total"]
     selected = inputs.competitors.loc[inputs.competitors["niche"].eq(niche)].reset_index(drop=True)
@@ -508,8 +512,17 @@ def evaluate_location(
         samples,
         float(quantiles[1]),
     )
-    assumptions = report_assumptions(
-        inputs, str(features.iloc[candidate_index].district), float(quantiles[1]), city
+    assumptions = report_assumptions(inputs, str(features.iloc[candidate_index].district), city)
+    assumptions.extend(
+        tax_assumptions(
+            inputs.taxes,
+            niche,
+            inputs.salary,
+            revenues[:, candidate_index],
+            usn_p50,
+            finance.vat[:, candidate_index],
+            str(inputs.parameters["tax_regime_default"]),
+        )
     )
     if any("эффект ограничен выручкой" in factor.name for factor in factors):
         assumptions.append(
