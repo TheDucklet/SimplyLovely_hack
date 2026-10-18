@@ -87,6 +87,7 @@ docker compose -f compose.demo.yml up -d --build --wait
 | Переменная | По умолчанию | Назначение |
 | --- | --- | --- |
 | `GEOSTART_USE_MOCKS` | `false` | `true` включает ответы по синтетическим данным для разработки интерфейса без данных |
+| `GEOSTART_WARMUP` | `true` | `false` отключает подготовку кэша модели по всем городам и нишам при старте API |
 | `GEOSTART_STORAGE` | `files` | `postgres` переключает карту, конкурентов и поиск на базу, параметры базы описаны в docs/storage.md |
 | `GEOSTART_DATA_DIR` | `data/` в корне репозитория | каталог данных |
 | `GEOSTART_CONFIG_DIR` | `config/` в корне репозитория | каталог с `cities.yaml` и `niches.yaml` |

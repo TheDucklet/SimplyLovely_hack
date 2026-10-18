@@ -1,4 +1,5 @@
-from collections.abc import Callable
+from collections.abc import AsyncIterator, Callable
+from contextlib import asynccontextmanager
 
 import psycopg
 from fastapi import APIRouter, FastAPI, HTTPException, Query
@@ -29,7 +30,7 @@ from geostart.schemas import (
     NicheInfo,
     ReportRequest,
 )
-from geostart.settings import cors_origins, use_mocks
+from geostart.settings import cors_origins, use_mocks, warmup_enabled
 from geostart.storage import reader
 from geostart.storage.connection import DatabaseNotConfiguredError
 
@@ -125,8 +126,15 @@ def report(request: ReportRequest) -> LocationReport:
         raise HTTPException(status_code=422, detail=str(error)) from error
 
 
+@asynccontextmanager
+async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+    if warmup_enabled() and not use_mocks():
+        data_backend.warm_model_cache()
+    yield
+
+
 configure_environment()
-app = FastAPI(title="ГеоСтарт API", version="0.2.0")
+app = FastAPI(title="ГеоСтарт API", version="0.2.0", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware, allow_origins=cors_origins(), allow_methods=["GET", "POST"], allow_headers=["*"]
 )

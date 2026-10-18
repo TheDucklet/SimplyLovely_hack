@@ -22,6 +22,10 @@ def processed_dir(city_code: str) -> Path:
     return data_dir() / "processed" / city_code
 
 
+def warmup_enabled() -> bool:
+    return os.environ.get("GEOSTART_WARMUP", "true").strip().lower() in TRUE_VALUES
+
+
 def use_mocks() -> bool:
     return os.environ.get("GEOSTART_USE_MOCKS", "false").strip().lower() in TRUE_VALUES
 
