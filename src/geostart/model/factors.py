@@ -13,11 +13,11 @@ FACTOR_NAMES = {
     "residents": ("Жители ячейки", "чел."),
     "workers": ("Рабочие места ячейки", "мест"),
     "competitors_500m": ("Конкуренты в радиусе 500 м", "шт."),
+    "metro_dist_m": ("Расстояние до метро", "м"),
+    "transit_stops_n": ("Остановки ячейки", "шт."),
     "offices_n": ("Офисы ячейки", "шт."),
     "education_n": ("Учебные заведения ячейки", "шт."),
     "malls_n": ("Торговые центры ячейки", "шт."),
-    "transit_stops_n": ("Остановки ячейки", "шт."),
-    "metro_dist_m": ("Расстояние до метро", "м"),
 }
 
 
@@ -76,8 +76,9 @@ def explain_factors(
         if pd.isna(value):
             continue
         counterfactual = model
-        if code in ("residents", "workers"):
+        if code in ("residents", "workers", "metro_dist_m", "transit_stops_n"):
             changed = model.features.copy(deep=True)
+            changed[code] = changed[code].astype(float)
             changed.loc[changed.index[candidate_index], code] = float(city_features[code].median())
             counterfactual = replace(model, features=changed)
         elif code == "competitors_500m":

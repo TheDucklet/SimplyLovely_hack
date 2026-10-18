@@ -68,6 +68,11 @@ def test_score_file_and_location_report_agree(model_data: Path, city: str, niche
     assert report.costs_month.total == pytest.approx(
         sum(getattr(report.costs_month, name) for name in ("rent", "payroll", "cogs", "taxes", "other"))
     )
+    assert report.profit_month_p50 == pytest.approx(report.revenue_month.p50 - report.costs_month.total)
+    if report.profit_month_p50 > 0:
+        assert report.payback_months_p50 == pytest.approx(report.capex_rub_p50 / report.profit_month_p50)
+    else:
+        assert report.payback_months_p50 is None
     effects = [abs(factor.effect_rub) for factor in report.factors]
     assert effects == sorted(effects, reverse=True)
     if city == "tula":
@@ -112,6 +117,28 @@ def test_cli_scores_all_four_combinations(model_data: Path) -> None:
     assert {path.name for path in (model_data / "scores").glob("*.parquet")} == {
         f"{city}_{niche}.parquet" for city in ("moscow", "tula") for niche in ("coffee", "pickup_point")
     }
+
+
+def test_benchmarks_use_unique_occupied_cells_and_city_parameters(model_data: Path, capsys) -> None:
+    for city in ("moscow", "tula"):
+        directory = model_data / "processed" / city
+        cells = pd.read_parquet(directory / "hex_features.parquet").h3.iloc[:2].tolist()
+        pd.DataFrame({"h3": [cells[0]] * 3, "niche": ["coffee", "coffee", "pickup_point"]}).to_parquet(
+            directory / "competitors.parquet", index=False
+        )
+        output = model_data / "scores"
+        output.mkdir(exist_ok=True)
+        for niche in ("coffee", "pickup_point"):
+            pd.DataFrame({"h3": cells, "revenue_p50": [100, 100000]}).to_parquet(
+                output / f"{city}_{niche}.parquet", index=False
+            )
+    main(["benchmarks"])
+    text = capsys.readouterr().out
+    assert text.count("| 1 | 100.00 | 100.00 | 100.00 |") == 4
+    assert "1100000.00" in text
+    assert "650000.00" in text
+    assert "375000.00" in text
+    assert "233000.00" in text
 
 
 def test_resident_factor_is_exact_cell_counterfactual(model_data: Path) -> None:

@@ -23,6 +23,10 @@ PARAMETER_NAMES = {
     "max_walk_distance_m": "Предельное расстояние пешком",
     "distance_decay_beta": "Степень убывания с расстоянием",
     "outside_option_weight": "Вес внешней альтернативы",
+    "metro_visits_per_month": "Покупки прохожих у метро в месяц",
+    "metro_influence_distance_m": "Радиус влияния метро",
+    "transit_visits_per_stop_month": "Покупки прохожих на остановку в месяц",
+    "max_pickup_distance_m": "Расширенный радиус получения заказа",
 }
 PROFESSION_NAMES = {"barista": "бариста", "pickup_operator": "оператора пункта выдачи"}
 
