@@ -10,6 +10,7 @@ from geostart.model.demand import (
     cell_demand,
     competitor_attractiveness,
     demand_ranges,
+    limit_revenue,
 )
 
 TOP_FRACTION = 0.2
@@ -80,6 +81,7 @@ def point_simulation(
             candidate_weights, denominators, out=np.zeros_like(candidate_weights), where=denominators > 0
         )
         results[run_index] = np.bincount(slots, weights=demand[origins] * shares, minlength=len(selected))
+        results[run_index] = limit_revenue(results[run_index], model.niche, parameters)
         reachable[run_index] = np.bincount(
             slots, weights=demand[origins] * (point_weights > 0), minlength=len(selected)
         )

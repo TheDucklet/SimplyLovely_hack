@@ -1,0 +1,10 @@
+city: moscow
+excluded_okrug: ЦАО
+metro_distance_threshold_m: 1000
+far_metro_multiplier: 0.4
+source: "https://freedome-realty.ru/blog/kommercheskaja-nedvizhimost/torgovaya-nedvizhimost-moskvy-v-i-kvartale-2026-tts-pod-davleniem/"
+published: 2026-06-03
+updated: 2026-09-30
+passing_rent_rub_m2_year: {lower: 25000, upper: 55000}
+far_metro_rent_rub_m2_year: {lower: 10000, upper: 22000}
+note: "поправка R5b для ячеек Москвы вне ЦАО дальше 1000 м от метро: отношение середин диапазонов без метро и проходных мест равно 16000 / 40000 = 0,4, порог 1000 м и перенос отношения на ставку района являются допущением, при пропуске расстояния или округа поправка не применяется, явная ставка пользователя имеет приоритет"
