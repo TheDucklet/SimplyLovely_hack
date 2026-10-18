@@ -1,13 +1,18 @@
+import logging
+import time
 from functools import lru_cache
 from pathlib import Path
 
 import pandas as pd
 
-from geostart.config import CityConfig
+from geostart.config import CityConfig, load_cities, load_niches
 from geostart.model import evaluate_location
+from geostart.model.service import city_context
 from geostart.schemas import AddressMatch, Competitor, HexesResponse, HexScore, LocationReport, ReportRequest
 from geostart.settings import data_dir, processed_dir, storage_mode
 from geostart.storage import reader
+
+logger = logging.getLogger("geostart.api")
 
 SEARCH_LIMIT = 10
 UNKNOWN_DATA_VERSION = "нет данных"
@@ -148,3 +153,23 @@ def data_report(city: CityConfig, request: ReportRequest) -> LocationReport:
         area_m2=request.area_m2,
         rent_rub_m2_month=request.rent_rub_m2_month,
     )
+
+
+def warm_model_cache() -> dict[str, float]:
+    durations: dict[str, float] = {}
+    for city in load_cities():
+        for niche in load_niches():
+            started = time.perf_counter()
+            try:
+                city_context(city.code, niche.code)
+            except (FileNotFoundError, DataNotReadyError, KeyError, ValueError) as error:
+                logger.warning("Кэш модели для %s, %s не прогрет: %s", city.code, niche.code, error)
+                continue
+            durations[f"{city.code}_{niche.code}"] = round(time.perf_counter() - started, 1)
+            logger.info(
+                "Кэш модели для %s, %s прогрет за %.1f с",
+                city.code,
+                niche.code,
+                durations[f"{city.code}_{niche.code}"],
+            )
+    return durations

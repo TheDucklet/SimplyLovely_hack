@@ -97,3 +97,14 @@ def test_large_responses_are_compressed() -> None:
         "/api/v1/hexes", params={"city": "tula", "niche": "coffee"}, headers={"Accept-Encoding": "gzip"}
     )
     assert response.headers.get("content-encoding") == "gzip"
+
+
+def test_warmup_prepares_loaded_cities_and_skips_missing() -> None:
+    durations = data_backend.warm_model_cache()
+    assert set(durations) == {"tula_coffee", "tula_pickup_point"}
+
+
+def test_startup_with_warmup_serves_reports() -> None:
+    with TestClient(app) as warmed:
+        response = warmed.get("/api/v1/health")
+    assert response.status_code == 200
