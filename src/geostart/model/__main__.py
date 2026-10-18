@@ -5,6 +5,7 @@ from pathlib import Path
 from time import perf_counter
 
 from geostart.config import load_cities, load_niches
+from geostart.model.benchmark import print_benchmarks
 from geostart.model.data import configure_environment
 from geostart.model.service import score_city
 
@@ -19,10 +20,20 @@ def main(argv: list[str] | None = None) -> None:
     score.add_argument("--city", choices=[*cities, "all"], required=True)
     score.add_argument("--niche", choices=[*niches, "all"], required=True)
     score.add_argument("--data-dir", type=Path)
+    benchmarks = commands.add_parser("benchmarks", help="Сверить выручку занятых ячеек с исследованием")
+    benchmarks.add_argument("--city", choices=[*cities, "all"], default="all")
+    benchmarks.add_argument("--niche", choices=[*niches, "all"], default="all")
+    benchmarks.add_argument("--data-dir", type=Path)
     arguments = parser.parse_args(argv)
     if arguments.data_dir is not None:
         os.environ["GEOSTART_DATA_DIR"] = str(arguments.data_dir.resolve())
     logging.basicConfig(level=logging.INFO, format="%(message)s")
+    if arguments.command == "benchmarks":
+        print_benchmarks(
+            cities if arguments.city == "all" else [arguments.city],
+            niches if arguments.niche == "all" else [arguments.niche],
+        )
+        return
     for city in cities if arguments.city == "all" else [arguments.city]:
         for niche in niches if arguments.niche == "all" else [arguments.niche]:
             started = perf_counter()

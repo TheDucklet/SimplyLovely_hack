@@ -6,8 +6,6 @@ import numpy as np
 import pandas as pd
 
 from geostart.model.demand import (
-    DISTANCE_SCALE_M,
-    MIN_DISTANCE_M,
     DemandModel,
     cell_demand,
     competitor_attractiveness,
@@ -29,10 +27,7 @@ def roc_auc(positive: np.ndarray, negative: np.ndarray) -> float:
 
 
 def edge_weights(model: DemandModel, parameters: Mapping[str, float]) -> np.ndarray:
-    weights = (np.maximum(model.distances, MIN_DISTANCE_M) / DISTANCE_SCALE_M) ** (
-        -parameters["distance_decay_beta"]
-    )
-    return weights * (model.distances <= parameters["max_walk_distance_m"])
+    return model.competition_weights(parameters)
 
 
 @dataclass(frozen=True)
@@ -179,20 +174,15 @@ def sensitivity(
 
 
 def pickup_decomposition(model: DemandModel, parameters: Mapping[str, float], candidate_index: int) -> dict:
-    weights = edge_weights(model, parameters)
-    pressure = np.bincount(
-        model.origin_indices,
-        weights=weights * model.attraction[model.destination_indices],
-        minlength=len(model.features),
-    )
-    candidate_edges = (model.destination_indices == candidate_index) & (weights > 0)
-    origins = model.origin_indices[candidate_edges]
+    all_origins, destinations, weights, pressure = model.candidate_terms(parameters)
+    candidate_edges = (destinations == candidate_index) & (weights > 0)
+    origins = all_origins[candidate_edges]
     candidate_weights = weights[candidate_edges]
     residents = model.features["residents"].to_numpy(dtype=float)[origins]
     population = float(residents.sum())
     orders = residents * parameters["orders_per_resident_month"] * parameters["marketplace_share"]
     total_orders = float(orders.sum())
-    denominators = candidate_weights + pressure[origins] + parameters["outside_option_weight"]
+    denominators = candidate_weights + pressure[candidate_edges] + parameters["outside_option_weight"]
     captured_orders = float(np.sum(orders * candidate_weights / denominators))
     outside_orders = float(np.sum(orders * parameters["outside_option_weight"] / denominators))
     outside_share = outside_orders / total_orders if total_orders else 0

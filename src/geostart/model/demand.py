@@ -1,7 +1,7 @@
 from collections.abc import Mapping
 from dataclasses import dataclass
 from enum import StrEnum
-from functools import cache
+from functools import cache, cached_property
 from math import ceil
 from pathlib import Path
 
@@ -19,6 +19,7 @@ SEATS_SCALE = 20.0
 GRID_RADIUS_MARGIN = 2
 GRID_EDGE_SAFETY_FACTOR = 0.5
 QUANTILES = (0.1, 0.5, 0.9)
+DISTANCE_TOLERANCE_M = 1e-6
 
 
 class Niche(StrEnum):
@@ -36,6 +37,15 @@ REQUIRED_PARAMETERS = {
     Niche.PICKUP_POINT: ("orders_per_resident_month", "marketplace_share", "payout_per_order_rub"),
 }
 COMMON_PARAMETERS = ("max_walk_distance_m", "distance_decay_beta", "outside_option_weight")
+OPTIONAL_PARAMETERS = {
+    Niche.COFFEE: ("metro_visits_per_month", "metro_influence_distance_m", "transit_visits_per_stop_month"),
+    Niche.PICKUP_POINT: ("max_pickup_distance_m",),
+}
+
+
+def preparation_distance(samples: pd.DataFrame) -> float:
+    columns = [name for name in ("max_walk_distance_m", "max_pickup_distance_m") if name in samples]
+    return float(samples[columns].max().max())
 
 
 def parse_niche(niche: str) -> Niche:
@@ -65,6 +75,15 @@ def validate_parameters(niche: str, parameters: Mapping[str, float]) -> None:
     for name in ("max_walk_distance_m", "distance_decay_beta"):
         if parameters[name] <= 0:
             raise ValueError(f"Параметр {name} должен быть положительным")
+    for name in OPTIONAL_PARAMETERS[selected]:
+        value = parameters.get(name, 0)
+        if not np.isfinite(value) or value < 0:
+            raise ValueError(f"Параметр {name} должен быть конечным и неотрицательным")
+    if (
+        parameters.get("metro_visits_per_month", 0) > 0
+        and parameters.get("metro_influence_distance_m", 0) <= 0
+    ):
+        raise ValueError("Для спроса у метро нужен положительный радиус его влияния")
     if selected == Niche.COFFEE and parameters["outside_option_weight"] <= 0:
         raise ValueError("Параметр outside_option_weight для кофейни должен быть положительным")
     if selected == Niche.PICKUP_POINT and parameters["marketplace_share"] > 1:
@@ -79,6 +98,7 @@ def cell_demand(features: pd.DataFrame, niche: str, parameters: Mapping[str, flo
         return (
             residents * parameters["visits_per_resident_month"]
             + workers * parameters["visits_per_worker_month"]
+            + passing_visits(features, parameters)
         ) * parameters["avg_check_rub"]
     return (
         residents
@@ -86,6 +106,20 @@ def cell_demand(features: pd.DataFrame, niche: str, parameters: Mapping[str, flo
         * parameters["marketplace_share"]
         * parameters["payout_per_order_rub"]
     )
+
+
+def passing_visits(features: pd.DataFrame, parameters: Mapping[str, float]) -> np.ndarray:
+    visits = np.zeros(len(features))
+    if parameters.get("metro_visits_per_month", 0) > 0:
+        distances = pd.to_numeric(features.get("metro_dist_m", pd.Series(np.nan, index=features.index)))
+        influence = (
+            (1 - distances / parameters["metro_influence_distance_m"]).clip(lower=0, upper=1).fillna(0)
+        )
+        visits += influence.to_numpy() * parameters["metro_visits_per_month"]
+    if parameters.get("transit_visits_per_stop_month", 0) > 0:
+        stops = pd.to_numeric(features.get("transit_stops_n", pd.Series(0, index=features.index))).fillna(0)
+        visits += stops.clip(lower=0).to_numpy() * parameters["transit_visits_per_stop_month"]
+    return visits
 
 
 def competitor_attractiveness(competitors: pd.DataFrame) -> np.ndarray:
@@ -114,16 +148,32 @@ class DemandModel:
     attraction: np.ndarray
     max_distance_m: float
 
-    def revenue(self, parameters: Mapping[str, float], candidate_attraction: float = 1.0) -> np.ndarray:
-        validate_parameters(self.niche, parameters)
-        if not np.isfinite(candidate_attraction) or candidate_attraction <= 0:
-            raise ValueError("Привлекательность кандидата должна быть положительной и конечной")
-        if parameters["max_walk_distance_m"] > self.max_distance_m:
-            raise ValueError("Радиус превышает подготовленную область, пересоздайте модель")
+    @cached_property
+    def nearest_distances(self) -> np.ndarray:
+        nearest = np.full(len(self.features), np.inf)
+        selected = self.attraction[self.destination_indices] > 0
+        np.minimum.at(nearest, self.origin_indices[selected], self.distances[selected])
+        return nearest
+
+    def competition_weights(self, parameters: Mapping[str, float]) -> np.ndarray:
         weights = (np.maximum(self.distances, MIN_DISTANCE_M) / DISTANCE_SCALE_M) ** (
             -parameters["distance_decay_beta"]
         )
         weights *= self.distances <= parameters["max_walk_distance_m"]
+        if self.niche == Niche.PICKUP_POINT and parameters.get("max_pickup_distance_m", 0) > 0:
+            nearest = self.nearest_distances[self.origin_indices]
+            fallback = (
+                (nearest > parameters["max_walk_distance_m"])
+                & (self.distances <= parameters["max_pickup_distance_m"])
+                & (np.abs(self.distances - nearest) <= DISTANCE_TOLERANCE_M)
+            )
+            weights[fallback] = 1
+        return weights
+
+    def candidate_terms(
+        self, parameters: Mapping[str, float]
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+        weights = self.competition_weights(parameters)
         pressure = np.bincount(
             self.origin_indices,
             weights=weights * self.attraction[self.destination_indices],
@@ -132,8 +182,32 @@ class DemandModel:
         candidate_edges = self.destination_indices < len(self.features)
         origins = self.origin_indices[candidate_edges]
         destinations = self.destination_indices[candidate_edges]
-        candidate_weights = weights[candidate_edges] * candidate_attraction
-        denominators = candidate_weights + pressure[origins] + parameters["outside_option_weight"]
+        distances = self.distances[candidate_edges]
+        candidate_weights = weights[candidate_edges].copy()
+        candidate_pressure = pressure[origins].copy()
+        if self.niche == Niche.PICKUP_POINT and parameters.get("max_pickup_distance_m", 0) > 0:
+            nearest = self.nearest_distances[origins]
+            uncovered = nearest > parameters["max_walk_distance_m"]
+            walk = distances <= parameters["max_walk_distance_m"]
+            fallback = uncovered & ~walk & (distances <= parameters["max_pickup_distance_m"])
+            fallback &= distances <= nearest + DISTANCE_TOLERANCE_M
+            candidate_weights[fallback] = 1
+            closer = distances < nearest - DISTANCE_TOLERANCE_M
+            candidate_pressure[uncovered & (walk | (fallback & closer))] = 0
+        return origins, destinations, candidate_weights, candidate_pressure
+
+    def revenue(self, parameters: Mapping[str, float], candidate_attraction: float = 1.0) -> np.ndarray:
+        validate_parameters(self.niche, parameters)
+        if not np.isfinite(candidate_attraction) or candidate_attraction <= 0:
+            raise ValueError("Привлекательность кандидата должна быть положительной и конечной")
+        if (
+            max(parameters["max_walk_distance_m"], parameters.get("max_pickup_distance_m", 0))
+            > self.max_distance_m
+        ):
+            raise ValueError("Радиус превышает подготовленную область, пересоздайте модель")
+        origins, destinations, candidate_weights, pressure = self.candidate_terms(parameters)
+        candidate_weights *= candidate_attraction
+        denominators = candidate_weights + pressure + parameters["outside_option_weight"]
         shares = np.divide(
             candidate_weights,
             denominators,
@@ -212,7 +286,9 @@ def sample_parameters(
     samples = {}
     lower_parameters = {}
     upper_parameters = {}
-    for name in (*REQUIRED_PARAMETERS[selected], *COMMON_PARAMETERS):
+    names = (*REQUIRED_PARAMETERS[selected], *COMMON_PARAMETERS)
+    names += tuple(name for name in OPTIONAL_PARAMETERS[selected] if name in supplied_ranges)
+    for name in names:
         bounds = supplied_ranges[name]
         lower, upper = float(bounds["p10"]), float(bounds["p90"])
         if not np.isfinite([lower, upper]).all() or lower > upper:
@@ -237,7 +313,7 @@ def simulate_demand(
     seed: int = DEFAULT_SEED,
 ) -> pd.DataFrame:
     samples = sample_parameters(niche, ranges, runs, seed)
-    model = prepare_model(features, competitors, niche, float(samples["max_walk_distance_m"].max()))
+    model = prepare_model(features, competitors, niche, preparation_distance(samples))
     revenues = np.array([model.revenue(parameters) for parameters in samples.to_dict("records")])
     quantiles = np.quantile(revenues, QUANTILES, axis=0)
     return pd.DataFrame(
