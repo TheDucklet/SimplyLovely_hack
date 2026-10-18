@@ -39,7 +39,7 @@ def test_finance_costs_include_payroll_contributions() -> None:
         }
     )
     result = calculate_finance(
-        np.array([[1_000_000.0]]), samples, np.array([7000.0]), 50_000, "usn_income_6", TAXES
+        np.array([[1_000_000.0]]), samples, np.array([7000.0]), 50_000, "usn_income_6", TAXES, niche="coffee"
     )
     assert result.rent[0, 0] == 280_000
     assert result.payroll[0, 0] == 260_000
