@@ -1,7 +1,248 @@
 year: 2026
-status: placeholder
-usn_income_rate: {value: 0.06, unit: share, applies_to: [coffee, pickup_point], source: null, note: "условное значение до S1-I4"}
-usn_income_minus_expenses_rate: {value: 0.15, unit: share, applies_to: [coffee, pickup_point], source: null, note: "условное значение до S1-I4"}
-employer_contributions_rate: {value: 0.30, unit: share, applies_to: [coffee, pickup_point], source: null, note: "условное значение до S1-I4"}
-vat_threshold_usn_rub_year: {value: 20000000, unit: rub, applies_to: [coffee, pickup_point], source: null, note: "условное значение до S1-I4"}
-moscow_trade_fee_rub_quarter: {value: null, unit: rub, applies_to: [], source: null, note: "уточняет Иван в S1-I4"}
+currency: RUB
+updated: 2026-10-18
+usn_income_rate: {value: 0.06, unit: share, applies_to: [coffee, pickup_point], source: "https://tochka.com/knowledge/buhgalteriya/stavki-usn-po-regionam-dlya-ip-i-ooo/", note: "УСН «Доходы» 6 % по п. 1 ст. 346.20 НК РФ, региональных льгот для общепита и пунктов выдачи в Москве и Тульской области нет, подробности в usn"}
+usn_income_minus_expenses_rate: {value: 0.15, unit: share, applies_to: [coffee, pickup_point], source: "https://glavkniga.ru/situations/s518887", note: "УСН «Доходы минус расходы» 15 % по п. 2 ст. 346.20 НК РФ при минимальном налоге 1 % выручки, подробности в usn"}
+employer_contributions_rate: {value: 0.302, unit: share, applies_to: [coffee, pickup_point], source: "https://www.kontur-extern.ru/info/5789", note: "общий тариф 30 % (п. 3 ст. 425 НК РФ) и 0,2 % на травматизм для 1 класса риска; для кофейни действует пониженный тариф 15 % с части зарплаты свыше 1,5 МРОТ (social_contributions_employer), модель пока применяет общий тариф к обеим нишам"}
+vat_threshold_usn_rub_year: {value: 20000000, unit: rub, applies_to: [coffee, pickup_point], source: "https://www.klerk.ru/blogs/astral/713790/", note: "порог освобождения от НДС на УСН с 2026 года по Федеральному закону от 28.11.2025 № 425-ФЗ, ставки НДС после порога в vat_on_usn"}
+moscow_trade_fee_rub_quarter: {value: 61845.39, unit: rub, applies_to: [], source: "https://www.klerk.ru/rubricator/torgovyj-sbor/", note: "кофейни и пункты выдачи торговый сбор не платят, значение для торгового зала до 50 м² внутри МКАД вне ЦАО приведено для справки, подробности в trade_fee_moscow"}
+
+usn:
+  income_rate_moscow:
+    value: 0.06
+    unit: share
+    applies_to: ["coffee", "pickup_point"]
+    source: "https://tochka.com/knowledge/buhgalteriya/stavki-usn-po-regionam-dlya-ip-i-ooo/"
+    note: "базовая ставка УСН «Доходы» 6% по п. 1 ст. 346.20 НК РФ, в Москве региональных льгот по объекту «Доходы» для общепита и ПВЗ нет (обзор от 13.08.2026)"
+  income_rate_tula:
+    value: 0.06
+    unit: share
+    applies_to: ["coffee", "pickup_point"]
+    source: "https://rezhimo.ru/okved/56"
+    note: "базовая ставка УСН «Доходы» 6% по п. 1 ст. 346.20 НК РФ, в Тульской области коды кофеен и ПВЗ не входят в перечень льготных категорий (данные реестра ставок от 17.08.2026 и 10.09.2026)"
+  profit_rate_moscow:
+    value: 0.15
+    unit: share
+    applies_to: ["coffee", "pickup_point"]
+    source: "https://glavkniga.ru/situations/s518887"
+    note: "базовая ставка УСН «Доходы минус расходы» 15% по п. 2 ст. 346.20 НК РФ, пониженная ставка 10% по Закону г. Москвы от 07.10.2009 № 41 действует только для производства, науки, спорта, соцуслуг, управления недвижимостью и сельского хозяйства (обзор от 05.02.2026)"
+  profit_rate_tula:
+    value: 0.15
+    unit: share
+    applies_to: ["coffee", "pickup_point"]
+    source: "https://rezhimo.ru/okved/56"
+    note: "базовая ставка УСН «Доходы минус расходы» 15% по п. 2 ст. 346.20 НК РФ, в Тульской области пониженные ставки для общепита и ПВЗ не установлены (данные на 10.09.2026)"
+  min_tax_rate_profit_object:
+    value: 0.01
+    unit: share_of_revenue
+    applies_to: ["coffee", "pickup_point"]
+    source: "https://tochka.com/knowledge/buhgalteriya/stavki-usn-po-regionam-dlya-ip-i-ooo/"
+    note: "минимальный налог на УСН «Доходы минус расходы» составляет 1% от годовых доходов и уплачивается, если рассчитанный по ставке 15% налог оказался меньше 1% выручки (п. 6 ст. 346.18 НК РФ, обзор от 13.08.2026)"
+  max_annual_revenue_limit:
+    value: 490500000
+    unit: rub_year
+    applies_to: ["coffee", "pickup_point"]
+    source: "https://www.kontur-extern.ru/info/53637-nds_na_usn"
+    note: "предельный размер доходов для сохранения права на применение УСН в 2026 году с учётом коэффициента-дефлятора (п. 4 ст. 346.13 НК РФ, обзор от 12.01.2026)"
+  tax_deduction_max_share_with_staff:
+    value: 0.50
+    unit: share_of_tax
+    applies_to: ["coffee", "pickup_point"]
+    source: "https://www.sravni.ru/registraciya-ip-yur-lic/info/umenshenie-naloga-usn-ip-na-strahovye-vznosy-2026/"
+    note: "ООО и ИП с наёмными работниками уменьшают исчисленный налог УСН «Доходы» на страховые взносы и больничные за счёт работодателя не более чем на 50% (п. 3.1 ст. 346.21 НК РФ, обзор от 03.07.2026)"
+  tax_deduction_max_share_ip_no_staff:
+    value: 1.00
+    unit: share_of_tax
+    applies_to: ["coffee", "pickup_point"]
+    source: "https://www.sravni.ru/registraciya-ip-yur-lic/info/umenshenie-naloga-usn-ip-na-strahovye-vznosy-2026/"
+    note: "ИП без работников и подрядчиков по договорам ГПХ уменьшают налог УСН «Доходы» на фиксированные и дополнительные взносы за себя до 100% вплоть до нуля (п. 3.1 ст. 346.21 НК РФ, обзор от 03.07.2026)"
+
+social_contributions_employer:
+  federal_mrot:
+    value: 27093
+    unit: rub_month
+    applies_to: ["coffee", "pickup_point"]
+    source: "https://pravovest-audit.ru/nashi-statii-nalogi-i-buhuchet/strakhovye-vznosy-izmeneniya-s-2026-goda/"
+    note: "федеральный МРОТ с 01.01.2026 по Федеральному закону от 28.11.2025 № 429-ФЗ (обзор от 05.12.2025)"
+  msp_threshold_1_5_mrot:
+    value: 40639.50
+    unit: rub_month
+    applies_to: ["coffee"]
+    source: "https://www.kontur-extern.ru/info/82978-kto_smozhet_primenyat_lgotu_po_vznosam"
+    note: "полуторакратный федеральный МРОТ в месяц на одного работника (27 093 × 1,5), в пределах которого начисляется ставка 30%, а свыше него для приоритетных отраслей МСП действует ставка 15% (п. 2.4 ст. 427 НК РФ, обзор от 30.12.2025)"
+  standard_rate:
+    value: 0.30
+    unit: share_of_wage
+    applies_to: ["coffee", "pickup_point"]
+    source: "https://www.kontur-extern.ru/info/5789"
+    note: "единый базовый тариф страховых взносов работодателя в пределах единой предельной базы по п. 3 ст. 425 НК РФ (для ПВЗ с кодами 47.91, 52.29 и 82.92 применяется ко всей зарплате, так как эти коды не вошли в распоряжение Правительства РФ от 27.12.2025 № 4125-р; для кофеен с кодом 56 применяется к части выплаты до 40 639,50 руб. в месяц)"
+  standard_rate_above_limit:
+    value: 0.151
+    unit: share_of_wage
+    applies_to: ["coffee", "pickup_point"]
+    source: "https://www.kontur-extern.ru/info/5789"
+    note: "тариф страховых взносов работодателя свыше единой предельной базы 2 979 000 руб. нарастающим итогом за год (п. 3 ст. 425 НК РФ)"
+  unified_limit_base:
+    value: 2979000
+    unit: rub_year_per_employee
+    applies_to: ["coffee", "pickup_point"]
+    source: "https://legalbis.ru/instrumenty/lgota-vznosy-okved"
+    note: "единая предельная величина базы для исчисления страховых взносов на одного работника в 2026 году (обзор от августа 2026 года)"
+  msp_reduced_rate_above_1_5_mrot:
+    value: 0.15
+    unit: share_of_wage
+    applies_to: ["coffee"]
+    source: "https://www.nalog.gov.ru/rn77/news/activities_fts/16599875/"
+    note: "пониженный тариф 15% с части ежемесячной выплаты свыше 1,5 МРОТ (40 639,50 руб.) по п. 2.4 и п. 13.3 ст. 427 НК РФ при доле доходов от основного вида деятельности не менее 70%: код 56 (общепит) и код 53 (почтовая и курьерская деятельность) включены в перечень распоряжения Правительства РФ от 27.12.2025 № 4125-р, тогда как стандартные коды ПВЗ 47.91, 52.29 и 82.92 в перечень не входят (разъяснение ФНС от 03.02.2026)"
+  injury_rate_min:
+    value: 0.002
+    unit: share_of_wage
+    applies_to: ["coffee", "pickup_point"]
+    source: "https://www.kontur-extern.ru/info/80346-opredelili_tarify_vznosov_na_travmatizm"
+    note: "базовый тариф взносов на обязательное социальное страхование от несчастных случаев на производстве и профзаболеваний для 1 класса профессионального риска (общепит, розничная торговля, услуги хранения и упаковки) по Федеральному закону от 28.11.2025 № 434-ФЗ (обзор от 08.12.2025)"
+
+ip_self_contributions:
+  fixed_annual:
+    value: 57390
+    unit: rub_year
+    applies_to: ["coffee", "pickup_point"]
+    source: "https://www.klerk.ru/blogs/moedelo/663649/"
+    note: "фиксированный размер страховых взносов ИП за себя на ОПС и ОМС за полный 2026 год по пп. 1 п. 1.2 ст. 430 НК РФ со сроком уплаты до 28 декабря 2026 года (4782,50 руб. в пересчёте на месяц, публикация от 02.10.2025)"
+  additional_income_threshold:
+    value: 300000
+    unit: rub_year
+    applies_to: ["coffee", "pickup_point"]
+    source: "https://www.klerk.ru/blogs/moedelo/663649/"
+    note: "годовой порог дохода ИП, свыше которого начисляется дополнительный взнос 1% на ОПС по пп. 2 п. 1.2 ст. 430 НК РФ (публикация от 02.10.2025)"
+  additional_rate_above_threshold:
+    value: 0.01
+    unit: share_of_income_above_threshold
+    applies_to: ["coffee", "pickup_point"]
+    source: "https://www.klerk.ru/blogs/moedelo/663649/"
+    note: "ставка дополнительного страхового взноса ИП за себя с дохода свыше 300 000 руб. в год со сроком уплаты до 1 июля 2027 года (пп. 2 п. 1.2 ст. 430 НК РФ, публикация от 02.10.2025)"
+  additional_annual_cap:
+    value: 321818
+    unit: rub_year
+    applies_to: ["coffee", "pickup_point"]
+    source: "https://www.klerk.ru/blogs/moedelo/663649/"
+    note: "максимальный размер дополнительного взноса 1% за 2026 год по пп. 2 п. 1.2 ст. 430 НК РФ, совокупный предел взносов ИП за себя вместе с фиксированной частью составляет 379 208 руб. в год (публикация от 02.10.2025)"
+
+vat_on_usn:
+  exemption_revenue_threshold:
+    value: 20000000
+    unit: rub_year
+    applies_to: ["coffee", "pickup_point"]
+    source: "https://www.klerk.ru/blogs/astral/713790/"
+    note: "порог годового дохода за 2025 год или с начала 2026 года, после превышения которого плательщик УСН утрачивает освобождение от НДС по п. 1 ст. 145 НК РФ в редакции Федерального закона от 28.11.2025 № 425-ФЗ (обзор от 15.10.2026)"
+  special_rate_tier1:
+    value: 0.05
+    unit: share
+    applies_to: ["coffee", "pickup_point"]
+    source: "https://www.kontur-extern.ru/info/53637-nds_na_usn"
+    note: "специальная ставка НДС 5% без права на вычет входного НДС при годовом доходе от 20 млн до 272,5 млн руб. включительно по п. 8 ст. 164 НК РФ (обзор от 12.01.2026)"
+  special_rate_tier1_max_revenue:
+    value: 272500000
+    unit: rub_year
+    applies_to: ["coffee", "pickup_point"]
+    source: "https://www.kontur-extern.ru/info/53637-nds_na_usn"
+    note: "верхний предел годового дохода с учётом коэффициента-дефлятора для применения специальной ставки НДС 5% на УСН в 2026 году (пп. 1 п. 8 ст. 164 НК РФ, обзор от 12.01.2026)"
+  special_rate_tier2:
+    value: 0.07
+    unit: share
+    applies_to: ["coffee", "pickup_point"]
+    source: "https://www.kontur-extern.ru/info/53637-nds_na_usn"
+    note: "специальная ставка НДС 7% без права на вычет входного НДС при годовом доходе свыше 272,5 млн до 490,5 млн руб. включительно по п. 8 ст. 164 НК РФ (обзор от 12.01.2026)"
+  special_rate_tier2_max_revenue:
+    value: 490500000
+    unit: rub_year
+    applies_to: ["coffee", "pickup_point"]
+    source: "https://www.kontur-extern.ru/info/53637-nds_na_usn"
+    note: "верхний предел годового дохода для применения специальной ставки НДС 7% и сохранения УСН в 2026 году (пп. 2 п. 8 ст. 164 НК РФ, обзор от 12.01.2026)"
+  general_rate:
+    value: 0.22
+    unit: share
+    applies_to: ["coffee", "pickup_point"]
+    source: "https://www.klerk.ru/blogs/astral/713790/"
+    note: "основная ставка НДС 22% с правом на вычет входного НДС, введённая с 01.01.2026 Федеральным законом от 28.11.2025 № 425-ФЗ по п. 3 ст. 164 НК РФ (на отдельные продовольственные товары сохраняется ставка 10%, обзор от 15.10.2026)"
+
+trade_fee_moscow:
+  applies_to_niches_by_default:
+    value: 0
+    unit: rub_quarter
+    applies_to: []
+    source: "https://www.klerk.ru/rubricator/torgovyj-sbor/"
+    note: "ни кофейни (услуги общепита по ГОСТ 31984-2012, письмо Минфина от 05.06.2019 № 03-11-11/40960), ни классические ПВЗ (выдача интернет-заказов без торгового зала и выкладки товара, разъяснения Департамента финансов и ДЭПиР г. Москвы) торговый сбор не платят; сбор возникает только при выделении витрины для розничной перепродажи чужих товаров на площади более 10% помещения"
+  deflator_2026:
+    value: 2.165
+    unit: multiplier
+    applies_to: []
+    source: "https://sberbusiness.live/publications/torgovyj-sbor"
+    note: "коэффициент-дефлятор для индексации базовых ставок торгового сбора на 2026 год по приказу Минэкономразвития России от 06.11.2025 № 734 (обзор от 23.04.2026)"
+  stationary_up_to_50m2_cao_quarter:
+    value: 123690.78
+    unit: rub_quarter
+    applies_to: []
+    source: "https://t-j.ru/kak-platit-torgovyj-sbor/"
+    note: "ставка торгового сбора в ЦАО Москвы за торговый объект с залом до 50 м2 включительно в квартал (базовая ставка 57 132 руб. по Закону г. Москвы от 17.12.2014 № 62 × дефлятор 2,165; в месяц 41 230,26 руб., обзор от 20.07.2026)"
+  stationary_up_to_50m2_inside_mkad_non_cao_quarter:
+    value: 61845.39
+    unit: rub_quarter
+    applies_to: []
+    source: "https://t-j.ru/kak-platit-torgovyj-sbor/"
+    note: "ставка торгового сбора в округах Москвы внутри МКАД (кроме ЦАО) за торговый объект с залом до 50 м2 включительно в квартал (базовая ставка 28 566 руб. × дефлятор 2,165; в месяц 20 615,13 руб., обзор от 20.07.2026)"
+
+patent_system:
+  max_annual_revenue_limit:
+    value: 20000000
+    unit: rub_year
+    applies_to: ["coffee"]
+    source: "https://www.mos.ru/upload/content/files/f9390936f0123db276f146eaa8b577ff/PSN_24-02-2026.pdf"
+    note: "предельный доход ИП за 2025 год или с начала 2026 года (по всем патентам и УСН суммарно) для права на ПСН в 2026 году по пп. 1 п. 6 ст. 346.45 НК РФ; для ПВЗ и ООО патент недоступен (справочник ДЭПиР г. Москвы от 24.02.2026)"
+  max_staff_limit:
+    value: 15
+    unit: persons
+    applies_to: ["coffee"]
+    source: "https://www.rnk.ru/article/218816-patent-dlya-ip-izmeneniya"
+    note: "предельная средняя численность наёмных работников у ИП на патенте по п. 5 ст. 346.43 НК РФ (обзор от 14.09.2026)"
+  deflator_2026:
+    value: 1.253
+    unit: multiplier
+    applies_to: ["coffee"]
+    source: "https://glavkniga.ru/situations/s518926"
+    note: "коэффициент-дефлятор для ПСН на 2026 год по приказу Минэкономразвития России от 06.11.2025 № 734 (обзор от 10.06.2026)"
+  moscow_coffee_with_hall_annual_max:
+    value: 902160
+    unit: rub_year_per_object
+    applies_to: ["coffee"]
+    source: "https://rezhimo.ru/patent/moskva"
+    note: "полная годовая стоимость патента в Москве на 1 объект общепита с залом обслуживания (до 50 м2) в ЦАО (75 180 руб./мес., диапазон по районам Москвы от 315 756 до 902 160 руб./год до уменьшения на взносы, данные калькулятора ФНС в справочнике от 21.07.2026)"
+  moscow_coffee_with_hall_annual_min:
+    value: 315756
+    unit: rub_year_per_object
+    applies_to: ["coffee"]
+    source: "https://rezhimo.ru/patent/moskva"
+    note: "минимальная полная годовая стоимость патента в Москве на 1 объект общепита с залом обслуживания в периферийных районах (26 313 руб./мес. до уменьшения на взносы, справочник от 21.07.2026)"
+  moscow_coffee_no_hall_annual_max:
+    value: 601440
+    unit: rub_year_per_object
+    applies_to: ["coffee"]
+    source: "https://rezhimo.ru/patent/moskva"
+    note: "полная годовая стоимость патента в Москве на 1 объект общепита без зала обслуживания в ЦАО (50 120 руб./мес., диапазон по районам Москвы от 210 504 до 601 440 руб./год до уменьшения на взносы, справочник от 21.07.2026)"
+  moscow_coffee_no_hall_annual_min:
+    value: 210504
+    unit: rub_year_per_object
+    applies_to: ["coffee"]
+    source: "https://rezhimo.ru/patent/moskva"
+    note: "минимальная полная годовая стоимость патента в Москве на 1 объект общепита без зала обслуживания в периферийных районах (17 542 руб./мес. до уменьшения на взносы, справочник от 21.07.2026)"
+  tula_coffee_with_hall_annual_per_m2:
+    value: 2173
+    unit: rub_year_per_m2_hall
+    applies_to: ["coffee"]
+    source: "https://rezhimo.ru/patent/tulskaya-oblast"
+    note: "полная годовая стоимость патента в г. Туле для кафе и кофеен с залом обслуживания за 1 м2 площади зала (181 руб./мес. за 1 м2; для зала 25 м2 при общей площади кофейни 38 м2 составляет 54 325 руб./год или 4527 руб./мес. до уменьшения на взносы, данные калькулятора ФНС в справочнике от 21.07.2026)"
+  tula_coffee_no_hall_annual_per_object:
+    value: 51084
+    unit: rub_year_per_object
+    applies_to: ["coffee"]
+    source: "https://rezhimo.ru/patent/tulskaya-oblast"
+    note: "полная годовая стоимость патента в г. Туле на 1 объект общепита без зала обслуживания посетителей (4257 руб./мес. до уменьшения на взносы, потенциальный годовой доход 851 400 руб., данные калькулятора ФНС в справочнике от 21.07.2026)"
