@@ -1,5 +1,6 @@
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from functools import cached_property, lru_cache
 from math import ceil
 from pathlib import Path
 
@@ -34,6 +35,8 @@ from geostart.model.finance import (
     risk_levels,
     sample_finance_parameters,
 )
+from geostart.model.simulation import simulate_revenues
+from geostart.model.spatial import CellNeighborhood
 from geostart.research import city_parameters
 from geostart.schemas import (
     Assumption,
@@ -71,9 +74,34 @@ class CityInputs:
     taxes: dict
     salary: float
     data_version: str
+    city: str = ""
+    rent_adjustment: dict = field(default_factory=dict)
+    district_okrugs: dict = field(default_factory=dict)
+
+
+def input_revision(city: str, niche: str) -> tuple:
+    directory = city_directory(city)
+    root = settings.research_dir()
+    paths = [*directory.iterdir(), root / "niche_params" / f"{niche}.yaml", root / "rent" / f"{city}.csv"]
+    paths.extend(
+        (root / "taxes" / "2026.yaml", settings.config_dir() / "population" / "moscow_districts.csv")
+    )
+    paths.extend(root.joinpath("rent").glob("*.yaml"))
+    return tuple(
+        (str(path.resolve()), path.stat().st_mtime_ns, path.stat().st_size)
+        for path in paths
+        if path.is_file()
+    )
 
 
 def load_inputs(city: str, niche: str) -> CityInputs:
+    get_city(city)
+    get_niche(niche)
+    return cached_inputs(city, niche, input_revision(city, niche))
+
+
+@lru_cache(maxsize=8)
+def cached_inputs(city: str, niche: str, revision: tuple) -> CityInputs:
     get_city(city)
     get_niche(niche)
     directory = city_directory(city)
@@ -82,6 +110,14 @@ def load_inputs(city: str, niche: str) -> CityInputs:
         parameters = city_parameters(yaml.safe_load(stream), city)
     with (root / "taxes" / "2026.yaml").open(encoding="utf-8") as stream:
         taxes = yaml.safe_load(stream)
+    adjustment_path = root / "rent" / "location_adjustments.yaml"
+    adjustment = (
+        yaml.safe_load(adjustment_path.read_text(encoding="utf-8")) if adjustment_path.is_file() else {}
+    )
+    district_path = settings.config_dir() / "population" / "moscow_districts.csv"
+    districts = (
+        pd.read_csv(district_path).set_index("district").okrug.to_dict() if district_path.is_file() else {}
+    )
     features = pd.read_parquet(directory / "hex_features.parquet")
     competitors = pd.read_parquet(directory / "competitors.parquet")
     wages = pd.read_parquet(directory / "wages.parquet")
@@ -99,12 +135,127 @@ def load_inputs(city: str, niche: str) -> CityInputs:
         taxes,
         float(salaries.median()),
         pd.to_datetime(wages["collected_at"]).max().date().isoformat(),
+        city,
+        adjustment,
+        districts,
     )
+
+
+@dataclass(frozen=True)
+class CityContext:
+    inputs: CityInputs
+    samples: pd.DataFrame
+    nearby: list[np.ndarray]
+    cells: dict[str, int]
+    addresses: pd.DataFrame
+    neighborhood: CellNeighborhood
+
+    @cached_property
+    def model(self) -> DemandModel:
+        return prepare_model(
+            self.inputs.features,
+            self.inputs.competitors,
+            str(self.inputs.parameters["niche"]),
+            preparation_distance(self.samples),
+            self.neighborhood,
+        )
+
+    @cached_property
+    def offsets(self) -> np.ndarray:
+        counts = np.bincount(self.model.origin_indices, minlength=len(self.inputs.features))
+        return np.concatenate([[0], np.cumsum(counts)])
+
+
+def city_context(city: str, niche: str) -> CityContext:
+    return cached_context(city, niche, input_revision(city, niche))
+
+
+@lru_cache(maxsize=4)
+def cached_context(city: str, niche: str, revision: tuple) -> CityContext:
+    inputs = cached_inputs(city, niche, revision)
+    samples = sample_parameters(niche, inputs.parameters["demand"])
+    selected = inputs.competitors.loc[inputs.competitors.niche.eq(niche)]
+    cells = list(dict.fromkeys([*inputs.features.h3, *selected.h3]))
+    return CityContext(
+        inputs,
+        samples,
+        nearby_indices(inputs.features, inputs.competitors, niche),
+        {cell: index for index, cell in enumerate(cells)},
+        pd.read_parquet(inputs.directory / "addresses.parquet"),
+        CellNeighborhood.build(cells, preparation_distance(samples)),
+    )
+
+
+def local_demand_model(context: CityContext, features: pd.DataFrame) -> DemandModel:
+    from geostart.model.demand import Niche, competitor_attractiveness
+
+    source_indices = np.array([context.cells[cell] for cell in features.h3])
+    niche = str(context.inputs.parameters["niche"])
+    selected = context.inputs.competitors.loc[context.inputs.competitors.niche.eq(niche)]
+    cells = list(dict.fromkeys([*features.h3, *selected.h3]))
+    old_indices = np.array([context.cells[cell] for cell in cells])
+    mapping = np.full(len(context.cells), -1, dtype=int)
+    mapping[old_indices] = np.arange(len(cells))
+    if "model" in context.__dict__:
+        edges = np.concatenate(
+            [np.arange(context.offsets[index], context.offsets[index + 1]) for index in source_indices]
+        )
+        global_origins = context.model.origin_indices[edges]
+        global_destinations = context.model.destination_indices[edges]
+        global_distances = context.model.distances[edges]
+    else:
+        global_origins, global_destinations, global_distances = context.neighborhood.edges(source_indices)
+    keep = mapping[global_destinations] >= 0
+    origins = mapping[global_origins[keep]]
+    destinations = mapping[global_destinations[keep]]
+    order = np.lexsort((destinations, origins))
+    attraction = np.zeros(len(cells))
+    indices = {cell: index for index, cell in enumerate(cells)}
+    np.add.at(attraction, selected.h3.map(indices).to_numpy(dtype=int), competitor_attractiveness(selected))
+    return DemandModel(
+        features.copy(deep=True),
+        Niche(niche),
+        origins[order],
+        destinations[order],
+        global_distances[keep][order],
+        attraction,
+        preparation_distance(context.samples),
+    )
+
+
+@lru_cache(maxsize=32)
+def cached_location(
+    city: str, niche: str, revision: tuple, cell: str
+) -> tuple[pd.DataFrame, int, DemandModel]:
+    context = cached_context(city, niche, revision)
+    radius = preparation_distance(context.samples)
+    features, candidate_index = local_features(context.inputs, cell, radius)
+    model = (
+        local_demand_model(context, features)
+        if cell in context.cells and cell in set(context.inputs.features.h3)
+        else prepare_model(features, context.inputs.competitors, niche, radius)
+    )
+    return features, candidate_index, model
 
 
 def rent_rates(inputs: CityInputs, features: pd.DataFrame) -> np.ndarray:
     rates = {district: resolve_rent(inputs.rents, district)[0] for district in features["district"].unique()}
-    return features["district"].map(rates).to_numpy(dtype=float)
+    return features["district"].map(rates).to_numpy(dtype=float) * rent_multipliers(inputs, features)
+
+
+def rent_multipliers(inputs: CityInputs, features: pd.DataFrame) -> np.ndarray:
+    result = np.ones(len(features))
+    rule = inputs.rent_adjustment
+    if not rule or inputs.city != rule["city"] or "metro_dist_m" not in features:
+        return result
+    okrugs = features.district.map(inputs.district_okrugs)
+    selected = (
+        okrugs.notna()
+        & okrugs.ne(rule["excluded_okrug"])
+        & features.metro_dist_m.gt(float(rule["metro_distance_threshold_m"]))
+    )
+    result[selected.to_numpy()] = float(rule["far_metro_multiplier"])
+    return result
 
 
 def run_simulation(
@@ -114,7 +265,7 @@ def run_simulation(
     area_m2: float | None = None,
     rent_rub_m2_month: float | None = None,
 ) -> tuple[np.ndarray, FinanceResult]:
-    revenues = np.array([model.revenue(parameters) for parameters in samples.to_dict("records")])
+    revenues = simulate_revenues(model, samples)
     finance_samples = sample_finance_parameters(inputs.parameters, len(samples), DEFAULT_SEED)
     if area_m2 is not None:
         finance_samples["area_m2"] = area_m2
@@ -155,9 +306,8 @@ def nearby_indices(features: pd.DataFrame, competitors: pd.DataFrame, niche: str
 
 
 def score_city(city: str, niche: str) -> pd.DataFrame:
-    inputs = load_inputs(city, niche)
-    samples = sample_parameters(niche, inputs.parameters["demand"])
-    model = prepare_model(inputs.features, inputs.competitors, niche, preparation_distance(samples))
+    context = city_context(city, niche)
+    inputs, samples, model = context.inputs, context.samples, context.model
     revenues, finance = run_simulation(inputs, model, samples)
     quantiles = np.quantile(revenues, QUANTILES, axis=0)
     displayed_costs = sum(
@@ -165,7 +315,7 @@ def score_city(city: str, niche: str) -> pd.DataFrame:
     )
     profit_p50 = quantiles[1] - displayed_costs
     capex_p50 = np.median(finance.capex, axis=0)
-    counts = [len(indices) for indices in nearby_indices(inputs.features, inputs.competitors, niche)]
+    counts = [len(indices) for indices in context.nearby]
     scores = pd.DataFrame(
         {
             "h3": inputs.features["h3"].to_numpy(),
@@ -320,10 +470,9 @@ def evaluate_location(
     inputs = load_inputs(city, niche)
     validate_location(inputs, lat, lon, city)
     cell = h3.latlng_to_cell(lat, lon, get_city(city).h3_resolution)
-    samples = sample_parameters(niche, inputs.parameters["demand"])
-    radius_m = preparation_distance(samples)
-    features, candidate_index = local_features(inputs, cell, radius_m)
-    model = prepare_model(features, inputs.competitors, niche, radius_m)
+    context = city_context(city, niche)
+    samples = context.samples
+    features, candidate_index, model = cached_location(city, niche, input_revision(city, niche), cell)
     revenues, finance = run_simulation(inputs, model, samples, area_m2, rent_rub_m2_month)
     quantiles = np.quantile(revenues[:, candidate_index], QUANTILES)
     capex_p50 = float(np.median(finance.capex[:, candidate_index]))
@@ -348,9 +497,7 @@ def evaluate_location(
         for (_, row), distance in zip(selected.iloc[nearby].iterrows(), point_distances, strict=True)
     ]
     competitor_reports.sort(key=lambda competitor: competitor.distance_m)
-    city_counts = np.array(
-        [len(indices) for indices in nearby_indices(inputs.features, inputs.competitors, niche)]
-    )
+    city_counts = np.array([len(indices) for indices in context.nearby])
     factors = explain_factors(
         model,
         candidate_index,
@@ -364,6 +511,38 @@ def evaluate_location(
     assumptions = report_assumptions(
         inputs, str(features.iloc[candidate_index].district), float(quantiles[1]), city
     )
+    if any("эффект ограничен выручкой" in factor.name for factor in factors):
+        assumptions.append(
+            Assumption(
+                name="Ограничение эффекта конкурентов",
+                value=(
+                    "Эффект представляет разницу с условным сценарием медианной конкуренции. "
+                    "Его модуль ограничен выручкой точки. Оценка предназначена для сравнения сценариев."
+                ),
+                unit="",
+                source=None,
+            )
+        )
+    if rent_rub_m2_month is None:
+        multiplier = float(rent_multipliers(inputs, features.iloc[[candidate_index]])[0])
+        if multiplier != 1:
+            rule = inputs.rent_adjustment
+            assumptions.append(
+                Assumption(
+                    name="Множитель аренды по удалённости от метро вне ЦАО",
+                    value=f"{multiplier:g}, порог {rule['metro_distance_threshold_m']} м, {rule['note']}",
+                    unit="",
+                    source=rule["source"],
+                )
+            )
+            assumptions.append(
+                Assumption(
+                    name="Ставка аренды после поправки на метро",
+                    value=float(rent_rates(inputs, features.iloc[[candidate_index]])[0]),
+                    unit="₽/м² в месяц",
+                    source=rule["source"],
+                )
+            )
     for name, value, unit in (
         ("Площадь пользователя", area_m2, "м²"),
         ("Ставка аренды пользователя", rent_rub_m2_month, "₽/м² в месяц"),
@@ -392,7 +571,7 @@ def evaluate_location(
                 source=None,
             )
         )
-    addresses = pd.read_parquet(inputs.directory / "addresses.parquet")
+    addresses = context.addresses
     matching = addresses.loc[addresses["h3"].eq(cell)]
     address = None
     if not matching.empty:

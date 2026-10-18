@@ -1,6 +1,9 @@
 import json
+import os
 import shutil
+from dataclasses import replace
 from pathlib import Path
+from time import perf_counter
 
 import h3
 import numpy as np
@@ -12,6 +15,9 @@ from shapely.geometry import box, mapping
 from geostart import settings
 from geostart.model import evaluate_location, score_city
 from geostart.model.__main__ import main
+from geostart.model.demand import limit_revenue
+from geostart.model.service import city_context, input_revision, load_inputs, rent_multipliers
+from geostart.model.simulation import simulate_revenues
 from geostart.pipeline.fixtures import write_fixtures
 from geostart.schemas import LocationReport
 
@@ -25,6 +31,67 @@ SCORE_COLUMNS = [
     "risk_level",
     "competitors_500m",
 ]
+
+
+@pytest.mark.parametrize("niche", ["coffee", "pickup_point"])
+def test_batch_simulation_matches_uncached_reference(model_data: Path, niche: str) -> None:
+    context = city_context("tula", niche)
+    model = context.model
+    expected = np.array([model.revenue(parameters) for parameters in context.samples.to_dict("records")])
+    np.testing.assert_allclose(simulate_revenues(model, context.samples), expected, rtol=1e-12, atol=1e-8)
+    np.testing.assert_allclose(simulate_revenues(model, context.samples, 0)[:, 0], expected[:, 0])
+
+
+def test_data_mtime_invalidates_city_cache(model_data: Path) -> None:
+    first = city_context("tula", "coffee")
+    assert first is city_context("tula", "coffee")
+    path = model_data / "processed/tula/hex_features.parquet"
+    stat = path.stat()
+    os.utime(path, ns=(stat.st_atime_ns, stat.st_mtime_ns + 1000000))
+    assert first is not city_context("tula", "coffee")
+    parameters = settings.research_dir() / "niche_params/coffee.yaml"
+    before = input_revision("tula", "coffee")
+    stat = parameters.stat()
+    os.utime(parameters, ns=(stat.st_atime_ns, stat.st_mtime_ns + 1000000))
+    assert before != input_revision("tula", "coffee")
+
+
+def test_rent_discount_excludes_center_tula_and_missing_metro(model_data: Path) -> None:
+    inputs = load_inputs("moscow", "coffee")
+    features = pd.DataFrame(
+        {
+            "district": ["Тверской", "Ясенево", "Ясенево", "Ясенево", "Неизвестный"],
+            "metro_dist_m": [1500, 1000, 1001, np.nan, 2000],
+        }
+    )
+    np.testing.assert_array_equal(rent_multipliers(inputs, features), [1, 1, 0.4, 1, 1])
+    np.testing.assert_array_equal(rent_multipliers(replace(inputs, city="tula"), features), 1)
+
+
+def test_capacity_limits_coffee_and_keeps_pickup_revenue() -> None:
+    revenues = np.array([100, 10_000_000])
+    parameters = {"max_cups_per_day": 150, "avg_check_rub": 300}
+    np.testing.assert_array_equal(limit_revenue(revenues, "coffee", parameters), [100, 1_350_000])
+    np.testing.assert_array_equal(limit_revenue(revenues, "pickup_point", parameters), revenues)
+
+
+def test_cached_report_time_has_margin_and_does_not_rebuild_geometry(model_data: Path, monkeypatch) -> None:
+    from geostart.model import service
+
+    inputs = load_inputs("tula", "pickup_point")
+    coordinate = h3.cell_to_latlng(inputs.features.iloc[0].h3)
+    evaluate_location("tula", "pickup_point", *coordinate)
+
+    def rejected(*args, **kwargs):
+        pytest.fail("Геометрия повторно строится для прогретого адреса")
+
+    monkeypatch.setattr(service, "prepare_model", rejected)
+    timings = []
+    for _ in range(10):
+        started = perf_counter()
+        evaluate_location("tula", "pickup_point", *coordinate)
+        timings.append(perf_counter() - started)
+    assert np.quantile(timings, 0.95) < 2.5
 
 
 @pytest.fixture
@@ -179,6 +246,10 @@ def test_more_residents_increase_revenue(model_data: Path) -> None:
 
 
 def test_competition_factor_matches_removing_colocated_point(model_data: Path) -> None:
+    path = settings.research_dir() / "niche_params" / "coffee.yaml"
+    parameters = yaml.safe_load(path.read_text(encoding="utf-8"))
+    parameters["demand"].pop("max_cups_per_day", None)
+    path.write_text(yaml.safe_dump(parameters), encoding="utf-8")
     directory = model_data / "processed" / "tula"
     features = pd.read_parquet(directory / "hex_features.parquet")
     cell = features.iloc[0].h3

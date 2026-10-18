@@ -27,6 +27,7 @@ PARAMETER_NAMES = {
     "metro_influence_distance_m": "Радиус влияния метро",
     "transit_visits_per_stop_month": "Покупки прохожих на остановку в месяц",
     "max_pickup_distance_m": "Расширенный радиус получения заказа",
+    "max_cups_per_day": "Пропускная способность кофейни, чашек в день",
 }
 PROFESSION_NAMES = {"barista": "бариста", "pickup_operator": "оператора пункта выдачи"}
 

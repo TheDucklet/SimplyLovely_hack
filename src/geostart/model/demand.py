@@ -2,13 +2,16 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from enum import StrEnum
 from functools import cache, cached_property
-from math import ceil
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import h3
 import numpy as np
 import pandas as pd
 import yaml
+
+if TYPE_CHECKING:
+    from geostart.model.spatial import CellNeighborhood
 
 DEFAULT_RUNS = 200
 DEFAULT_SEED = 2026
@@ -20,6 +23,7 @@ GRID_RADIUS_MARGIN = 2
 GRID_EDGE_SAFETY_FACTOR = 0.5
 QUANTILES = (0.1, 0.5, 0.9)
 DISTANCE_TOLERANCE_M = 1e-6
+DAYS_PER_MONTH = 30
 
 
 class Niche(StrEnum):
@@ -38,7 +42,12 @@ REQUIRED_PARAMETERS = {
 }
 COMMON_PARAMETERS = ("max_walk_distance_m", "distance_decay_beta", "outside_option_weight")
 OPTIONAL_PARAMETERS = {
-    Niche.COFFEE: ("metro_visits_per_month", "metro_influence_distance_m", "transit_visits_per_stop_month"),
+    Niche.COFFEE: (
+        "metro_visits_per_month",
+        "metro_influence_distance_m",
+        "transit_visits_per_stop_month",
+        "max_cups_per_day",
+    ),
     Niche.PICKUP_POINT: ("max_pickup_distance_m",),
 }
 
@@ -108,17 +117,30 @@ def cell_demand(features: pd.DataFrame, niche: str, parameters: Mapping[str, flo
     )
 
 
+def limit_revenue(revenue: np.ndarray, niche: str, parameters: Mapping[str, float]) -> np.ndarray:
+    cups = parameters.get("max_cups_per_day", 0)
+    if niche == Niche.COFFEE and cups > 0:
+        return np.minimum(revenue, cups * DAYS_PER_MONTH * parameters["avg_check_rub"])
+    return revenue
+
+
 def passing_visits(features: pd.DataFrame, parameters: Mapping[str, float]) -> np.ndarray:
     visits = np.zeros(len(features))
     if parameters.get("metro_visits_per_month", 0) > 0:
-        distances = pd.to_numeric(features.get("metro_dist_m", pd.Series(np.nan, index=features.index)))
-        influence = (
-            (1 - distances / parameters["metro_influence_distance_m"]).clip(lower=0, upper=1).fillna(0)
+        distances = (
+            features["metro_dist_m"].to_numpy(dtype=float)
+            if "metro_dist_m" in features
+            else np.full(len(features), np.nan)
         )
-        visits += influence.to_numpy() * parameters["metro_visits_per_month"]
+        influence = np.nan_to_num(np.clip(1 - distances / parameters["metro_influence_distance_m"], 0, 1))
+        visits += influence * parameters["metro_visits_per_month"]
     if parameters.get("transit_visits_per_stop_month", 0) > 0:
-        stops = pd.to_numeric(features.get("transit_stops_n", pd.Series(0, index=features.index))).fillna(0)
-        visits += stops.clip(lower=0).to_numpy() * parameters["transit_visits_per_stop_month"]
+        stops = (
+            np.nan_to_num(features["transit_stops_n"].to_numpy(dtype=float))
+            if "transit_stops_n" in features
+            else np.zeros(len(features))
+        )
+        visits += np.maximum(stops, 0) * parameters["transit_visits_per_stop_month"]
     return visits
 
 
@@ -214,16 +236,23 @@ class DemandModel:
             out=np.zeros_like(candidate_weights),
             where=denominators > 0,
         )
-        return np.bincount(
+        result = np.bincount(
             destinations,
             weights=cell_demand(self.features, self.niche, parameters)[origins] * shares,
             minlength=len(self.features),
         )
+        return limit_revenue(result, self.niche, parameters)
 
 
 def prepare_model(
-    features: pd.DataFrame, competitors: pd.DataFrame, niche: str, max_distance_m: float
+    features: pd.DataFrame,
+    competitors: pd.DataFrame,
+    niche: str,
+    max_distance_m: float,
+    neighborhood: "CellNeighborhood | None" = None,
 ) -> DemandModel:
+    from geostart.model.spatial import CellNeighborhood
+
     selected = parse_niche(niche)
     if not np.isfinite(max_distance_m) or max_distance_m <= 0:
         raise ValueError("Радиус должен быть положительным и конечным")
@@ -239,25 +268,8 @@ def prepare_model(
     if any(h3.get_resolution(cell) != resolution for cell in all_cells):
         raise ValueError("Ячейки должны иметь одинаковое разрешение H3")
     indices = {cell: index for index, cell in enumerate(all_cells)}
-    coordinates = np.array([h3.cell_to_latlng(cell) for cell in all_cells])
-    radius = (
-        ceil(
-            max_distance_m / (h3.average_hexagon_edge_length(resolution, unit="m") * GRID_EDGE_SAFETY_FACTOR)
-        )
-        + GRID_RADIUS_MARGIN
-    )
-    origin_indices = []
-    destination_indices = []
-    for origin_index, cell in enumerate(cells):
-        neighbors = sorted(
-            indices[neighbor] for neighbor in h3.grid_disk(cell, radius) if neighbor in indices
-        )
-        origin_indices.extend([origin_index] * len(neighbors))
-        destination_indices.extend(neighbors)
-    origins = np.asarray(origin_indices, dtype=np.int64)
-    destinations = np.asarray(destination_indices, dtype=np.int64)
-    distances = distances_m(coordinates[origins], coordinates[destinations])
-    inside = distances <= max_distance_m
+    spatial = neighborhood if neighborhood is not None else CellNeighborhood.build(all_cells, max_distance_m)
+    origins, destinations, distances = spatial.edges(np.arange(len(cells)))
     attraction = np.zeros(len(all_cells))
     np.add.at(
         attraction,
@@ -267,9 +279,9 @@ def prepare_model(
     return DemandModel(
         features.copy(deep=True),
         selected,
-        origins[inside],
-        destinations[inside],
-        distances[inside],
+        origins.astype(np.int64),
+        destinations.astype(np.int64),
+        distances,
         attraction,
         max_distance_m,
     )

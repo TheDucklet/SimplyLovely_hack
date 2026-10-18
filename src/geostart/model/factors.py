@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 
 from geostart.model.demand import DemandModel, competitor_attractiveness, distances_m
+from geostart.model.simulation import simulate_revenues
 from geostart.schemas import Factor
 
 COMPETITOR_RADIUS_M = 500.0
@@ -69,7 +70,6 @@ def explain_factors(
     baseline_p50: float,
 ) -> list[Factor]:
     candidate = model.features.iloc[candidate_index]
-    parameters = samples.to_dict("records")
     factors = []
     for code, (name, unit) in FACTOR_NAMES.items():
         value = nearby_count if code == "competitors_500m" else candidate[code]
@@ -91,9 +91,11 @@ def explain_factors(
         else:
             factors.append(Factor(code=code, name=name, value=float(value), unit=unit, effect_rub=0))
             continue
-        revenues = [counterfactual.revenue(item)[candidate_index] for item in parameters]
+        revenues = simulate_revenues(counterfactual, samples, candidate_index)[:, 0]
         effect = baseline_p50 - float(np.median(revenues))
         if code == "competitors_500m":
+            if abs(effect) > baseline_p50:
+                name += ", эффект ограничен выручкой"
             effect = bounded_competition_effect(baseline_p50, float(np.median(revenues)))
         factors.append(Factor(code=code, name=name, value=float(value), unit=unit, effect_rub=effect))
     return sorted(factors, key=lambda factor: abs(factor.effect_rub), reverse=True)
