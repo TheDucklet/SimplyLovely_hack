@@ -19,10 +19,10 @@ services:
       resources:
         limits:
           cpus: "0.8"
-          memory: 800M
+          memory: 640M
         reservations:
           memory: 256M
-    memswap_limit: 800M
+    memswap_limit: 640M
     logging: *logging
     restart: unless-stopped
 
@@ -40,9 +40,9 @@ services:
       resources:
         limits:
           cpus: "0.2"
-          memory: 64M
+          memory: 48M
         reservations:
           memory: 16M
-    memswap_limit: 64M
+    memswap_limit: 48M
     logging: *logging
     restart: unless-stopped
