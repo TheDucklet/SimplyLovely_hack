@@ -69,6 +69,11 @@ export function MapView({
       center: [initialCity.current.center[1], initialCity.current.center[0]],
       zoom: initialCity.current.zoom,
       attributionControl: false,
+      locale: {
+        'Map.Title': 'Карта',
+        'NavigationControl.ZoomIn': 'Приблизить карту',
+        'NavigationControl.ZoomOut': 'Отдалить карту',
+      },
     });
     const deckOverlay = new MapboxOverlay({ interleaved: false });
     instance.addControl(deckOverlay);
