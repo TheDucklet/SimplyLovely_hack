@@ -3,8 +3,12 @@ export function BankModal({ action, onClose }: { action: string; onClose: () => 
   const dialog = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     const element = dialog.current;
+    const trigger = document.activeElement;
     element?.showModal();
-    return () => element?.close();
+    return () => {
+      element?.close();
+      if (trigger instanceof HTMLElement && trigger.isConnected) trigger.focus();
+    };
   }, []);
   return (
     <dialog
@@ -23,7 +27,7 @@ export function BankModal({ action, onClose }: { action: string; onClose: () => 
         <span className="eyebrow">ВТБ БИЗНЕС · ПИЛОТ</span>
         <h2 id="bank-title">{action}</h2>
         <p>В пилоте здесь будет переход в ВТБ Бизнес</p>
-        <button className="primary-button" autoFocus onClick={onClose}>
+        <button className="primary-button" onClick={onClose}>
           Понятно
         </button>
       </div>

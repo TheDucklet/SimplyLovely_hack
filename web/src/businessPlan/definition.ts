@@ -15,6 +15,7 @@ const PAGE_MARGIN = 32;
 const INK = '#14233A';
 const MUTED = '#58645E';
 const ORANGE = '#B5541C';
+const SOURCE_COLUMNS = 3;
 const RISK_LABELS: Record<RiskLevel, string> = {
   low: 'Низкий риск',
   medium: 'Средний риск',
@@ -43,6 +44,11 @@ function safeLink(value: string): string | undefined {
   } catch {
     return undefined;
   }
+}
+
+function sourceLabel(value: string): string {
+  const link = safeLink(value);
+  return link ? new URL(link).hostname : value;
 }
 
 function sectionTitle(text: string): Content {
@@ -112,7 +118,7 @@ export function createBusinessPlanDefinition(snapshot: BusinessPlanSnapshot): TD
             link: safeLink(item.source),
             color: '#21634A',
           }
-        : { text: 'Без подтверждённого источника', color: '#8A431B' },
+        : { text: 'Не подтверждён', color: '#8A431B' },
     ]),
   ];
   const content: Content[] = [
@@ -232,7 +238,7 @@ export function createBusinessPlanDefinition(snapshot: BusinessPlanSnapshot): TD
     },
     {
       text: 'Допущения и источники',
-      fontSize: 20,
+      fontSize: 18,
       bold: true,
       pageBreak: 'before',
       margin: [0, 0, 0, 6],
@@ -246,36 +252,48 @@ export function createBusinessPlanDefinition(snapshot: BusinessPlanSnapshot): TD
     {
       text: `Расчёт ${date} МСК · Версия данных ${report.data_version}`,
       style: 'note',
-      margin: [0, 0, 0, 12],
+      margin: [0, 0, 0, 4],
     },
     {
-      table: { headerRows: 1, widths: [160, '*', 102], body: assumptions, dontBreakRows: true },
+      table: { headerRows: 1, widths: [148, '*', 76], body: assumptions, dontBreakRows: true },
       layout: {
         hLineWidth: (index) => (index === 1 ? 1 : 0.4),
         vLineWidth: () => 0,
         hLineColor: () => '#CCD1CD',
         paddingLeft: () => 4,
         paddingRight: () => 4,
-        paddingTop: () => 1.5,
-        paddingBottom: () => 1.5,
+        paddingTop: () => 0.25,
+        paddingBottom: () => 0.25,
       },
       fontSize: 7.5,
       lineHeight: 1.05,
     },
     sectionTitle('Источники'),
-    ...sources.map((source, index): Content => ({
-      text: [
-        { text: `[${index + 1}] `, bold: true },
-        { text: source, link: safeLink(source) },
-      ],
-      fontSize: 7,
-      color: MUTED,
-      margin: [0, 0, 0, 3],
-    })),
     {
-      text: `Ячейка H3 ${report.location.h3}. Строки без подтверждённого источника являются допущениями. При изменении параметров требуется новый расчёт.`,
+      columns: Array.from({ length: SOURCE_COLUMNS }, (_, column) => ({
+        width: '*',
+        stack: sources.flatMap((source, index): Content[] =>
+          index % SOURCE_COLUMNS === column
+            ? [
+                {
+                  text: [
+                    { text: `[${index + 1}] `, bold: true },
+                    { text: sourceLabel(source), link: safeLink(source) },
+                  ],
+                  fontSize: 7,
+                  color: MUTED,
+                  margin: [0, 0, 0, 3],
+                },
+              ]
+            : [],
+        ),
+      })),
+      columnGap: 14,
+    },
+    {
+      text: `H3 ${report.location.h3}. «Не подтверждён» – допущение без источника. Полные адреса публикаций доступны по ссылкам.`,
       style: 'note',
-      margin: [0, 8, 0, 0],
+      margin: [0, 4, 0, 0],
     },
   ];
   return {
