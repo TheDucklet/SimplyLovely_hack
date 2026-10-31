@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { api, useMocks } from './api/client';
 import type { CityInfo, Competitor, HexesResponse, NicheInfo } from './api/types';
 import { MapView } from './components/MapView';
@@ -8,9 +8,12 @@ import { ReportPanel } from './components/ReportPanel';
 import { ComparisonPanel } from './components/ComparisonPanel';
 import type { ReportSlot } from './comparison';
 import { BankModal } from './components/BankModal';
+import { WelcomeToast } from './components/WelcomeToast';
+import { Landing } from './components/Landing';
 import { useLocationReport } from './hooks/useLocationReport';
 import { message, number, rubles } from './format';
 import type { Metric } from './mapStyle';
+import { browserStorage, markWelcomeSeen, welcomeSeen } from './welcome';
 
 export function App() {
   const [cities, setCities] = useState<CityInfo[]>([]);
@@ -28,6 +31,11 @@ export function App() {
   const [bankAction, setBankAction] = useState<string | null>(null);
   const [creditMode, setCreditMode] = useState(false);
   const reportState = useLocationReport(cityCode, nicheCode);
+  const [welcomeOpen, setWelcomeOpen] = useState(() => !welcomeSeen(browserStorage()));
+  const closeWelcome = useCallback(() => {
+    markWelcomeSeen(browserStorage());
+    setWelcomeOpen(false);
+  }, []);
   const secondReportState = useLocationReport(cityCode, nicheCode);
   const [comparisonEnabled, setComparisonEnabled] = useState(false);
   const [activeSlot, setActiveSlot] = useState<ReportSlot>('first');
@@ -106,11 +114,17 @@ export function App() {
                 stroke="currentColor"
                 strokeWidth="2"
               />
-              <circle cx="20" cy="20" r="5" fill="#e8945e" />
+              <circle cx="20" cy="20" r="5" fill="#00aeef" />
             </svg>
           </span>
           ГеоСтарт<span className="brand-note">Место имеет значение</span>
         </a>
+        <nav className="header-nav" aria-label="Разделы">
+          <a href="#how">Как работает</a>
+          <a href="#proof">Точность</a>
+          <a href="#bank">Для банка</a>
+          <a href="#map">Карта</a>
+        </nav>
         <div className="header-actions">
           <button
             className="credit-mode-toggle"
@@ -119,192 +133,196 @@ export function App() {
           >
             Кредитный специалист
           </button>
-          <span className="pilot-label">
-            {useMocks ? 'Демонстрация · Москва, кофейня' : 'Пилот для малого бизнеса'}
-          </span>
+          {useMocks && <span className="pilot-label">Демонстрация · Москва, кофейня</span>}
+          <a className="primary-button button-link header-cta" href="#map">
+            Открыть карту
+          </a>
         </div>
       </header>
-      <div className="toolbar" aria-label="Настройки карты">
-        <label className="select-field">
-          <span className="field-label">Город</span>
-          <select
-            aria-label="Город"
-            value={cityCode}
-            onChange={(event) => {
-              setCityCode(event.target.value);
-              stopComparison();
-            }}
-            disabled={!cities.length}
-          >
-            {cities.map((item) => (
-              <option key={item.code} value={item.code}>
-                {item.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="select-field niche-field">
-          <span className="field-label">Бизнес</span>
-          <select
-            aria-label="Бизнес"
-            value={nicheCode}
-            onChange={(event) => {
-              setNicheCode(event.target.value);
-              stopComparison();
-            }}
-            disabled={!niches.length}
-          >
-            {niches.map((item) => (
-              <option key={item.code} value={item.code}>
-                {item.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <Search
-          key={`${cityCode}-${nicheCode}-${comparisonEnabled ? activeSlot : 'single'}`}
-          city={cityCode}
-          disabled={reportPending || !data}
-          onSelect={activeReport.select}
-        />
-        <div className="metric-field">
-          <span className="field-label">Показать на карте</span>
-          <div className="metric-toggle" role="group" aria-label="Метрика карты">
-            <button aria-pressed={metric === 'revenue'} onClick={() => setMetric('revenue')}>
-              Выручка
-            </button>
-            <button aria-pressed={metric === 'payback'} onClick={() => setMetric('payback')}>
-              Окупаемость
-            </button>
+      <Landing onCreditMode={() => setCreditMode(true)} />
+      <section id="map" className="tool" aria-label="Карта и отчёт">
+        <div className="toolbar" aria-label="Настройки карты">
+          <label className="select-field">
+            <span className="field-label">Город</span>
+            <select
+              aria-label="Город"
+              value={cityCode}
+              onChange={(event) => {
+                setCityCode(event.target.value);
+                stopComparison();
+              }}
+              disabled={!cities.length}
+            >
+              {cities.map((item) => (
+                <option key={item.code} value={item.code}>
+                  {item.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="select-field niche-field">
+            <span className="field-label">Бизнес</span>
+            <select
+              aria-label="Бизнес"
+              value={nicheCode}
+              onChange={(event) => {
+                setNicheCode(event.target.value);
+                stopComparison();
+              }}
+              disabled={!niches.length}
+            >
+              {niches.map((item) => (
+                <option key={item.code} value={item.code}>
+                  {item.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <Search
+            key={`${cityCode}-${nicheCode}-${comparisonEnabled ? activeSlot : 'single'}`}
+            city={cityCode}
+            disabled={reportPending || !data}
+            onSelect={activeReport.select}
+          />
+          <div className="metric-field">
+            <span className="field-label">Показать на карте</span>
+            <div className="metric-toggle" role="group" aria-label="Метрика карты">
+              <button aria-pressed={metric === 'revenue'} onClick={() => setMetric('revenue')}>
+                Выручка
+              </button>
+              <button aria-pressed={metric === 'payback'} onClick={() => setMetric('payback')}>
+                Окупаемость
+              </button>
+            </div>
           </div>
         </div>
-      </div>
-      <main
-        className={`workspace${reportState.location ? ' has-report' : ''}${comparisonEnabled ? ' is-comparing' : ''}`}
-      >
-        <aside className="intro-panel">
-          <p className="eyebrow">ОТКРЫВАЙТЕ С ПОНИМАНИЕМ</p>
-          <h1>
-            Найдите место
-            <br />
-            для своего дела
-          </h1>
-          <p className="intro-copy">
-            Оцените будущую выручку и окупаемость бизнеса до того, как подпишете договор аренды.
-          </p>
-          <div className="map-instruction">
-            <span className="instruction-number">01</span>
-            <p>Выберите участок на карте или найдите адрес, чтобы получить оценку.</p>
-          </div>
-          <div className="stat-block">
-            <span>Участков на карте</span>
-            <strong>{data ? number(data.items.length) : '…'}</strong>
-          </div>
-          <div className="stat-block">
-            <span>Медиана выручки по городу</span>
-            <strong>
-              {median === undefined ? '…' : rubles(median)}
-              <small>/ месяц</small>
-            </strong>
-          </div>
-          <div className="stat-block">
-            <span>Конкурентов в доступных данных</span>
-            <strong>{data ? number(competitors.length) : '…'}</strong>
-          </div>
-          <p className="footnote">
-            Прогноз основан на открытых данных. Значения ориентировочные и зависят от допущений
-            модели.
-          </p>
-        </aside>
-        <section className="map-region" aria-label="Карта прогноза">
-          {reportState.location && (
-            <a
-              className="skip-map"
-              href={comparisonEnabled ? `#report-${activeSlot}-title` : '#report-title'}
-            >
-              Перейти к отчёту
-            </a>
-          )}
-          {city && (
-            <MapView
-              city={city}
-              items={data?.items || []}
-              competitors={data && showCompetitors ? competitors : []}
-              metric={metric}
-              selected={activeReport.location}
-              disabled={reportPending || !data}
-              onSelect={activeReport.select}
+        <main
+          className={`workspace${reportState.location ? ' has-report' : ''}${comparisonEnabled ? ' is-comparing' : ''}`}
+        >
+          <aside className="intro-panel">
+            <p className="eyebrow">ОТКРЫВАЙТЕ С ПОНИМАНИЕМ</p>
+            <h1>
+              Найдите место
+              <br />
+              для своего дела
+            </h1>
+            <p className="intro-copy">
+              Оцените будущую выручку и окупаемость бизнеса до того, как подпишете договор аренды.
+            </p>
+            <div className="map-instruction">
+              <span className="instruction-number">01</span>
+              <p>Выберите участок на карте или найдите адрес, чтобы получить оценку.</p>
+            </div>
+            <div className="stat-block">
+              <span>Участков на карте</span>
+              <strong>{data ? number(data.items.length) : '…'}</strong>
+            </div>
+            <div className="stat-block">
+              <span>Медиана выручки по городу</span>
+              <strong>
+                {median === undefined ? '…' : rubles(median)}
+                <small>/ месяц</small>
+              </strong>
+            </div>
+            <div className="stat-block">
+              <span>Конкурентов в доступных данных</span>
+              <strong>{data ? number(competitors.length) : '…'}</strong>
+            </div>
+            <p className="footnote">
+              Прогноз основан на открытых данных. Значения ориентировочные и зависят от допущений
+              модели.
+            </p>
+          </aside>
+          <section className="map-region" aria-label="Карта прогноза">
+            {reportState.location && (
+              <a
+                className="skip-map"
+                href={comparisonEnabled ? `#report-${activeSlot}-title` : '#report-title'}
+              >
+                Перейти к отчёту
+              </a>
+            )}
+            {city && (
+              <MapView
+                city={city}
+                items={data?.items || []}
+                competitors={data && showCompetitors ? competitors : []}
+                metric={metric}
+                selected={activeReport.location}
+                disabled={reportPending || !data}
+                onSelect={activeReport.select}
+              />
+            )}
+            <div className="map-heading">
+              <span className="eyebrow">{useMocks ? 'ДЕМОНСТРАЦИЯ' : 'ПРОГНОЗ НА КАРТЕ'}</span>
+              <h2>{city?.name || 'Загружаем карту'}</h2>
+              <span>
+                {niche?.name} · {metric === 'revenue' ? 'выручка в месяц' : 'окупаемость'}
+              </span>
+            </div>
+            <label className="competitors-toggle">
+              <input
+                type="checkbox"
+                checked={showCompetitors}
+                onChange={(event) => setShowCompetitors(event.target.checked)}
+              />
+              <span className="competitor-dot" />
+              Конкуренты{data ? ` · ${number(competitors.length)}` : ''}
+            </label>
+            {!data && !currentError && (
+              <div className="map-status" role="status">
+                <span className="spinner" />
+                Загружаем прогноз
+              </div>
+            )}
+            {currentError && (
+              <div className="map-status error" role="alert">
+                <strong>Данные недоступны</strong>
+                <p>{currentError}</p>
+                <button onClick={() => setReload((value) => value + 1)}>Повторить</button>
+              </div>
+            )}
+            {data && !data.items.length && (
+              <div className="map-status" role="status">
+                Для этого города и ниши пока нет ячеек
+              </div>
+            )}
+            {data && <Legend items={data.items} metric={metric} />}
+            <div className="map-hint" role="status">
+              {reportPending
+                ? 'Рассчитываем отчёт…'
+                : comparisonEnabled
+                  ? `Выберите адрес ${activeSlot === 'first' ? '1' : '2'} для сравнения`
+                  : 'Нажмите на участок для оценки'}
+            </div>
+          </section>
+          {comparisonEnabled ? (
+            <ComparisonPanel
+              creditMode={creditMode}
+              first={reportState}
+              second={secondReportState}
+              activeSlot={activeSlot}
+              onSelectSlot={setActiveSlot}
+              onClose={stopComparison}
+              onBankAction={setBankAction}
+              cityName={city?.name || cityCode}
+              nicheName={niche?.name || nicheCode}
             />
-          )}
-          <div className="map-heading">
-            <span className="eyebrow">{useMocks ? 'ДЕМОНСТРАЦИЯ' : 'ПРОГНОЗ НА КАРТЕ'}</span>
-            <h2>{city?.name || 'Загружаем карту'}</h2>
-            <span>
-              {niche?.name} · {metric === 'revenue' ? 'выручка в месяц' : 'окупаемость'}
-            </span>
-          </div>
-          <label className="competitors-toggle">
-            <input
-              type="checkbox"
-              checked={showCompetitors}
-              onChange={(event) => setShowCompetitors(event.target.checked)}
+          ) : reportState.location ? (
+            <ReportPanel
+              creditMode={creditMode}
+              state={reportState}
+              onBankAction={setBankAction}
+              cityName={city?.name || cityCode}
+              nicheName={niche?.name || nicheCode}
+              onCompare={() => {
+                setComparisonEnabled(true);
+                setActiveSlot('second');
+              }}
             />
-            <span className="competitor-dot" />
-            Конкуренты{data ? ` · ${number(competitors.length)}` : ''}
-          </label>
-          {!data && !currentError && (
-            <div className="map-status" role="status">
-              <span className="spinner" />
-              Загружаем прогноз
-            </div>
-          )}
-          {currentError && (
-            <div className="map-status error" role="alert">
-              <strong>Данные недоступны</strong>
-              <p>{currentError}</p>
-              <button onClick={() => setReload((value) => value + 1)}>Повторить</button>
-            </div>
-          )}
-          {data && !data.items.length && (
-            <div className="map-status" role="status">
-              Для этого города и ниши пока нет ячеек
-            </div>
-          )}
-          {data && <Legend items={data.items} metric={metric} />}
-          <div className="map-hint" role="status">
-            {reportPending
-              ? 'Рассчитываем отчёт…'
-              : comparisonEnabled
-                ? `Выберите адрес ${activeSlot === 'first' ? '1' : '2'} для сравнения`
-                : 'Нажмите на участок для оценки'}
-          </div>
-        </section>
-        {comparisonEnabled ? (
-          <ComparisonPanel
-            creditMode={creditMode}
-            first={reportState}
-            second={secondReportState}
-            activeSlot={activeSlot}
-            onSelectSlot={setActiveSlot}
-            onClose={stopComparison}
-            onBankAction={setBankAction}
-            cityName={city?.name || cityCode}
-            nicheName={niche?.name || nicheCode}
-          />
-        ) : reportState.location ? (
-          <ReportPanel
-            creditMode={creditMode}
-            state={reportState}
-            onBankAction={setBankAction}
-            cityName={city?.name || cityCode}
-            nicheName={niche?.name || nicheCode}
-            onCompare={() => {
-              setComparisonEnabled(true);
-              setActiveSlot('second');
-            }}
-          />
-        ) : null}
-      </main>
+          ) : null}
+        </main>
+      </section>
       <footer className="footer">
         <span>Simply Lovely · ГеоСтарт</span>
         <span>
@@ -313,6 +331,7 @@ export function App() {
         </span>
       </footer>
       {bankAction && <BankModal action={bankAction} onClose={() => setBankAction(null)} />}
+      {welcomeOpen && <WelcomeToast onClose={closeWelcome} />}
     </div>
   );
 }

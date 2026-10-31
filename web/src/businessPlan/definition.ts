@@ -12,9 +12,9 @@ export interface BusinessPlanSnapshot {
 }
 
 const PAGE_MARGIN = 32;
-const INK = '#14233A';
-const MUTED = '#58645E';
-const ORANGE = '#B5541C';
+const INK = '#0A2E73';
+const MUTED = '#4B5A78';
+const ACCENT = '#0077C8';
 const SOURCE_COLUMNS = 3;
 const RISK_LABELS: Record<RiskLevel, string> = {
   low: 'Низкий риск',
@@ -122,7 +122,7 @@ export function createBusinessPlanDefinition(snapshot: BusinessPlanSnapshot): TD
     ]),
   ];
   const content: Content[] = [
-    { text: 'ГеоСтарт', fontSize: 12, bold: true, color: ORANGE, margin: [0, 0, 0, 9] },
+    { text: 'ГеоСтарт', fontSize: 12, bold: true, color: ACCENT, margin: [0, 0, 0, 9] },
     { text: 'Черновик бизнес-плана', fontSize: 24, bold: true, margin: [0, 0, 0, 6] },
     { text: `${cityName} · ${nicheName}`, fontSize: 12, margin: [0, 0, 0, 8] },
     { text: address, fontSize: 11, bold: true, margin: [0, 0, 0, 4] },

@@ -11,7 +11,7 @@ import type { SelectedLocation } from '../hooks/useLocationReport';
 import { metricScale, type Metric } from '../mapStyle';
 
 setWorkerUrl(workerUrl);
-const HEX_OPACITY = 0.6;
+const HEX_OPACITY = 0.5;
 const MAP_STYLE: string | StyleSpecification = import.meta.env.VITE_MAP_STYLE_URL || {
   version: 8,
   sources: {
@@ -27,7 +27,7 @@ const MAP_STYLE: string | StyleSpecification = import.meta.env.VITE_MAP_STYLE_UR
       id: 'openstreetmap',
       type: 'raster',
       source: 'openstreetmap',
-      paint: { 'raster-saturation': -0.75, 'raster-opacity': 0.65 },
+      paint: { 'raster-saturation': -0.45, 'raster-opacity': 0.95 },
     },
   ],
 };
@@ -138,10 +138,10 @@ export function MapView({
           id: 'competitors',
           data: competitors,
           getPosition: (item) => [item.lon, item.lat],
-          getFillColor: [20, 35, 58, 235],
-          getLineColor: [255, 255, 255],
+          getFillColor: [255, 255, 255, 240],
+          getLineColor: [10, 46, 115],
           stroked: true,
-          lineWidthMinPixels: 1,
+          lineWidthMinPixels: 1.5,
           getRadius: 4,
           radiusUnits: 'pixels',
           pickable: true,
@@ -157,7 +157,7 @@ export function MapView({
           getPosition: (item) => [item.lon, item.lat],
           getRadius: 9,
           radiusUnits: 'pixels',
-          getFillColor: [181, 84, 28],
+          getFillColor: [0, 174, 239],
           getLineColor: [255, 255, 255],
           stroked: true,
           lineWidthMinPixels: 3,
