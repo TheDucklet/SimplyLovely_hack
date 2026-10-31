@@ -1,0 +1,48 @@
+name: geostart-vps
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: 10m
+    max-file: "3"
+
+services:
+  api:
+    image: geostart-demo-api
+    pull_policy: never
+    user: "${GEOSTART_UID:-1000}:${GEOSTART_GID:-1000}"
+    volumes:
+      - ./data:/app/data
+    environment:
+      FORWARDED_ALLOW_IPS: "*"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.8"
+          memory: 800M
+        reservations:
+          memory: 256M
+    memswap_limit: 800M
+    logging: *logging
+    restart: unless-stopped
+
+  web:
+    image: geostart-demo-web
+    pull_policy: never
+    depends_on:
+      api:
+        condition: service_healthy
+    volumes:
+      - ./docker/web/nginx.vps.conf:/etc/nginx/conf.d/default.conf:ro
+    ports:
+      - "127.0.0.1:${GEOSTART_VPS_PORT:-8081}:80"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.2"
+          memory: 64M
+        reservations:
+          memory: 16M
+    memswap_limit: 64M
+    logging: *logging
+    restart: unless-stopped

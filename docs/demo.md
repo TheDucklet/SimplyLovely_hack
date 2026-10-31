@@ -51,3 +51,5 @@ docker compose -f compose.demo.yml down
 | `docker compose -f compose.demo.yml logs api` | строки расчёта четырёх сочетаний города и ниши и запуск uvicorn |
 
 Если в `data/processed/` нет данных, контейнер `api` завершается с сообщением, куда распаковать архив, а команда с `--wait` ждёт до таймаута. В таком случае посмотрите `docker compose -f compose.demo.yml logs api`.
+
+Публичный стенд на сервере с ограничениями по памяти и процессору описан в [vps.md](vps.md).
