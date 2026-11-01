@@ -43,10 +43,12 @@ export function ReportPanel({
   titleId = 'report-title',
   onClose,
   onCompare,
+  onMethodology,
   creditMode,
 }: {
   state: ReturnType<typeof useLocationReport>;
   onBankAction: (action: string) => void;
+  onMethodology?: () => void;
   cityName: string;
   nicheName: string;
   heading?: string;
@@ -321,6 +323,11 @@ export function ReportPanel({
               Оценка ориентировочная и не гарантирует финансовый результат. Версия данных{' '}
               {report.data_version}.
             </p>
+            {onMethodology && (
+              <button className="methodology-link" onClick={onMethodology}>
+                Как считается оценка
+              </button>
+            )}
           </div>
         )}
       </div>

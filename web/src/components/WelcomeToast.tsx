@@ -1,6 +1,12 @@
 import { useEffect, useRef } from 'react';
 
-export function WelcomeToast({ onClose }: { onClose: () => void }) {
+export function WelcomeToast({
+  onClose,
+  onReadAbout,
+}: {
+  onClose: () => void;
+  onReadAbout: () => void;
+}) {
   const dialog = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     const element = dialog.current;
@@ -32,7 +38,7 @@ export function WelcomeToast({ onClose }: { onClose: () => void }) {
           <a className="primary-button button-link" href="#map" onClick={onClose}>
             Открыть карту
           </a>
-          <button onClick={onClose}>Сначала прочитать о сервисе</button>
+          <button onClick={onReadAbout}>Сначала прочитать о сервисе</button>
         </div>
       </div>
     </dialog>

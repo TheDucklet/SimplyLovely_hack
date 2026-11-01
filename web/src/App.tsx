@@ -10,6 +10,7 @@ import type { ReportSlot } from './comparison';
 import { BankModal } from './components/BankModal';
 import { WelcomeToast } from './components/WelcomeToast';
 import { Landing } from './components/Landing';
+import { MethodologyDialog } from './components/MethodologyDialog';
 import { useLocationReport } from './hooks/useLocationReport';
 import { message, number, rubles } from './format';
 import type { Metric } from './mapStyle';
@@ -30,12 +31,18 @@ export function App() {
   const [reload, setReload] = useState(0);
   const [bankAction, setBankAction] = useState<string | null>(null);
   const [creditMode, setCreditMode] = useState(false);
+  const [methodologyOpen, setMethodologyOpen] = useState(false);
   const reportState = useLocationReport(cityCode, nicheCode);
   const [welcomeOpen, setWelcomeOpen] = useState(() => !welcomeSeen(browserStorage()));
   const closeWelcome = useCallback(() => {
     markWelcomeSeen(browserStorage());
     setWelcomeOpen(false);
   }, []);
+  const readAbout = useCallback(() => {
+    closeWelcome();
+    window.history.replaceState(null, '', window.location.pathname);
+    window.scrollTo({ top: 0 });
+  }, [closeWelcome]);
   const secondReportState = useLocationReport(cityCode, nicheCode);
   const [comparisonEnabled, setComparisonEnabled] = useState(false);
   const [activeSlot, setActiveSlot] = useState<ReportSlot>('first');
@@ -126,6 +133,9 @@ export function App() {
           <a href="#map">Карта</a>
         </nav>
         <div className="header-actions">
+          <button className="header-methodology" onClick={() => setMethodologyOpen(true)}>
+            Как считается оценка
+          </button>
           <button
             className="credit-mode-toggle"
             aria-pressed={creditMode}
@@ -313,6 +323,7 @@ export function App() {
               creditMode={creditMode}
               state={reportState}
               onBankAction={setBankAction}
+              onMethodology={() => setMethodologyOpen(true)}
               cityName={city?.name || cityCode}
               nicheName={niche?.name || nicheCode}
               onCompare={() => {
@@ -331,7 +342,10 @@ export function App() {
         </span>
       </footer>
       {bankAction && <BankModal action={bankAction} onClose={() => setBankAction(null)} />}
-      {welcomeOpen && <WelcomeToast onClose={closeWelcome} />}
+      {welcomeOpen && <WelcomeToast onClose={closeWelcome} onReadAbout={readAbout} />}
+      {methodologyOpen && (
+        <MethodologyDialog version={version} onClose={() => setMethodologyOpen(false)} />
+      )}
     </div>
   );
 }
