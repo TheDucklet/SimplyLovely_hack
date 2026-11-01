@@ -111,6 +111,5 @@ docker compose -f compose.demo.yml up -d --build --wait
 | [docs/vps.md](docs/vps.md) | публичный стенд на VPS, лимиты ресурсов, запуск без sudo |
 | [docs/storage.md](docs/storage.md) | хранилище PostgreSQL с PostGIS, роли, загрузка |
 | [docs/rules.md](docs/rules.md) | правила текста и кода команды |
-| [AGENTS.md](AGENTS.md) | обязательные инструкции для ИИ-агентов |
 
 Порядок работы команды с ветками и pull request описан в `docs/architecture.md`, раздел «Работа с репозиторием».
