@@ -23,7 +23,14 @@ const MAP_STYLE_URL =
   import.meta.env.VITE_MAP_STYLE_URL || 'https://tiles.openfreemap.org/styles/positron';
 const EMPTY_STYLE: StyleSpecification = { version: 8, sources: {}, layers: [] };
 const LABEL_FIELD: ExpressionSpecification = ['coalesce', ['get', 'name:ru'], ['get', 'name']];
-const LABEL_HALO_WIDTH = 1.6;
+const LABEL_HALO_WIDTH = 1.8;
+const LABEL_COLOR = '#0b1220';
+
+function boldFont(font: unknown): unknown {
+  return Array.isArray(font)
+    ? font.map((name) => (typeof name === 'string' ? name.replace(/Regular|Italic/, 'Bold') : name))
+    : font;
+}
 
 function withoutLabels(style: StyleSpecification): StyleSpecification {
   return { ...style, layers: style.layers.filter((layer) => layer.type !== 'symbol') };
@@ -41,9 +48,13 @@ function onlyLabels(style: StyleSpecification): StyleSpecification {
           ...(JSON.stringify(layer.layout?.['text-field'] ?? '').includes('name')
             ? { 'text-field': LABEL_FIELD }
             : {}),
+          ...(layer.layout?.['text-font']
+            ? { 'text-font': boldFont(layer.layout['text-font']) as string[] }
+            : {}),
         },
         paint: {
           ...layer.paint,
+          'text-color': LABEL_COLOR,
           'text-halo-color': '#ffffff',
           'text-halo-width': LABEL_HALO_WIDTH,
         },
