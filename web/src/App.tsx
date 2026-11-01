@@ -23,7 +23,7 @@ export function App() {
   const [hexes, setHexes] = useState<HexesResponse>();
   const [competitors, setCompetitors] = useState<Competitor[]>([]);
   const [metric, setMetric] = useState<Metric>('revenue');
-  const [showCompetitors, setShowCompetitors] = useState(true);
+  const [showCompetitors, setShowCompetitors] = useState(false);
   const [error, setError] = useState('');
   const [bootError, setBootError] = useState('');
   const [version, setVersion] = useState('');
