@@ -1,5 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
-import { Map, NavigationControl, setWorkerUrl, type StyleSpecification } from 'maplibre-gl';
+import {
+  Map,
+  NavigationControl,
+  setWorkerUrl,
+  type ExpressionSpecification,
+  type StyleSpecification,
+  type SymbolLayerSpecification,
+} from 'maplibre-gl';
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url';
 import { MapboxOverlay } from '@deck.gl/mapbox';
 import { H3HexagonLayer } from '@deck.gl/geo-layers';
@@ -12,25 +19,37 @@ import { metricScale, type Metric } from '../mapStyle';
 
 setWorkerUrl(workerUrl);
 const HEX_OPACITY = 0.5;
-const MAP_STYLE: string | StyleSpecification = import.meta.env.VITE_MAP_STYLE_URL || {
-  version: 8,
-  sources: {
-    openstreetmap: {
-      type: 'raster',
-      tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
-      tileSize: 256,
-      maxzoom: 19,
-    },
-  },
-  layers: [
-    {
-      id: 'openstreetmap',
-      type: 'raster',
-      source: 'openstreetmap',
-      paint: { 'raster-saturation': -0.45, 'raster-opacity': 0.95 },
-    },
-  ],
-};
+const MAP_STYLE_URL =
+  import.meta.env.VITE_MAP_STYLE_URL || 'https://tiles.openfreemap.org/styles/positron';
+const EMPTY_STYLE: StyleSpecification = { version: 8, sources: {}, layers: [] };
+const LABEL_FIELD: ExpressionSpecification = ['coalesce', ['get', 'name:ru'], ['get', 'name']];
+const LABEL_HALO_WIDTH = 1.6;
+
+function withoutLabels(style: StyleSpecification): StyleSpecification {
+  return { ...style, layers: style.layers.filter((layer) => layer.type !== 'symbol') };
+}
+
+function onlyLabels(style: StyleSpecification): StyleSpecification {
+  return {
+    ...style,
+    layers: style.layers
+      .filter((layer): layer is SymbolLayerSpecification => layer.type === 'symbol')
+      .map((layer) => ({
+        ...layer,
+        layout: {
+          ...layer.layout,
+          ...(JSON.stringify(layer.layout?.['text-field'] ?? '').includes('name')
+            ? { 'text-field': LABEL_FIELD }
+            : {}),
+        },
+        paint: {
+          ...layer.paint,
+          'text-halo-color': '#ffffff',
+          'text-halo-width': LABEL_HALO_WIDTH,
+        },
+      })),
+  };
+}
 export interface MapViewProps {
   city: CityInfo;
   items: HexScore[];
@@ -51,6 +70,7 @@ export function MapView({
   onSelect,
 }: MapViewProps) {
   const container = useRef<HTMLDivElement>(null);
+  const labelsContainer = useRef<HTMLDivElement>(null);
   const initialCity = useRef(city);
   const map = useRef<Map | null>(null);
   const overlay = useRef<MapboxOverlay | null>(null);
@@ -62,10 +82,10 @@ export function MapView({
     disabledRef.current = disabled;
   }, [onSelect, disabled]);
   useEffect(() => {
-    if (!container.current) return;
+    if (!container.current || !labelsContainer.current) return;
     const instance = new Map({
       container: container.current,
-      style: MAP_STYLE,
+      style: EMPTY_STYLE,
       center: [initialCity.current.center[1], initialCity.current.center[0]],
       zoom: initialCity.current.zoom,
       attributionControl: false,
@@ -75,6 +95,24 @@ export function MapView({
         'NavigationControl.ZoomOut': 'Отдалить карту',
       },
     });
+    instance.setStyle(MAP_STYLE_URL, { transformStyle: (_, next) => withoutLabels(next) });
+    const labels = new Map({
+      container: labelsContainer.current,
+      style: EMPTY_STYLE,
+      center: instance.getCenter(),
+      zoom: instance.getZoom(),
+      interactive: false,
+      attributionControl: false,
+    });
+    labels.setStyle(MAP_STYLE_URL, { transformStyle: (_, next) => onlyLabels(next) });
+    instance.on('move', () =>
+      labels.jumpTo({
+        center: instance.getCenter(),
+        zoom: instance.getZoom(),
+        bearing: instance.getBearing(),
+        pitch: instance.getPitch(),
+      }),
+    );
     const deckOverlay = new MapboxOverlay({ interleaved: false });
     instance.addControl(deckOverlay);
     instance.addControl(new NavigationControl({ showCompass: false }), 'bottom-right');
@@ -87,12 +125,16 @@ export function MapView({
     });
     map.current = instance;
     overlay.current = deckOverlay;
-    const observer = new ResizeObserver(() => instance.resize());
+    const observer = new ResizeObserver(() => {
+      instance.resize();
+      labels.resize();
+    });
     observer.observe(container.current);
     return () => {
       observer.disconnect();
       overlay.current = null;
       map.current = null;
+      labels.remove();
       instance.remove();
     };
   }, []);
@@ -180,13 +222,16 @@ export function MapView({
   return (
     <>
       <div ref={container} className="map-canvas" aria-label={`Карта ${city.name}`} />
+      <div ref={labelsContainer} className="map-labels" aria-hidden="true" />
       {mapError && (
         <div className="map-warning" role="status">
           Подложка карты недоступна. Проверьте подключение к серверу тайлов.
         </div>
       )}
       <div className="map-attribution">
-        © участники <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>,{' '}
+        <a href="https://openfreemap.org">OpenFreeMap</a> ©{' '}
+        <a href="https://www.openmaptiles.org">OpenMapTiles</a>, © участники{' '}
+        <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>,{' '}
         <a href="https://data.mos.ru">data.mos.ru</a>
       </div>
     </>
