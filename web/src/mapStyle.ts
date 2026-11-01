@@ -4,11 +4,11 @@ import { months, rubles } from './format';
 export type Metric = 'revenue' | 'payback';
 export type Color = [number, number, number];
 export const REVENUE_COLORS: Color[] = [
-  [230, 189, 152],
-  [211, 161, 113],
-  [145, 175, 147],
-  [83, 140, 122],
-  [32, 105, 93],
+  [207, 232, 248],
+  [138, 201, 240],
+  [62, 155, 220],
+  [22, 99, 184],
+  [10, 46, 115],
 ];
 export const NO_PAYBACK_COLOR: Color = [136, 141, 155];
 
