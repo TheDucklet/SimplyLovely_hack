@@ -1,4 +1,5 @@
 :root {
+  color-scheme: only light;
   font-family: Inter, 'Segoe UI', Arial, sans-serif;
   color: #0a2e73;
   background: #f2f6fc;
@@ -194,7 +195,8 @@ h1 {
   background: #e4ebf5;
   min-width: 0;
 }
-.map-canvas {
+.map-canvas,
+.map-canvas.maplibregl-map {
   position: absolute;
   inset: 0;
   z-index: 0;

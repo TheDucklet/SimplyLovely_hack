@@ -1,7 +1,6 @@
-import { useCallback, useEffect, useState } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useState } from 'react';
 import { api, useMocks } from './api/client';
 import type { CityInfo, Competitor, HexesResponse, NicheInfo } from './api/types';
-import { MapView } from './components/MapView';
 import { Search } from './components/Search';
 import { Legend } from './components/Legend';
 import { ReportPanel } from './components/ReportPanel';
@@ -15,6 +14,10 @@ import { useLocationReport } from './hooks/useLocationReport';
 import { message, number, rubles } from './format';
 import type { Metric } from './mapStyle';
 import { browserStorage, markWelcomeSeen, welcomeSeen } from './welcome';
+
+const MapView = lazy(() =>
+  import('./components/MapView').then((module) => ({ default: module.MapView })),
+);
 
 export function App() {
   const [cities, setCities] = useState<CityInfo[]>([]);
@@ -253,15 +256,24 @@ export function App() {
               </a>
             )}
             {city && (
-              <MapView
-                city={city}
-                items={data?.items || []}
-                competitors={data && showCompetitors ? competitors : []}
-                metric={metric}
-                selected={activeReport.location}
-                disabled={reportPending || !data}
-                onSelect={activeReport.select}
-              />
+              <Suspense
+                fallback={
+                  <div className="map-status" role="status">
+                    <span className="spinner" />
+                    Загружаем карту
+                  </div>
+                }
+              >
+                <MapView
+                  city={city}
+                  items={data?.items || []}
+                  competitors={data && showCompetitors ? competitors : []}
+                  metric={metric}
+                  selected={activeReport.location}
+                  disabled={reportPending || !data}
+                  onSelect={activeReport.select}
+                />
+              </Suspense>
             )}
             <div className="map-heading">
               <span className="eyebrow">{useMocks ? 'ДЕМОНСТРАЦИЯ' : 'ПРОГНОЗ НА КАРТЕ'}</span>
