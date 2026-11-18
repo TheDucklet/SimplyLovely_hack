@@ -100,8 +100,10 @@ docker compose -f compose.demo.yml up -d --build --wait
 | Документ | Содержание |
 | --- | --- |
 | [docs/architecture.md](docs/architecture.md) | компоненты, поток данных, владельцы каталогов |
-| [docs/contracts.md](docs/contracts.md) | схемы данных, интерфейс модели, HTTP API |
+| [docs/contracts.md](docs/contracts.md) | схемы данных, интерфейс модели, HTTP API v1 и v2 |
 | [docs/api.md](docs/api.md) | режимы работы API и заглушки |
+| [docs/economics.md](docs/economics.md) | финансовый движок, налоги, кредит, нормативы |
+| [docs/api-v2.openapi.json](docs/api-v2.openapi.json) | контракт API v2 в формате OpenAPI |
 | [docs/web.md](docs/web.md) | интерфейс, настройки, запуск и сборка |
 | [docs/data-sources.md](docs/data-sources.md) | источники данных и способы оценки признаков |
 | [docs/decisions.md](docs/decisions.md) | журнал решений |
