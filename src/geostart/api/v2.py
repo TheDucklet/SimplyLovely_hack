@@ -5,11 +5,12 @@ from fastapi import APIRouter, HTTPException, Query
 from geostart.api import mocks
 from geostart.api.data_backend import DataNotReadyError
 from geostart.config import UnknownCityError, UnknownNicheError, get_city
-from geostart.economics.service import check_plan, evaluate_economics, norms_response
+from geostart.economics.service import check_plan, credit_products, evaluate_economics, norms_response
 from geostart.schemas import ReportRequest
 from geostart.schemas_v2 import (
     CreditCheckReport,
     CreditCheckRequest,
+    CreditProductInfo,
     EconomicsReport,
     EconomicsRequest,
     Estimate,
@@ -76,3 +77,8 @@ def credit_check(request: CreditCheckRequest) -> CreditCheckReport:
 @router.get("/norms/{niche}", summary="Нормативы и параметры ниши в городе")
 def norms(niche: str, city: str = Query(min_length=1)) -> NormsResponse:
     return guarded(lambda: norms_response(city, niche))
+
+
+@router.get("/credit-products", summary="Кредитные продукты и их условия с источниками")
+def products() -> list[CreditProductInfo]:
+    return guarded(credit_products)

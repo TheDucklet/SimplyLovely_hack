@@ -246,3 +246,57 @@ patent_system:
     applies_to: ["coffee"]
     source: "https://rezhimo.ru/patent/tulskaya-oblast"
     note: "полная годовая стоимость патента в г. Туле на 1 объект общепита без зала обслуживания посетителей (4257 руб./мес. до уменьшения на взносы, потенциальный годовой доход 851 400 руб., данные калькулятора ФНС в справочнике от 21.07.2026)"
+
+ausn:
+  income_rate:
+    value: 0.08
+    unit: share
+    applies_to: ["coffee", "pickup_point"]
+    source: "https://www.klerk.ru/buh/articles/668150/"
+    note: "АУСН с объектом «доходы» 8% без уменьшения на страховые взносы по ст. 3 Федерального закона от 25.02.2022 № 17-ФЗ (обзор Клерк.ру от 09.11.2025, правка 12.03.2026)"
+  profit_rate:
+    value: 0.20
+    unit: share
+    applies_to: ["coffee", "pickup_point"]
+    source: "https://www.klerk.ru/buh/articles/668150/"
+    note: "АУСН с объектом «доходы минус расходы» 20% по ст. 3 Федерального закона от 25.02.2022 № 17-ФЗ"
+  min_tax_rate_profit_object:
+    value: 0.03
+    unit: share_of_revenue
+    applies_to: ["coffee", "pickup_point"]
+    source: "https://www.klerk.ru/buh/articles/668150/"
+    note: "минимальный налог 3% дохода для объекта «доходы минус расходы», перенос убытков в модели не применяется"
+  max_annual_revenue_limit:
+    value: 60000000
+    unit: rub_year
+    applies_to: ["coffee", "pickup_point"]
+    source: "https://www.klerk.ru/buh/articles/668150/"
+    note: "доход за предыдущий и текущий год не больше 60 млн руб., при превышении сценарий в модели считается по УСН"
+  max_staff_limit:
+    value: 5
+    unit: persons
+    applies_to: ["coffee", "pickup_point"]
+    source: "https://www.klerk.ru/buh/articles/668150/"
+    note: "средняя численность работников не больше 5 человек, зарплата выплачивается только безналично"
+  injury_fixed_annual:
+    value: 2959
+    unit: rub_year_per_employer
+    applies_to: ["coffee", "pickup_point"]
+    source: "https://buh.ru/news/platelshchikam-ausn-utverdili-na-2026-god-razmer-fiksirovannogo-vznosa-na-travmatizm.html"
+    note: "фиксированный взнос на травматизм на 2026 год по постановлению Правительства РФ от 01.11.2025 № 1729 (новость buh.ru от 07.11.2025), в модели начисляется один раз в год на работодателя, взносы на ОПС, ОМС и ВНиМ и фиксированные взносы ИП за себя на АУСН не платятся"
+  experiment_end:
+    value: "2027-12-31"
+    unit: date
+    applies_to: ["coffee", "pickup_point"]
+    source: "https://www.klerk.ru/buh/articles/668150/"
+    note: "эксперимент по Федеральному закону от 25.02.2022 № 17-ФЗ идёт до 31.12.2027, с 2028 года сценарий в модели считается по УСН"
+  regions:
+    source: "https://ausn.nalog.gov.ru/"
+    note: "даты начала АУСН в регионах городов сервиса по порталу ФНС, проверено поиском 18.11.2026"
+    start_dates:
+      moscow: "2022-07-01"
+      tula: "2025-01-01"
+      yaroslavl: "2026-02-01"
+      saint_petersburg: "2025-01-01"
+      novosibirsk: "2025-01-01"
+      yekaterinburg: "2025-02-01"

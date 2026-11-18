@@ -64,14 +64,41 @@ def test_geo_report_has_full_contract(geo_report: dict) -> None:
         "usn_income_6",
         "usn_income_minus_expenses_15",
         "patent",
+        "ausn_income_8",
+        "ausn_income_minus_expenses_20",
     }
+    assert geo_report["tax"]["explanation"].startswith("Режим ")
     assert any(item["name"] == "Источник выручки" for item in geo_report["assumptions"])
 
 
-def test_auto_regime_has_lowest_taxes(geo_report: dict) -> None:
+def test_auto_regime_has_lowest_burden(geo_report: dict) -> None:
     eligible = [option for option in geo_report["tax"]["options"] if option["eligible"]]
-    best = min(eligible, key=lambda option: option["taxes_horizon_p50"])
+    best = min(eligible, key=lambda option: option["burden_horizon_p50"])
     assert geo_report["tax"]["regime"] == best["regime"]
+    for option in eligible:
+        assert option["burden_horizon_p50"] >= option["taxes_horizon_p50"]
+        assert option["burden_horizon_p50"] >= option["contributions_horizon_p50"]
+
+
+def test_investment_items_add_up(geo_report: dict) -> None:
+    investment = geo_report["investment"]
+    items = {item["code"]: item["amount"] for item in investment["items"]}
+    capex_items = [item for item in investment["items"] if item["life_months"] is not None]
+    assert sum(item["amount"] for item in capex_items) == pytest.approx(investment["capex"])
+    assert items["security_deposit"] == pytest.approx(investment["security_deposit"])
+    assert items["working_capital"] == pytest.approx(investment["working_capital"])
+
+
+def test_monthly_rows_have_dscr_and_depreciation(geo_report: dict) -> None:
+    first = geo_report["monthly"][0]
+    assert first["dscr"] == pytest.approx(
+        (first["ebitda"] - first["taxes"]) / (first["interest"] + first["principal"])
+    )
+    assert first["depreciation"] > 0
+    year = geo_report["years"][0]
+    assert year["ebit"] == pytest.approx(year["ebitda"] - year["depreciation"])
+    assert geo_report["metrics"]["first_profit_month"]["p10"] >= 1
+    assert geo_report["credit"]["dscr_monthly_min"]["p50"] is not None
 
 
 def test_monthly_rows_are_consistent(geo_report: dict) -> None:
@@ -154,6 +181,82 @@ def test_user_overrides_replace_research_values() -> None:
     assert body["steady_month"]["wages"] == 3 * 55000
     assert body["tax"]["regime"] == "usn_income_6"
     assert body["tax"]["chosen_automatically"] is False
+
+
+def test_ausn_unavailable_before_regional_start() -> None:
+    response = client.post(
+        "/api/v2/economics",
+        json=geo_request(start_year=2026, start_month=3, horizon_months=12, tax={"regime": "auto"}),
+    )
+    options = {option["regime"]: option for option in response.json()["tax"]["options"]}
+    assert options["ausn_income_8"]["eligible"] is True
+    early = client.post(
+        "/api/v2/economics", json=geo_request(start_year=2025, start_month=1, tax={"regime": "ausn_income_8"})
+    )
+    assert early.status_code == 200
+    late = client.post(
+        "/api/v2/economics", json=geo_request(start_year=2028, tax={"regime": "ausn_income_8"})
+    )
+    assert late.status_code == 422
+    assert "завершается" in late.json()["detail"]
+
+
+def test_ausn_report_warns_about_experiment_end() -> None:
+    body = client.post(
+        "/api/v2/economics", json=geo_request(start_year=2027, tax={"regime": "ausn_income_8"})
+    ).json()
+    assert body["start_year"] == 2027
+    assert any("31.12.2027" in warning for warning in body["warnings"])
+    assert any(item["name"].startswith("Фиксированный взнос на травматизм") for item in body["assumptions"])
+
+
+def test_credit_product_sets_terms_and_warns_new_business() -> None:
+    body = client.post(
+        "/api/v2/economics", json=geo_request(financing={"loan_share": 0.5, "product": "vtb_express"})
+    ).json()
+    credit = body["credit"]
+    assert credit["product"] == "vtb_express"
+    assert credit["rate_annual"] == pytest.approx(0.26)
+    assert credit["term_months"] == 36
+    assert any("не младше 12 мес." in warning for warning in body["warnings"])
+    existing = client.post(
+        "/api/v2/economics",
+        json=geo_request(financing={"loan_share": 0.5, "product": "vtb_express", "business_age_months": 24}),
+    ).json()
+    assert not any("не младше" in warning for warning in existing["warnings"])
+
+
+def test_unknown_credit_product_is_rejected() -> None:
+    response = client.post("/api/v2/economics", json=geo_request(financing={"product": "unknown"}))
+    assert response.status_code == 422
+    assert "не найден" in response.json()["detail"]
+
+
+def test_grace_period_delays_principal() -> None:
+    body = client.post(
+        "/api/v2/economics", json=geo_request(financing={"loan_share": 0.5, "grace_months": 6})
+    ).json()
+    assert body["credit"]["grace_months"] == 6
+    assert all(row["principal"] == 0 for row in body["monthly"][:6])
+    assert body["monthly"][6]["principal"] > 0
+
+
+def test_credit_products_endpoint_lists_sources() -> None:
+    body = client.get("/api/v2/credit-products").json()
+    vtb = next(item for item in body if item["code"] == "vtb_express")
+    assert vtb["rate_annual"]["source"]
+    assert vtb["min_business_age_months"]["value"] == 12
+
+
+def test_franchise_fee_adds_to_investment() -> None:
+    base = client.post("/api/v2/economics", json=geo_request()).json()
+    with_fee = client.post(
+        "/api/v2/economics", json=geo_request(investment={"franchise_fee_rub": 500000})
+    ).json()
+    assert with_fee["investment"]["total"]["p50"] == pytest.approx(
+        base["investment"]["total"]["p50"] + 500000
+    )
+    assert any(item["code"] == "franchise_fee" for item in with_fee["investment"]["items"])
 
 
 def test_patent_for_company_is_rejected() -> None:

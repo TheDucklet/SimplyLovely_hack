@@ -11,8 +11,16 @@ import yaml
 
 from geostart import settings
 from geostart.config import get_city, get_niche
-from geostart.economics.credit import LoanTerms, Schedule
+from geostart.economics.credit import (
+    CreditProduct,
+    LoanTerms,
+    ProductValue,
+    Schedule,
+    get_product,
+    load_products,
+)
 from geostart.economics.engine import (
+    DEFAULT_ASSET_LIFE_MONTHS,
     MODEL_VERSION,
     Metrics,
     PlanSettings,
@@ -26,11 +34,13 @@ from geostart.economics.engine import (
 from geostart.economics.norms import MONTHS_PER_YEAR, Norm, Norms, load_norms, norms_path
 from geostart.economics.sampling import bounds_samples, optional_summary, quantile_samples, summary
 from geostart.economics.taxes import (
+    AUSN_REGIMES,
     MOSCOW,
     REGIME_NAMES,
     LegalForm,
     PatentCost,
     Regime,
+    TaxRules,
     patent_cost,
     tax_rules,
 )
@@ -42,6 +52,7 @@ from geostart.schemas_v2 import (
     CashBand,
     CreditCheckReport,
     CreditCheckRequest,
+    CreditProductInfo,
     CreditSummary,
     DemandSummary,
     EconomicsMetrics,
@@ -49,6 +60,7 @@ from geostart.schemas_v2 import (
     EconomicsRequest,
     Financing,
     GeoDemand,
+    InvestmentItem,
     InvestmentSummary,
     MonthRow,
     NormsResponse,
@@ -56,6 +68,7 @@ from geostart.schemas_v2 import (
     OptionalRange,
     ParameterValue,
     PlanCheck,
+    ProductCondition,
     RegimeOption,
     RevenueDemand,
     SteadyMonth,
@@ -75,6 +88,7 @@ CONFIRMED_DSCR_PROBABILITY = 0.8
 REJECTED_DSCR_PROBABILITY = 0.5
 REJECTED_FLAGS = 2
 PERCENT = 100.0
+FRANCHISE_NAME = "Паушальный взнос"
 COST_PARAMETERS = {
     "area_m2": ("Площадь помещения", "м²"),
     "staff_count": ("Число сотрудников", "чел."),
@@ -309,22 +323,42 @@ class Calculation:
     salary_source: str | None
     unit_value: float
     warnings: list[str]
+    product: CreditProduct | None
+    explanation: str
 
 
-def loan_terms(context: EconomicContext, financing: Financing | None) -> LoanTerms:
+def money_text(value: float) -> str:
+    return f"{value:,.0f}".replace(",", " ")
+
+
+def loan_terms(
+    context: EconomicContext, financing: Financing | None, warnings: list[str]
+) -> tuple[LoanTerms, CreditProduct | None]:
     norms = context.norms
-    rate = (
-        financing.rate_annual
-        if financing and financing.rate_annual is not None
-        else norms.value("loan_rate_annual")
-    )
-    term = (
-        financing.term_months
-        if financing and financing.term_months is not None
-        else int(norms.value("loan_term_months"))
-    )
-    schedule = Schedule(financing.schedule) if financing else Schedule.ANNUITY
-    return LoanTerms(rate, term, schedule)
+    product = get_product(financing.product) if financing and financing.product else None
+    rate = norms.value("loan_rate_annual") if product is None else product.rate_annual.value
+    term = int(norms.value("loan_term_months")) if product is None else int(product.max_term_months.value)
+    grace = 0 if product is None else int(product.grace_months.value)
+    schedule = Schedule.ANNUITY if product is None else product.schedule
+    if financing is not None:
+        rate = financing.rate_annual if financing.rate_annual is not None else rate
+        term = financing.term_months if financing.term_months is not None else term
+        grace = financing.grace_months if financing.grace_months is not None else grace
+        schedule = Schedule(financing.schedule) if financing.schedule else schedule
+    if product is not None and financing is not None:
+        if term > product.max_term_months.value:
+            warnings.append(
+                f"Срок {term} мес. больше предельного срока продукта «{product.name}» "
+                f"{product.max_term_months.value:g} мес."
+            )
+        if financing.business_age_months < product.min_business_age_months.value:
+            warnings.append(
+                f"Продукт «{product.name}» требует бизнес не младше "
+                f"{product.min_business_age_months.value:g} мес., для нового бизнеса нужен другой продукт"
+            )
+    if grace >= term:
+        raise ValueError("Льготный период должен быть короче срока кредита")
+    return LoanTerms(rate, term, schedule, grace), product
 
 
 def loan_amount(financing: Financing | None, investment: np.ndarray) -> np.ndarray:
@@ -338,21 +372,63 @@ def loan_amount(financing: Financing | None, investment: np.ndarray) -> np.ndarr
 
 
 def regime_eligibility(
-    regime: Regime, legal_form: LegalForm, patent: PatentCost | None, staff: np.ndarray, staff_limit: float
+    regime: Regime,
+    legal_form: LegalForm,
+    patent: PatentCost | None,
+    staff: np.ndarray,
+    rules: TaxRules,
+    start: date,
 ) -> str | None:
-    if regime != Regime.PATENT:
-        return None
-    if legal_form != LegalForm.IP:
-        return "Патент доступен только ИП"
-    if patent is None:
-        return "Стоимость патента для ниши и города не исследована"
-    if float(np.median(staff)) > staff_limit:
-        return f"Штат больше {staff_limit:g} человек"
+    staff_p50 = float(np.median(staff))
+    if regime == Regime.PATENT:
+        if legal_form != LegalForm.IP:
+            return "Патент доступен только ИП"
+        if patent is None:
+            return "Стоимость патента для ниши и города не исследована"
+        if staff_p50 > rules.patent_staff_limit:
+            return f"Штат больше {rules.patent_staff_limit:g} человек"
+    if regime in AUSN_REGIMES:
+        ausn = rules.ausn
+        if ausn is None:
+            return "АУСН в нише не исследована"
+        if ausn.region_start is None:
+            return "Нет данных о введении АУСН в регионе города"
+        if start < ausn.region_start:
+            return f"АУСН в регионе действует с {ausn.region_start:%d.%m.%Y}"
+        if start.year > ausn.end_year:
+            return f"Эксперимент АУСН завершается 31.12.{ausn.end_year}"
+        if staff_p50 > ausn.staff_limit:
+            return f"Штат больше {ausn.staff_limit:g} человек"
     return None
 
 
-def default_start_month() -> int:
-    return date.today().month % MONTHS_PER_YEAR + 1
+def start_date(month: int | None, year: int | None) -> date:
+    today = date.today()
+    if month is None:
+        month = today.month % MONTHS_PER_YEAR + 1
+        default_year = today.year + (1 if today.month == MONTHS_PER_YEAR else 0)
+    else:
+        default_year = today.year if month > today.month else today.year + 1
+    return date(year or default_year, month, 1)
+
+
+def regime_explanation(chosen: Regime, options: list[RegimeOption], automatic: bool) -> str:
+    if not automatic:
+        return f"Режим {REGIME_NAMES[chosen]} задан в запросе"
+    selected = next(option for option in options if option.regime == chosen.value)
+    others = [
+        option
+        for option in options
+        if option.eligible and option.regime != chosen.value and option.burden_horizon_p50 is not None
+    ]
+    if not others or selected.burden_horizon_p50 is None:
+        return f"Режим {REGIME_NAMES[chosen]} выбран как единственный доступный"
+    runner = min(others, key=lambda option: option.burden_horizon_p50)
+    gap = runner.burden_horizon_p50 - selected.burden_horizon_p50
+    return (
+        f"Режим {REGIME_NAMES[chosen]} выбран по наименьшей сумме налогов и взносов за горизонт расчёта, "
+        f"он дешевле режима {runner.name} на {money_text(gap)} ₽ по медиане сценариев"
+    )
 
 
 def calculate(request: EconomicsRequest) -> Calculation:
@@ -365,6 +441,7 @@ def calculate(request: EconomicsRequest) -> Calculation:
     runs = len(demand.revenue)
     costs = cost_samples(context, request, runs)
     warnings: list[str] = []
+    start = start_date(request.start_month, request.start_year)
     if request.premises.rent_rub_m2_month is not None:
         rent_rate, rent_source = request.premises.rent_rub_m2_month, None
     elif demand.rent_rate is not None:
@@ -400,21 +477,30 @@ def calculate(request: EconomicsRequest) -> Calculation:
         capex=costs["capex_rub"],
         deposit=deposit_months * area * rent_rate,
         working_capital=working_capital,
+        franchise_fee=np.full(runs, float(request.investment.franchise_fee_rub)),
         salary=float(salary),
     )
-    rules = tax_rules(context.taxes, niche)
+    rules = tax_rules(context.taxes, niche, city)
     central = (
         request.premises.central_district if request.premises.central_district is not None else demand.central
     )
     patent = patent_cost(context.taxes, city, niche, area, niche_norms.value("hall_share_of_area"), central)
     legal_form = LegalForm(request.tax.legal_form)
-    terms = loan_terms(context, request.financing)
+    terms, product = loan_terms(context, request.financing, warnings)
     loan = loan_amount(request.financing, inputs.investment)
     if (loan > inputs.investment).any():
         warnings.append("Сумма кредита больше вложений, в расчёте кредит ограничен суммой вложений")
+    if product is not None and float(np.median(loan)) > product.max_amount_rub.value:
+        warnings.append(
+            f"Сумма кредита больше лимита продукта «{product.name}» "
+            f"{money_text(product.max_amount_rub.value)} ₽"
+        )
     base = {
         "horizon": request.horizon_months,
-        "start_month": request.start_month or default_start_month(),
+        "start_month": start.month,
+        "start_year": start.year,
+        "capex_lives": tuple((item.share, item.life_months) for item in niche_norms.capex.items),
+        "franchise_life_months": DEFAULT_ASSET_LIFE_MONTHS,
         "ramp": niche_norms.series("ramp_up_share"),
         "seasonality": niche_norms.series("seasonality"),
         "revenue_growth": norms.value("inflation_annual"),
@@ -436,15 +522,19 @@ def calculate(request: EconomicsRequest) -> Calculation:
     }
     options: list[RegimeOption] = []
     projections: dict[Regime, tuple[PlanSettings, Projection]] = {}
+    burdens: dict[Regime, float] = {}
     for regime in Regime:
-        reason = regime_eligibility(regime, legal_form, patent, inputs.staff, rules.patent_staff_limit)
+        reason = regime_eligibility(regime, legal_form, patent, inputs.staff, rules, start)
+        first = horizon = contributions = burden = None
         if reason is None:
             plan = PlanSettings(regime=regime, **base)
             result = project(inputs, plan)
             projections[regime] = (plan, result)
-            first, horizon = float(np.median(first_year_taxes(result))), float(np.median(total_taxes(result)))
-        else:
-            first = horizon = None
+            first = float(np.median(first_year_taxes(result)))
+            horizon = float(np.median(total_taxes(result)))
+            contributions = float(np.median(result.contributions.sum(axis=1)))
+            burden = float(np.median(total_taxes(result) + result.contributions.sum(axis=1)))
+            burdens[regime] = burden
         options.append(
             RegimeOption(
                 regime=regime.value,
@@ -453,11 +543,13 @@ def calculate(request: EconomicsRequest) -> Calculation:
                 reason=reason,
                 taxes_first_year_p50=first,
                 taxes_horizon_p50=horizon,
+                contributions_horizon_p50=contributions,
+                burden_horizon_p50=burden,
             )
         )
     automatic = request.tax.regime == "auto"
     if automatic:
-        chosen = min(projections, key=lambda item: float(np.median(total_taxes(projections[item][1]))))
+        chosen = min(burdens, key=burdens.__getitem__)
     else:
         chosen = Regime(request.tax.regime)
         if chosen not in projections:
@@ -465,10 +557,19 @@ def calculate(request: EconomicsRequest) -> Calculation:
             raise ValueError(f"Режим {REGIME_NAMES[chosen]} недоступен: {reason}")
     plan, result = projections[chosen]
     metrics = evaluate(inputs, plan, result)
-    if result.patent_lost.any():
+    if result.fallback.any() and chosen == Regime.PATENT:
         warnings.append(
-            f"В {result.patent_lost.mean() * PERCENT:.0f}% сценариев выручка или штат выше лимитов патента, "
+            f"В {result.fallback.mean() * PERCENT:.0f}% сценариев выручка или штат выше лимитов патента, "
             "для них налог посчитан по УСН «Доходы»"
+        )
+    if result.fallback.any() and chosen in AUSN_REGIMES:
+        warnings.append(
+            f"В {result.fallback.mean() * PERCENT:.0f}% сценариев выручка или штат выше лимитов АУСН, "
+            "для них налог и взносы посчитаны по УСН"
+        )
+    if result.ausn_ended:
+        warnings.append(
+            "Эксперимент АУСН завершается 31.12.2027, с 2028 года налог и взносы посчитаны по УСН"
         )
     if result.general_vat.any():
         warnings.append(
@@ -498,6 +599,8 @@ def calculate(request: EconomicsRequest) -> Calculation:
         salary_source,
         unit,
         warnings,
+        product,
+        regime_explanation(chosen, options, automatic),
     )
 
 
@@ -600,7 +703,47 @@ def calculation_assumptions(calc: Calculation) -> list[Assumption]:
                 source=calc.patent.source,
             )
         )
-    if calc.settings.legal_form == LegalForm.IP:
+    ausn = calc.settings.rules.ausn
+    if regime in AUSN_REGIMES and ausn is not None:
+        result.append(
+            Assumption(
+                name="Фиксированный взнос на травматизм на АУСН",
+                value=ausn.injury_annual,
+                unit="₽/год",
+                source=ausn.source,
+            )
+        )
+        result.append(
+            Assumption(
+                name="Начало АУСН в регионе",
+                value=f"{ausn.region_start:%d.%m.%Y}" if ausn.region_start else "нет данных",
+                unit="",
+                source=ausn.region_source,
+            )
+        )
+    structure = context.norms.niche(context.niche).capex
+    result.append(
+        Assumption(
+            name="Структура вложений и сроки амортизации"
+            + ("" if structure.source else " – допущение без источника"),
+            value=", ".join(
+                f"{item.name} {item.share * PERCENT:.0f}% на {item.life_months} мес."
+                for item in structure.items
+            ),
+            unit="",
+            source=structure.source,
+        )
+    )
+    if calc.product is not None:
+        result.append(
+            Assumption(
+                name=f"Ставка продукта «{calc.product.name}»",
+                value=calc.product.rate_annual.value,
+                unit="доля в год",
+                source=calc.product.rate_annual.source,
+            )
+        )
+    if calc.settings.legal_form == LegalForm.IP and regime not in AUSN_REGIMES:
         result.append(
             Assumption(
                 name="Фиксированные взносы ИП за себя",
@@ -619,6 +762,7 @@ def monthly_rows(calc: Calculation) -> list[MonthRow]:
     p = calc.projection
     r = calc.metrics.representative
     cumulative = p.cumulative_project_cash[r]
+    dscr = calc.metrics.dscr_monthly[r]
     start = calc.settings.start_month
     return [
         MonthRow(
@@ -631,11 +775,13 @@ def monthly_rows(calc: Calculation) -> list[MonthRow]:
             other=float(p.other[r, month]),
             taxes=float(p.taxes[r, month]),
             ebitda=float(p.ebitda[r, month]),
+            depreciation=float(p.depreciation[r, month]),
             interest=float(p.interest[r, month]),
             principal=float(p.principal[r, month]),
             net_profit=float(p.net_profit[r, month]),
             owner_cash_flow=float(p.owner_cash[r, month]),
             cumulative_project_cash=float(cumulative[month]),
+            dscr=float(dscr[month]) if np.isfinite(dscr[month]) else None,
         )
         for month in range(calc.settings.horizon)
     ]
@@ -655,6 +801,8 @@ def year_rows(calc: Calculation) -> list[YearRow]:
                 revenue=revenue,
                 operating_costs=revenue - ebitda,
                 ebitda=ebitda,
+                depreciation=float(p.depreciation[r, window].sum()),
+                ebit=float(p.ebit[r, window].sum()),
                 taxes=float(p.taxes[r, window].sum()),
                 interest=float(p.interest[r, window].sum()),
                 principal=float(p.principal[r, window].sum()),
@@ -663,6 +811,41 @@ def year_rows(calc: Calculation) -> list[YearRow]:
             )
         )
     return rows
+
+
+def investment_items(calc: Calculation) -> list[InvestmentItem]:
+    capex = float(np.median(calc.inputs.capex))
+    structure = calc.context.norms.niche(calc.context.niche).capex
+    items = [
+        InvestmentItem(
+            code=item.code, name=item.name, amount=capex * item.share, life_months=item.life_months
+        )
+        for item in structure.items
+    ]
+    fee = float(np.median(calc.inputs.franchise_fee))
+    if fee > 0:
+        items.append(
+            InvestmentItem(
+                code="franchise_fee", name=FRANCHISE_NAME, amount=fee, life_months=DEFAULT_ASSET_LIFE_MONTHS
+            )
+        )
+    items.append(
+        InvestmentItem(
+            code="security_deposit",
+            name="Обеспечительный платёж по аренде",
+            amount=float(np.median(calc.inputs.deposit)),
+            life_months=None,
+        )
+    )
+    items.append(
+        InvestmentItem(
+            code="working_capital",
+            name="Оборотный запас",
+            amount=float(np.median(calc.inputs.working_capital)),
+            life_months=None,
+        )
+    )
+    return items
 
 
 def build_report(calc: Calculation) -> EconomicsReport:
@@ -696,6 +879,7 @@ def build_report(calc: Calculation) -> EconomicsReport:
         scenarios=calc.inputs.runs,
         horizon_months=calc.settings.horizon,
         start_month=calc.settings.start_month,
+        start_year=calc.settings.start_year,
         discount_rate_annual=calc.settings.discount_rate,
         demand=DemandSummary(
             source=calc.demand.source,
@@ -709,15 +893,18 @@ def build_report(calc: Calculation) -> EconomicsReport:
             name=REGIME_NAMES[regime],
             legal_form=calc.settings.legal_form.value,
             chosen_automatically=calc.chosen_automatically,
+            explanation=calc.explanation,
             options=calc.options,
         ),
         investment=InvestmentSummary(
             capex=float(np.median(calc.inputs.capex)),
+            franchise_fee=float(np.median(calc.inputs.franchise_fee)),
             security_deposit=float(np.median(calc.inputs.deposit)),
             working_capital=float(np.median(calc.inputs.working_capital)),
             total=money(calc.inputs.investment),
             loan=float(np.median(p.loan)),
             own_funds=float(np.median(calc.inputs.investment - p.loan)),
+            items=investment_items(calc),
         ),
         steady_month=SteadyMonth(
             revenue=float(steady["revenue"][r]),
@@ -737,6 +924,7 @@ def build_report(calc: Calculation) -> EconomicsReport:
             irr_annual=optional(m.irr_annual, missing_high=False),
             payback_months=optional(m.payback_months),
             discounted_payback_months=optional(m.discounted_payback_months),
+            first_profit_month=optional(m.first_profit_month),
             probability_no_payback=m.probability_no_payback,
             probability_loss=m.probability_loss,
             risk_level=risk_level(m.probability_loss),
@@ -750,14 +938,19 @@ def build_report(calc: Calculation) -> EconomicsReport:
             contribution_margin_per_unit=calc.unit_value * (1.0 - cogs_p50),
         ),
         credit=CreditSummary(
+            product=None if calc.product is None else calc.product.code,
+            product_name=None if calc.product is None else calc.product.name,
             amount=float(np.median(p.loan)),
             rate_annual=terms.rate_annual,
             term_months=terms.term_months,
+            grace_months=terms.grace_months,
             schedule=terms.schedule.value,
             first_payment=float(np.median(p.interest[:, 0] + p.principal[:, 0])),
             total_interest=float(np.median(p.interest.sum(axis=1))),
             dscr_first_year=optional(m.dscr_first_year),
             dscr_min=optional(m.dscr_min),
+            dscr_monthly_min=optional(m.dscr_monthly_min),
+            months_below_threshold_p50=float(np.median(m.months_below(threshold))) if loan_active else 0.0,
             dscr_threshold=threshold,
             probability_dscr_below_threshold=float(np.mean(m.dscr_min < threshold)) if loan_active else 0.0,
             max_loan_rub=money(m.max_loan),
@@ -825,6 +1018,9 @@ def check_plan(request: CreditCheckRequest) -> CreditCheckReport:
         rate_annual=plan.rate_annual,
         term_months=plan.term_months,
         schedule=plan.schedule,
+        grace_months=plan.grace_months,
+        product=plan.product,
+        business_age_months=plan.business_age_months,
     )
     calc = calculate(request.economics.model_copy(update={"financing": financing}))
     checks = [
@@ -920,3 +1116,23 @@ def norms_response(city: str, niche: str) -> NormsResponse:
         niche_norms=values(niche_norms.items),
         parameters=parameters,
     )
+
+
+def condition(value: ProductValue) -> ProductCondition:
+    return ProductCondition(value=value.value, source=value.source, note=value.note)
+
+
+def credit_products() -> list[CreditProductInfo]:
+    return [
+        CreditProductInfo(
+            code=product.code,
+            name=product.name,
+            rate_annual=condition(product.rate_annual),
+            max_term_months=condition(product.max_term_months),
+            max_amount_rub=condition(product.max_amount_rub),
+            min_business_age_months=condition(product.min_business_age_months),
+            grace_months=condition(product.grace_months),
+            schedule=product.schedule.value,
+        )
+        for product in load_products().values()
+    ]

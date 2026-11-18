@@ -321,6 +321,7 @@ def evaluate_location(
 | `POST /economics` | помесячная финансовая модель точки |
 | `POST /credit-check` | сверка бизнес-плана заявки на кредит с моделью |
 | `GET /norms/{niche}?city=tula` | нормативы и параметры затрат ниши в городе с источниками |
+| `GET /credit-products` | кредитные продукты с условиями и источниками |
 
 Запрос `POST /economics` с выручкой по модели ГеоСтарта:
 
@@ -328,15 +329,28 @@ def evaluate_location(
 {
   "city": "tula",
   "niche": "coffee",
-  "demand": {"source": "geostart", "lat": 54.193, "lon": 37.617},
-  "financing": {"loan_share": 0.7, "rate_annual": 0.19, "term_months": 36, "schedule": "annuity"},
-  "tax": {"legal_form": "ip", "regime": "auto"},
+  "demand": {
+    "source": "geostart",
+    "lat": 54.193,
+    "lon": 37.617
+  },
+  "financing": {
+    "loan_share": 0.7,
+    "product": "vtb_express",
+    "business_age_months": 24,
+    "grace_months": 3
+  },
+  "tax": {
+    "legal_form": "ip",
+    "regime": "auto"
+  },
   "horizon_months": 36,
-  "start_month": 1
+  "start_month": 1,
+  "start_year": 2027
 }
 ```
 
-Обязательны поля `city`, `niche` и `demand`. Необязательные блоки `premises` с полями `area_m2`, `rent_rub_m2_month`, `security_deposit_months` и `central_district`, `operations` с полями `staff_count`, `salary_rub_month`, `cogs_share` и `other_opex_rub_month`, `investment` с полями `capex_rub` и `working_capital_rub` заменяют значения исследования во всех сценариях. Без `financing` кредит не берётся, а ставка и срок для расчёта предельного кредита берутся из нормативов. Неизвестные поля отклоняются с кодом 422.
+Обязательны поля `city`, `niche` и `demand`. Необязательные блоки `premises` с полями `area_m2`, `rent_rub_m2_month`, `security_deposit_months` и `central_district`, `operations` с полями `staff_count`, `salary_rub_month`, `cogs_share` и `other_opex_rub_month`, `investment` с полями `capex_rub`, `working_capital_rub` и `franchise_fee_rub` заменяют значения исследования во всех сценариях. Блок `financing` принимает сумму `loan_amount_rub` или долю `loan_share`, ставку `rate_annual`, срок `term_months`, график `schedule`, льготный период `grace_months`, код продукта `product` и возраст бизнеса `business_age_months`. Без `financing` кредит не берётся, а ставка и срок для расчёта предельного кредита берутся из нормативов. Поля `start_month` и `start_year` задают месяц открытия, от них зависят налоговые годы и доступность АУСН. Поле `tax.regime` принимает `auto`, `usn_income_6`, `usn_income_minus_expenses_15`, `patent`, `ausn_income_8` и `ausn_income_minus_expenses_20`. Неизвестные поля отклоняются с кодом 422.
 
 | Поле `demand` | Содержимое |
 | --- | --- |
@@ -350,54 +364,245 @@ def evaluate_location(
 {
   "city": "tula",
   "niche": "coffee",
-  "versions": {"model": "economics-0.1.0", "norms": "2026-11-18", "data": "2026-10-16", "taxes": "2026-10-18"},
+  "versions": {
+    "model": "economics-0.2.0",
+    "norms": "2026-11-18",
+    "data": "2026-10-16",
+    "taxes": "2026-10-18"
+  },
   "scenarios": 200,
   "horizon_months": 36,
   "start_month": 1,
+  "start_year": 2027,
   "discount_rate_annual": 0.2,
-  "demand": {"source": "geostart", "provider": null, "h3": "891183931c7ffff", "district": "Центральный",
-             "revenue_steady_month": {"p10": 457441, "p50": 761868, "p90": 1223136}},
-  "tax": {"regime": "patent", "name": "Патентная система", "legal_form": "ip", "chosen_automatically": true,
-          "options": [{"regime": "usn_income_6", "name": "УСН «Доходы» 6%", "eligible": true, "reason": null,
-                       "taxes_first_year_p50": 382298, "taxes_horizon_p50": 1295326}]},
-  "investment": {"capex": 2201250, "security_deposit": 31715, "working_capital": 233340,
-                 "total": {"p10": 1494524, "p50": 2499409, "p90": 3887697}, "loan": 1749586, "own_funds": 749823},
-  "steady_month": {"revenue": 667996, "cogs": 167876, "rent": 41966, "wages": 183281,
-                   "payroll_contributions": 54147, "other": 31875, "ebitda": 188850, "tax": 2734,
-                   "owner_contributions": 5444, "vat": 0, "profit": 180673},
-  "metrics": {"npv": {"p10": -3483301, "p50": 3155252, "p90": 12137067},
-              "irr_annual": {"p10": -0.89, "p50": 1.13, "p90": 6.33},
-              "payback_months": {"p10": 6.1, "p50": 14.5, "p90": null},
-              "probability_no_payback": 0.245, "probability_loss": 0.135, "risk_level": "low",
-              "break_even_revenue_month": {"p10": 280047, "p50": 450320, "p90": 639397},
-              "break_even_units_per_day": {"p10": 32.9, "p50": 52.9, "p90": 75.1},
-              "unit_name": "чек", "unit_value_rub": 280},
-  "credit": {"amount": 1749586, "rate_annual": 0.19, "term_months": 36, "schedule": "annuity",
-             "first_payment": 64133, "dscr_min": {"p10": -1.09, "p50": 2.52, "p90": 7.87},
-             "dscr_threshold": 1.25, "probability_dscr_below_threshold": 0.305,
-             "max_loan_rub": {"p10": 0, "p50": 4760684, "p90": 11853737}},
-  "monthly": [{"month": 1, "calendar_month": 1, "revenue": 333998, "cogs": 83938, "rent": 41966,
-               "payroll": 237429, "other": 31875, "taxes": 4560, "ebitda": -61210, "interest": 18466,
-               "principal": 24285, "net_profit": -84235, "owner_cash_flow": -108520,
-               "cumulative_project_cash": -1731861}],
-  "cash_band": [{"month": 1, "p10": -3907572, "p50": -2489847, "p90": -1525514}],
-  "years": [{"year": 1, "revenue": 7187632, "operating_costs": 5541576, "ebitda": 1646056, "taxes": 98127,
-             "interest": 194824, "principal": 318183, "net_profit": 1353105, "operating_cash_flow": 1547929}],
-  "assumptions": [{"name": "Ключевая ставка Банка России", "value": 0.14, "unit": "доля в год",
-                   "source": "https://expert.ru/news/tsb-sokhranil-klyuchevuyu-stavku-na-urovne-14"}],
-  "warnings": ["В 3% сценариев выручка или штат выше лимитов патента, для них налог посчитан по УСН «Доходы»",
-               "Сезонность ниши не исследована, выручка распределена по месяцам равномерно"]
+  "demand": {
+    "source": "geostart",
+    "provider": null,
+    "revenue_steady_month": {
+      "p10": 457441,
+      "p50": 761868,
+      "p90": 1223136
+    },
+    "h3": "891183931c7ffff",
+    "district": "Центральный"
+  },
+  "tax": {
+    "regime": "patent",
+    "name": "Патентная система",
+    "legal_form": "ip",
+    "chosen_automatically": true,
+    "explanation": "Режим Патентная система выбран по наименьшей сумме налогов и взносов за горизонт расчёта, он дешевле режима АУСН «Доходы минус расходы» 20% на 770 064 ₽ по медиане сценариев",
+    "options": [
+      {
+        "regime": "usn_income_6",
+        "name": "УСН «Доходы» 6%",
+        "eligible": true,
+        "reason": null,
+        "taxes_first_year_p50": 382298,
+        "taxes_horizon_p50": 1295326,
+        "contributions_horizon_p50": 1869829,
+        "burden_horizon_p50": 3223633
+      },
+      {
+        "regime": "usn_income_minus_expenses_15",
+        "name": "УСН «Доходы минус расходы» 15%",
+        "eligible": true,
+        "reason": null,
+        "taxes_first_year_p50": 141911,
+        "taxes_horizon_p50": 953300,
+        "contributions_horizon_p50": 1869829,
+        "burden_horizon_p50": 3074389
+      }
+    ]
+  },
+  "investment": {
+    "capex": 2201250,
+    "franchise_fee": 0.0,
+    "security_deposit": 31715,
+    "working_capital": 233340,
+    "total": {
+      "p10": 1494524,
+      "p50": 2499409,
+      "p90": 3887697
+    },
+    "loan": 1749586,
+    "own_funds": 749823,
+    "items": [
+      {
+        "code": "renovation",
+        "name": "Ремонт помещения",
+        "amount": 770438,
+        "life_months": 60
+      },
+      {
+        "code": "equipment",
+        "name": "Кофейное и холодильное оборудование",
+        "amount": 990562,
+        "life_months": 60
+      }
+    ]
+  },
+  "steady_month": {
+    "revenue": 667996,
+    "cogs": 167876,
+    "rent": 41966,
+    "wages": 183281,
+    "payroll_contributions": 54147,
+    "other": 31875,
+    "ebitda": 188850,
+    "tax": 2734,
+    "owner_contributions": 5444,
+    "vat": 0.0,
+    "profit": 180673
+  },
+  "metrics": {
+    "npv": {
+      "p10": -3483301,
+      "p50": 3155252,
+      "p90": 12137067
+    },
+    "irr_annual": {
+      "p10": -0.89,
+      "p50": 1.13,
+      "p90": 6.33
+    },
+    "payback_months": {
+      "p10": 6.08,
+      "p50": 14.51,
+      "p90": null
+    },
+    "first_profit_month": {
+      "p10": 1.0,
+      "p50": 2.5,
+      "p90": null
+    },
+    "probability_no_payback": 0.24,
+    "probability_loss": 0.14,
+    "risk_level": "low",
+    "break_even_revenue_month": {
+      "p10": 280047,
+      "p50": 450320,
+      "p90": 639397
+    },
+    "break_even_units_per_day": {
+      "p10": 32.9,
+      "p50": 52.9,
+      "p90": 75.12
+    },
+    "unit_name": "чек",
+    "unit_value_rub": 280
+  },
+  "credit": {
+    "product": "vtb_express",
+    "product_name": "ВТБ, экспресс-кредит для малого бизнеса",
+    "amount": 1749586,
+    "rate_annual": 0.26,
+    "term_months": 36,
+    "grace_months": 3,
+    "schedule": "annuity",
+    "first_payment": 37908,
+    "dscr_min": {
+      "p10": -1.07,
+      "p50": 2.46,
+      "p90": 7.61
+    },
+    "dscr_monthly_min": {
+      "p10": -5.42,
+      "p50": -0.9,
+      "p90": 3.52
+    },
+    "months_below_threshold_p50": 2.0,
+    "dscr_threshold": 1.25,
+    "probability_dscr_below_threshold": 0.3,
+    "max_loan_rub": {
+      "p10": 0.0,
+      "p50": 4083950,
+      "p90": 10168722
+    }
+  },
+  "monthly": [
+    {
+      "month": 1,
+      "calendar_month": 1,
+      "revenue": 333998,
+      "cogs": 83938,
+      "rent": 41966,
+      "payroll": 237429,
+      "other": 31875,
+      "taxes": 4560,
+      "ebitda": -61210,
+      "depreciation": 33979,
+      "interest": 25269,
+      "principal": 0.0,
+      "net_profit": -91038,
+      "owner_cash_flow": -91038,
+      "cumulative_project_cash": -1731861,
+      "dscr": -2.6
+    }
+  ],
+  "cash_band": [
+    {
+      "month": 1,
+      "p10": -3907572,
+      "p50": -2489847,
+      "p90": -1525514
+    }
+  ],
+  "years": [
+    {
+      "year": 1,
+      "revenue": 7187632,
+      "operating_costs": 5541576,
+      "ebitda": 1646056,
+      "depreciation": 407750,
+      "ebit": 1238306,
+      "taxes": 98127,
+      "interest": 283067,
+      "principal": 241252,
+      "net_profit": 1264863,
+      "operating_cash_flow": 1547929
+    }
+  ],
+  "assumptions": [
+    {
+      "name": "Источник выручки",
+      "value": "Модель Хаффа ГеоСтарт по открытым данным, 200 сценариев параметров спроса",
+      "unit": "",
+      "source": "https://www.openstreetmap.org"
+    }
+  ],
+  "warnings": [
+    "В 3% сценариев выручка или штат выше лимитов патента, для них налог посчитан по УСН «Доходы»",
+    "Сезонность ниши не исследована, выручка распределена по месяцам равномерно"
+  ]
 }
 ```
 
-Списки `options`, `monthly`, `cash_band`, `years` и `assumptions` в примере сокращены до первого элемента. Поле `metrics` содержит также `discounted_payback_months`, `profit_steady_month`, `ebitda_margin_p50`, `safety_margin` и `contribution_margin_per_unit`, поле `credit` содержит `total_interest` и `dscr_first_year`. Диапазоны с возможными пустыми значениями имеют тип `OptionalRange`, в нём `null` означает, что показатель не достигается в этой доле сценариев.
+Список `tax.options` и `investment.items` в примере сокращены до двух элементов, списки `monthly`, `cash_band`, `years` и `assumptions` до первого. Поле `metrics` содержит также `discounted_payback_months`, `profit_steady_month`, `ebitda_margin_p50`, `safety_margin` и `contribution_margin_per_unit`, поле `credit` содержит `total_interest` и `dscr_first_year`. Строка месяца содержит амортизацию `depreciation` и DSCR месяца `dscr`, пустой без платежей по кредиту. Строка года содержит `depreciation` и `ebit`. Диапазоны с возможными пустыми значениями имеют тип `OptionalRange`, в нём `null` означает, что показатель не достигается в этой доле сценариев.
 
 Запрос `POST /credit-check` содержит блок `economics` в формате запроса `/economics` и бизнес-план заявки:
 
 ```json
 {
-  "economics": {"city": "tula", "niche": "coffee", "demand": {"source": "geostart", "lat": 54.193, "lon": 37.617}},
-  "plan": {"revenue_month_rub": 1500000, "capex_rub": 1000000, "payback_months": 8, "loan_amount_rub": 2000000}
+  "economics": {
+    "city": "tula",
+    "niche": "coffee",
+    "demand": {
+      "source": "geostart",
+      "lat": 54.193,
+      "lon": 37.617
+    },
+    "start_month": 1,
+    "start_year": 2027
+  },
+  "plan": {
+    "revenue_month_rub": 1500000,
+    "capex_rub": 1000000,
+    "payback_months": 8,
+    "loan_amount_rub": 2000000,
+    "product": "vtb_express",
+    "business_age_months": 24
+  }
 }
 ```
 
@@ -410,14 +615,31 @@ def evaluate_location(
     "Выручка в месяц плана 1 500 000 ₽ выше p90 модели, план оптимистичнее модели",
     "Вложения плана 1 000 000 ₽ ниже p10 модели, план оптимистичнее модели",
     "Окупаемость плана 8 мес. в диапазоне p10-p90 модели",
-    "Доля сценариев с покрытием долга не ниже 1,25 составляет 65%"
+    "Доля сценариев с покрытием долга не ниже 1,25 составляет 64%"
   ],
-  "checks": [{"code": "revenue_month", "name": "Выручка в месяц", "plan_value": 1500000,
-              "model": {"p10": 457441, "p50": 761868, "p90": 1223136}, "percentile": 98.5,
-              "status": "above", "risk_flag": true, "comment": "..."}],
+  "checks": [
+    {
+      "code": "revenue_month",
+      "name": "Выручка в месяц",
+      "plan_value": 1500000,
+      "model": {
+        "p10": 457441,
+        "p50": 761868,
+        "p90": 1223136
+      },
+      "percentile": 98.5,
+      "status": "above",
+      "risk_flag": true,
+      "comment": "Выручка в месяц плана 1 500 000 ₽ выше p90 модели, план оптимистичнее модели"
+    }
+  ],
   "loan_amount_rub": 2000000,
-  "probability_dscr_ok": 0.65,
-  "max_loan_rub": {"p10": 0, "p50": 4760684, "p90": 11853737},
+  "probability_dscr_ok": 0.64,
+  "max_loan_rub": {
+    "p10": 0.0,
+    "p50": 4331225,
+    "p90": 10784416
+  },
   "economics": {}
 }
 ```
