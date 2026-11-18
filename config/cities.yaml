@@ -13,3 +13,10 @@ cities:
     h3_resolution: 9
     center: [54.1931, 37.6173]
     zoom: 12
+  - code: yaroslavl
+    name: Ярославль
+    osm_boundary: городской округ Ярославль
+    scope: city_boundary
+    h3_resolution: 9
+    center: [57.6261, 39.8845]
+    zoom: 12

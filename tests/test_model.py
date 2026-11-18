@@ -13,6 +13,7 @@ import yaml
 from shapely.geometry import box, mapping
 
 from geostart import settings
+from geostart.config import load_cities
 from geostart.model import evaluate_location, score_city
 from geostart.model.__main__ import main
 from geostart.model.demand import limit_revenue
@@ -100,7 +101,8 @@ def model_data(tmp_path: Path, monkeypatch) -> Path:
     shutil.copytree(settings.research_dir(), root)
     monkeypatch.setattr(settings, "research_dir", lambda: root)
     monkeypatch.setenv("GEOSTART_DATA_DIR", str(tmp_path))
-    for city, center in (("moscow", (55.7558, 37.6176)), ("tula", (54.1931, 37.6173))):
+    for city_config in load_cities():
+        city, center = city_config.code, city_config.center
         directory = tmp_path / "processed" / city
         write_fixtures(city, directory)
         features = pd.read_parquet(directory / "hex_features.parquet")
@@ -187,7 +189,7 @@ def test_missing_cell_inside_boundary_has_valid_report(model_data: Path) -> None
 def test_cli_scores_all_four_combinations(model_data: Path) -> None:
     main(["score", "--city", "all", "--niche", "all"])
     assert {path.name for path in (model_data / "scores").glob("*.parquet")} == {
-        f"{city}_{niche}.parquet" for city in ("moscow", "tula") for niche in ("coffee", "pickup_point")
+        f"{city.code}_{niche}.parquet" for city in load_cities() for niche in ("coffee", "pickup_point")
     }
 
 

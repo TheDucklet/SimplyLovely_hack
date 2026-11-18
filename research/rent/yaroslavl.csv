@@ -1,0 +1,7 @@
+city,zone,zone_type,rent_rub_m2_month_p10,rent_rub_m2_month_p50,rent_rub_m2_month_p90,property_type,source,date
+yaroslavl,Кировский,center,900,1400,2200,street_retail,,placeholder
+yaroslavl,Ленинский,center,800,1200,1900,street_retail,,placeholder
+yaroslavl,Фрунзенский,middle,600,900,1400,street_retail,,placeholder
+yaroslavl,Красноперекопский,middle,600,900,1400,street_retail,,placeholder
+yaroslavl,Дзержинский,middle,600,900,1400,street_retail,,placeholder
+yaroslavl,Заволжский,periphery,500,800,1200,street_retail,,placeholder

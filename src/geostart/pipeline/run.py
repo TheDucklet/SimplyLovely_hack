@@ -1,3 +1,4 @@
+import json
 import logging
 import time
 from collections.abc import Iterator
@@ -117,12 +118,23 @@ def interim_dir() -> Path:
 def ensure_layers(extract_path: Path, config: PipelineConfig) -> dict[str, pd.DataFrame]:
     target = interim_dir()
     paths = {name: target / f"{name}.parquet" for name in INTERIM_LAYERS}
-    is_fresh = all(
-        path.exists() and path.stat().st_mtime > extract_path.stat().st_mtime for path in paths.values()
+    signature_path = target / "extract_signature.json"
+    signature = json.dumps(
+        {
+            "extract": extract_path.name,
+            "boxes": {code: city.extract_bbox for code, city in sorted(config.cities.items())},
+        },
+        ensure_ascii=False,
+    )
+    is_fresh = (
+        all(path.exists() for path in paths.values())
+        and signature_path.exists()
+        and signature_path.read_text(encoding="utf-8") == signature
     )
     if not is_fresh:
         boxes = {code: osm_extract.BoundingBox(*city.extract_bbox) for code, city in config.cities.items()}
         osm_extract.write_layers(osm_extract.extract_layers(extract_path, boxes), target)
+        signature_path.write_text(signature, encoding="utf-8")
     return {name: pd.read_parquet(path) for name, path in paths.items()}
 
 

@@ -45,3 +45,22 @@ cities:
       population: 533607
       date: 2025-01-01
       source: https://www.tsn24.ru/2025/04/16/329641-chislennost-naseleniya-tuly-za-god-sokratilas-pochti-na-pyat-tysyach-chelovek/
+  yaroslavl:
+    extract_bbox: [37.30, 56.50, 41.25, 58.95]
+    boundary: admin
+    boundary_name: городской округ Ярославль
+    boundary_admin_level: "6"
+    district_admin_level: "9"
+    drop_empty_cells: true
+    trudvsem_region: "7600000000000"
+    population_region:
+      name: Ярославская область
+      admin_level: "4"
+      population: 1187558
+      date: 2024-01-01
+      source: https://76.rosstat.gov.ru/storage/mediabank/chislennost_naseleniya_yaroslavskoy_oblasti_2024.pdf
+    population_scope:
+      name: городской округ Ярославль
+      population: 563700
+      date: 2025-01-01
+      source: https://76.rosstat.gov.ru/news/document/261374

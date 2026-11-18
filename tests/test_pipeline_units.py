@@ -136,6 +136,15 @@ def test_addresses_are_deduplicated_and_kept_inside_cells() -> None:
     assert result["address"].tolist() == ["Тверская улица, 7"]
 
 
+def test_point_in_overlapping_boxes_belongs_to_both_cities() -> None:
+    from geostart.pipeline.osm_extract import BoundingBox, cities_of
+
+    boxes = {"tula": BoundingBox(35.85, 52.95, 38.95, 54.90), "kaluga": BoundingBox(33.4, 53.3, 37.3, 55.3)}
+    assert cities_of(boxes, 36.5, 54.0) == ["tula", "kaluga"]
+    assert cities_of(boxes, 38.5, 54.0) == ["tula"]
+    assert cities_of(boxes, 30.0, 59.9) == []
+
+
 def test_scope_calibration_matches_scope_population() -> None:
     from shapely.geometry import box
 

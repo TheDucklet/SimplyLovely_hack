@@ -53,6 +53,7 @@ DISTRICTS = {
         "Арбат",
     ],
     "tula": ["Центральный", "Советский", "Привокзальный", "Пролетарский", "Зареченский"],
+    "yaroslavl": ["Кировский", "Ленинский", "Фрунзенский", "Красноперекопский", "Дзержинский", "Заволжский"],
 }
 CITIES_WITH_METRO = {"moscow"}
 COMPETITOR_COUNTS = {
@@ -66,6 +67,9 @@ WAGE_MEDIANS = {
     "moscow": {"barista": 72000, "pickup_operator": 65000},
     "tula": {"barista": 42000, "pickup_operator": 40000},
 }
+DEFAULT_DISTRICTS = ["Центральный", "Северный", "Южный", "Восточный", "Западный"]
+DEFAULT_COMPETITOR_COUNTS = {"coffee": 90, "pickup_point": 220}
+DEFAULT_WAGE_MEDIANS = {"barista": 42000, "pickup_operator": 40000}
 STREET_NAMES = ["Тестовая улица", "Синтетический переулок", "Модельный проспект", "Пробная улица"]
 
 
@@ -82,7 +86,7 @@ def fixture_cells(city: CityConfig) -> list[str]:
 
 
 def assign_districts(city: CityConfig, latitudes: np.ndarray, longitudes: np.ndarray) -> list[str]:
-    districts = DISTRICTS[city.code]
+    districts = DISTRICTS.get(city.code, DEFAULT_DISTRICTS)
     angles = np.arctan2(latitudes - city.center[0], longitudes - city.center[1])
     sectors = ((angles + np.pi) / (2 * np.pi) * len(districts)).astype(int) % len(districts)
     return [districts[sector] for sector in sectors]
@@ -147,7 +151,7 @@ def build_competitors(city_code: str) -> pd.DataFrame:
     rng = city_rng(city, salt=1)
     rows = []
     for niche in load_niches():
-        count = COMPETITOR_COUNTS[city.code][niche.code]
+        count = COMPETITOR_COUNTS.get(city.code, DEFAULT_COMPETITOR_COUNTS)[niche.code]
         latitudes, longitudes = sample_points(features, count, rng)
         for index, (latitude, longitude) in enumerate(zip(latitudes, longitudes, strict=True), start=1):
             from_mos_ru = city.code == "moscow" and niche.code == "coffee" and rng.random() < MOS_RU_SHARE
@@ -182,7 +186,7 @@ def build_wages(city_code: str) -> pd.DataFrame:
             "collected_at": FIXTURE_COLLECTED_AT,
             "basis": "direct",
         }
-        for profession, median in WAGE_MEDIANS[city.code].items()
+        for profession, median in WAGE_MEDIANS.get(city.code, DEFAULT_WAGE_MEDIANS).items()
     ]
     return pd.DataFrame(rows, columns=WAGE_COLUMNS)
 

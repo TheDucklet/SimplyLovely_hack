@@ -86,6 +86,8 @@ NICHE_ECONOMICS = {
     ),
 }
 MOCK_RENT_RUB_M2 = {"moscow": 3_500, "tula": 1_200}
+DEFAULT_MOCK_RENT_RUB_M2 = 1_200
+DEFAULT_MOCK_WAGE_RUB = {"coffee": 42_000, "pickup_point": 40_000}
 PAYROLL_CONTRIBUTIONS_SHARE = 0.30
 FACTOR_LABELS = {
     "residents": ("Жители в ячейке", "чел."),
@@ -126,7 +128,11 @@ def monthly_costs(
 ) -> MonthlyCosts:
     economics = NICHE_ECONOMICS[niche_code]
     rent = area_m2 * rent_rub_m2
-    payroll = economics.staff_count * economics.wage_rub[city_code] * (1 + PAYROLL_CONTRIBUTIONS_SHARE)
+    payroll = (
+        economics.staff_count
+        * economics.wage_rub.get(city_code, DEFAULT_MOCK_WAGE_RUB[niche_code])
+        * (1 + PAYROLL_CONTRIBUTIONS_SHARE)
+    )
     cogs = economics.cogs_share * revenue
     taxes = economics.tax_share * revenue
     other = economics.other_opex_rub
@@ -164,7 +170,13 @@ def mock_hexes(city_code: str, niche_code: str) -> HexesResponse:
     for row in features.itertuples(index=False):
         competitors = competition[row.h3]
         revenue = revenue_p50(niche_code, row.residents, row.workers, competitors)
-        costs = monthly_costs(city_code, niche_code, revenue, default_area, MOCK_RENT_RUB_M2[city_code])
+        costs = monthly_costs(
+            city_code,
+            niche_code,
+            revenue,
+            default_area,
+            MOCK_RENT_RUB_M2.get(city_code, DEFAULT_MOCK_RENT_RUB_M2),
+        )
         profit = revenue - costs.total
         items.append(
             HexScore(
@@ -286,7 +298,7 @@ def mock_report(city: CityConfig, request: ReportRequest) -> LocationReport:
     competitors = competition[cell]
     economics = NICHE_ECONOMICS[request.niche]
     area = request.area_m2 or economics.default_area_m2
-    rent_rate = request.rent_rub_m2_month or MOCK_RENT_RUB_M2[city.code]
+    rent_rate = request.rent_rub_m2_month or MOCK_RENT_RUB_M2.get(city.code, DEFAULT_MOCK_RENT_RUB_M2)
     revenue = revenue_p50(request.niche, cell_row["residents"], cell_row["workers"], competitors)
     costs = monthly_costs(city.code, request.niche, revenue, area, rent_rate)
     profit = revenue - costs.total

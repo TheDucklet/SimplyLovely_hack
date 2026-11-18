@@ -66,11 +66,8 @@ class ExtractedLayers:
     mkad: list[dict] = field(default_factory=list)
 
 
-def city_of(boxes: dict[str, BoundingBox], lon: float, lat: float) -> str | None:
-    for city_code, box in boxes.items():
-        if box.contains(lon, lat):
-            return city_code
-    return None
+def cities_of(boxes: dict[str, BoundingBox], lon: float, lat: float) -> list[str]:
+    return [city_code for city_code, box in boxes.items() if box.contains(lon, lat)]
 
 
 def pick_tags(tags: osmium.osm.TagList, keys: tuple[str, ...]) -> dict[str, str | None]:
@@ -108,29 +105,27 @@ def area_anchor(area: osmium.osm.Area) -> tuple[float, float] | None:
 
 def handle_node(node: osmium.osm.Node, boxes: dict[str, BoundingBox], layers: ExtractedLayers) -> None:
     lon, lat = node.location.lon, node.location.lat
-    city_code = city_of(boxes, lon, lat)
-    if city_code is None:
-        return
-    if has_poi_tags(node.tags):
-        layers.pois.append(
-            {
-                "city": city_code,
-                "osm_id": f"n{node.id}",
-                "lon": lon,
-                "lat": lat,
-                **pick_tags(node.tags, POI_TAGS),
-            }
-        )
-    address = address_record(city_code, node.tags, lon, lat)
-    if address:
-        layers.addresses.append(address)
+    for city_code in cities_of(boxes, lon, lat):
+        if has_poi_tags(node.tags):
+            layers.pois.append(
+                {
+                    "city": city_code,
+                    "osm_id": f"n{node.id}",
+                    "lon": lon,
+                    "lat": lat,
+                    **pick_tags(node.tags, POI_TAGS),
+                }
+            )
+        address = address_record(city_code, node.tags, lon, lat)
+        if address:
+            layers.addresses.append(address)
 
 
 def handle_way(way: osmium.osm.Way, boxes: dict[str, BoundingBox], layers: ExtractedLayers) -> None:
     if not is_mkad(way.tags):
         return
     coordinates = [(node.lon, node.lat) for node in way.nodes if node.location.valid()]
-    if len(coordinates) < 2 or city_of(boxes, *coordinates[0]) is None:
+    if len(coordinates) < 2 or not cities_of(boxes, *coordinates[0]):
         return
     layers.mkad.append({"osm_id": f"w{way.id}", "coordinates": coordinates})
 
@@ -146,11 +141,11 @@ def handle_area(
     anchor = area_anchor(area)
     if anchor is None:
         return
-    city_code = city_of(boxes, *anchor)
-    if city_code is None and not (is_boundary and tags.get("admin_level") in REGIONAL_ADMIN_LEVELS):
+    city_codes = cities_of(boxes, *anchor)
+    if not city_codes and not (is_boundary and tags.get("admin_level") in REGIONAL_ADMIN_LEVELS):
         return
     try:
-        geometry = factory.create_multipolygon(area)
+        geometry = bytes.fromhex(factory.create_multipolygon(area))
     except RuntimeError:
         return
     source_id = f"{'w' if area.from_way() else 'r'}{area.orig_id()}"
@@ -158,35 +153,31 @@ def handle_area(
         layers.boundaries.append(
             {
                 "osm_id": source_id,
-                "anchor_city": city_code,
-                "wkb": bytes.fromhex(geometry),
+                "anchor_city": city_codes[0] if city_codes else None,
+                "wkb": geometry,
                 **pick_tags(tags, BOUNDARY_TAGS),
             }
         )
         return
-    if "building" in tags:
-        layers.buildings.append(
-            {
-                "city": city_code,
-                "osm_id": source_id,
-                "wkb": bytes.fromhex(geometry),
-                **pick_tags(tags, BUILDING_TAGS),
-            }
-        )
-    if has_poi_tags(tags):
-        layers.pois.append(
-            {
-                "city": city_code,
-                "osm_id": source_id,
-                "lon": anchor[0],
-                "lat": anchor[1],
-                "wkb": bytes.fromhex(geometry),
-                **pick_tags(tags, POI_TAGS),
-            }
-        )
-    address = address_record(city_code, tags, *anchor)
-    if address:
-        layers.addresses.append(address)
+    for city_code in city_codes:
+        if "building" in tags:
+            layers.buildings.append(
+                {"city": city_code, "osm_id": source_id, "wkb": geometry, **pick_tags(tags, BUILDING_TAGS)}
+            )
+        if has_poi_tags(tags):
+            layers.pois.append(
+                {
+                    "city": city_code,
+                    "osm_id": source_id,
+                    "lon": anchor[0],
+                    "lat": anchor[1],
+                    "wkb": geometry,
+                    **pick_tags(tags, POI_TAGS),
+                }
+            )
+        address = address_record(city_code, tags, *anchor)
+        if address:
+            layers.addresses.append(address)
 
 
 def extract_layers(extract_path: Path, boxes: dict[str, BoundingBox]) -> ExtractedLayers:
