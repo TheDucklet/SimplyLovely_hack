@@ -1,0 +1,108 @@
+version: "2026-11-18"
+currency: RUB
+note: "нормативы финансового движка, значения без источника отмечены source null и уточняются в задаче S2-Ц8"
+
+common:
+  key_rate_annual:
+    value: 0.14
+    unit: share_year
+    source: "https://expert.ru/news/tsb-sokhranil-klyuchevuyu-stavku-na-urovne-14"
+    note: "ключевая ставка Банка России по решению от 23.10.2026"
+  risk_premium_annual:
+    value: 0.06
+    unit: share_year
+    source: null
+    note: "премия за риск малого бизнеса к ключевой ставке для ставки дисконтирования, допущение команды"
+  inflation_annual:
+    value: 0.065
+    unit: share_year
+    source: "https://rulaws.ru/acts/Informatsiya-Banka-Rossii-ot-23.10.2026/"
+    note: "середина прогноза Банка России по инфляции на 2026 год 6,0-7,0%"
+  rent_indexation_annual:
+    value: 0.065
+    unit: share_year
+    source: null
+    note: "ежегодная индексация аренды на уровень инфляции, допущение команды"
+  wage_growth_annual:
+    value: 0.065
+    unit: share_year
+    source: null
+    note: "рост зарплат на уровень инфляции, допущение команды"
+  opex_indexation_annual:
+    value: 0.065
+    unit: share_year
+    source: "https://rulaws.ru/acts/Informatsiya-Banka-Rossii-ot-23.10.2026/"
+    note: "прочие расходы растут на прогноз инфляции Банка России"
+  loan_rate_annual:
+    value: 0.19
+    unit: share_year
+    source: null
+    note: "ставка кредита по умолчанию, ключевая ставка плюс 5 пунктов до сбора условий ВТБ в задаче S2-Ц3"
+  loan_term_months:
+    value: 36
+    unit: months
+    source: null
+    note: "срок кредита по умолчанию, допущение команды"
+  dscr_threshold:
+    value: 1.25
+    unit: ratio
+    source: null
+    note: "минимальный коэффициент покрытия долга для расчёта предельного кредита, допущение команды"
+
+niches:
+  coffee:
+    unit_name: "чек"
+    unit_value_parameter: "avg_check_rub"
+    ramp_up_share:
+      value: [0.5, 0.65, 0.78, 0.88, 0.95, 1.0]
+      unit: share_of_steady_revenue
+      source: null
+      note: "доля плановой выручки в первые месяцы после открытия, допущение команды"
+    seasonality:
+      value: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+      unit: multiplier_by_calendar_month
+      source: null
+      note: "сезонность не учтена до исследования S2-Ц8"
+    working_capital_cogs_months:
+      value: 1.0
+      unit: months_of_cogs
+      source: null
+      note: "первичный запас зерна, молока и расходников, допущение команды"
+    security_deposit_months:
+      value: 1.0
+      unit: months_of_rent
+      source: null
+      note: "обеспечительный платёж по договору аренды, возвращается в конце горизонта, допущение команды"
+    hall_share_of_area:
+      value: 0.6
+      unit: share
+      source: null
+      note: "доля зала обслуживания в площади кофейни для стоимости патента в Туле, допущение команды"
+  pickup_point:
+    unit_name: "заказ"
+    unit_value_parameter: "payout_per_order_rub"
+    ramp_up_share:
+      value: [0.3, 0.45, 0.6, 0.72, 0.82, 0.9, 0.95, 1.0]
+      unit: share_of_steady_revenue
+      source: null
+      note: "доля плановой выручки в первые месяцы после открытия пункта, допущение команды"
+    seasonality:
+      value: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+      unit: multiplier_by_calendar_month
+      source: null
+      note: "сезонность не учтена до исследования S2-Ц8"
+    working_capital_cogs_months:
+      value: 0.0
+      unit: months_of_cogs
+      source: null
+      note: "пункт выдачи не держит товарных запасов"
+    security_deposit_months:
+      value: 0.0
+      unit: months_of_rent
+      source: "https://www.sostav.ru/blogs/284331/78854"
+      note: "обеспечительный платёж уже входит во вложения пункта выдачи по обзору Sostav.ru от 03.03.2026"
+    hall_share_of_area:
+      value: 0.0
+      unit: share
+      source: null
+      note: "у пункта выдачи нет зала обслуживания"
