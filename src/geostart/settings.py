@@ -26,6 +26,13 @@ def warmup_enabled() -> bool:
     return os.environ.get("GEOSTART_WARMUP", "true").strip().lower() in TRUE_VALUES
 
 
+def warmup_cities() -> set[str] | None:
+    raw = os.environ.get("GEOSTART_WARMUP_CITIES", "").strip()
+    if not raw:
+        return None
+    return {code.strip() for code in raw.split(",") if code.strip()}
+
+
 def use_mocks() -> bool:
     return os.environ.get("GEOSTART_USE_MOCKS", "false").strip().lower() in TRUE_VALUES
 

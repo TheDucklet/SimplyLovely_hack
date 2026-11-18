@@ -1,7 +1,7 @@
-city,zone,zone_type,rent_rub_m2_month_p10,rent_rub_m2_month_p50,rent_rub_m2_month_p90,property_type,source,date
-yaroslavl,Кировский,center,900,1400,2200,street_retail,,placeholder
-yaroslavl,Ленинский,center,800,1200,1900,street_retail,,placeholder
-yaroslavl,Фрунзенский,middle,600,900,1400,street_retail,,placeholder
-yaroslavl,Красноперекопский,middle,600,900,1400,street_retail,,placeholder
-yaroslavl,Дзержинский,middle,600,900,1400,street_retail,,placeholder
-yaroslavl,Заволжский,periphery,500,800,1200,street_retail,,placeholder
+city,zone,zone_type,rent_rub_m2_month_p10,rent_rub_m2_month_p50,rent_rub_m2_month_p90,property_type,source,date,note
+yaroslavl,Дзержинский,periphery,596,990,1458,street_retail,https://yaroslavl.cian.ru/snyat-torgovuyu-ploshad/,2026-11,"выборка Циан по району, 17 объявлений"
+yaroslavl,Заволжский,periphery,500,888,1500,street_retail,https://yaroslavl.cian.ru/snyat-torgovuyu-ploshad/,2026-11,"в районе 4 объявления, взято распределение города по выборке из 75 объявлений"
+yaroslavl,Кировский,center,693,1111,2120,street_retail,https://yaroslavl.cian.ru/snyat-torgovuyu-ploshad/,2026-11,"выборка Циан по району, 15 объявлений"
+yaroslavl,Красноперекопский,periphery,500,796,1000,street_retail,https://yaroslavl.cian.ru/snyat-torgovuyu-ploshad/,2026-11,"выборка Циан по району, 11 объявлений"
+yaroslavl,Ленинский,center,667,714,1375,street_retail,https://yaroslavl.cian.ru/snyat-torgovuyu-ploshad/,2026-11,"выборка Циан по району, 11 объявлений"
+yaroslavl,Фрунзенский,periphery,335,838,1377,street_retail,https://yaroslavl.cian.ru/snyat-torgovuyu-ploshad/,2026-11,"выборка Циан по району, 17 объявлений"

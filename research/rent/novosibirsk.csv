@@ -1,0 +1,11 @@
+city,zone,zone_type,rent_rub_m2_month_p10,rent_rub_m2_month_p50,rent_rub_m2_month_p90,property_type,source,date,note
+novosibirsk,Дзержинский,periphery,647,1149,1860,street_retail,https://novosibirsk.cian.ru/snyat-torgovuyu-ploshad/,2026-11,"выборка Циан по району, 28 объявлений"
+novosibirsk,Железнодорожный,center,960,1488,2714,street_retail,https://novosibirsk.cian.ru/snyat-torgovuyu-ploshad/,2026-11,"выборка Циан по району, 20 объявлений"
+novosibirsk,Заельцовский,periphery,825,1585,2611,street_retail,https://novosibirsk.cian.ru/snyat-torgovuyu-ploshad/,2026-11,"выборка Циан по району, 36 объявлений"
+novosibirsk,Калининский,periphery,860,1398,1660,street_retail,https://novosibirsk.cian.ru/snyat-torgovuyu-ploshad/,2026-11,"выборка Циан по району, 23 объявления"
+novosibirsk,Кировский,periphery,590,1061,1836,street_retail,https://novosibirsk.cian.ru/snyat-torgovuyu-ploshad/,2026-11,"выборка Циан по району, 24 объявления"
+novosibirsk,Ленинский,periphery,730,1421,2029,street_retail,https://novosibirsk.cian.ru/snyat-torgovuyu-ploshad/,2026-11,"выборка Циан по району, 30 объявлений"
+novosibirsk,Октябрьский,periphery,778,2000,2720,street_retail,https://novosibirsk.cian.ru/snyat-torgovuyu-ploshad/,2026-11,"выборка Циан по району, 58 объявлений"
+novosibirsk,Первомайский,periphery,707,1473,2500,street_retail,https://novosibirsk.cian.ru/snyat-torgovuyu-ploshad/,2026-11,"в районе 9 объявлений, взято распределение города по выборке из 260 объявлений"
+novosibirsk,Советский,periphery,707,1473,2500,street_retail,https://novosibirsk.cian.ru/snyat-torgovuyu-ploshad/,2026-11,"в районе 9 объявлений, взято распределение города по выборке из 260 объявлений"
+novosibirsk,Центральный,center,865,1503,2495,street_retail,https://novosibirsk.cian.ru/snyat-torgovuyu-ploshad/,2026-11,"выборка Циан по району, 23 объявления"

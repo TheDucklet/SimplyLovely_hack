@@ -16,7 +16,9 @@ INTEGER_FEATURES = ["offices_n", "education_n", "malls_n", "transit_stops_n"]
 FLOAT_FEATURES = ["lat", "lon", "residents", "workers", "metro_dist_m"]
 
 
-@pytest.mark.parametrize("city_code", ["moscow", "tula", "yaroslavl"])
+@pytest.mark.parametrize(
+    "city_code", ["moscow", "tula", "yaroslavl", "saint_petersburg", "novosibirsk", "yekaterinburg"]
+)
 def test_written_files_follow_contract_columns(city_code: str, tmp_path) -> None:
     target = write_fixtures(city_code, tmp_path)
     expected = {

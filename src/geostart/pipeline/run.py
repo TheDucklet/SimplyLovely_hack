@@ -6,7 +6,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
-from typing import Literal
+from typing import Literal, Self
 
 import geopandas as gpd
 import h3
@@ -14,7 +14,7 @@ import numpy as np
 import pandas as pd
 import requests
 import shapely
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 from shapely.geometry import MultiPolygon, Polygon
 
 from geostart.config import CityConfig, NicheConfig, get_city, load_niches, read_yaml
@@ -31,6 +31,7 @@ DISTRICT_NAME_PARTS = ("район ", " район", " территориаль�
 EDUCATION_AMENITIES = {"school", "university", "college"}
 TRANSIT_MODES = ("bus", "tram", "trolleybus")
 UNKNOWN_DISTRICT = ""
+DEFAULT_EXTRACT = "central"
 
 
 class PopulationRegion(BaseModel):
@@ -55,6 +56,7 @@ class PopulationDistricts(BaseModel):
 
 
 class CityPipelineConfig(BaseModel):
+    extract: str = DEFAULT_EXTRACT
     extract_bbox: tuple[float, float, float, float]
     boundary: Literal["mkad", "admin"]
     boundary_name: str | None = None
@@ -76,8 +78,18 @@ class ExtractConfig(BaseModel):
 
 
 class PipelineConfig(BaseModel):
-    osm_extract: ExtractConfig
+    osm_extracts: dict[str, ExtractConfig]
     cities: dict[str, CityPipelineConfig]
+
+    @model_validator(mode="after")
+    def known_extracts(self) -> Self:
+        unknown = {city.extract for city in self.cities.values()} - set(self.osm_extracts)
+        if unknown:
+            raise ValueError(f"Города ссылаются на неизвестные выгрузки OSM: {', '.join(sorted(unknown))}")
+        return self
+
+    def extract_cities(self, extract: str) -> dict[str, CityPipelineConfig]:
+        return {code: city for code, city in self.cities.items() if city.extract == extract}
 
 
 @dataclass
@@ -111,18 +123,20 @@ def ensure_extract(extract: ExtractConfig) -> Path:
     return path
 
 
-def interim_dir() -> Path:
-    return data_dir() / "interim" / "osm"
+def interim_dir(extract: str = DEFAULT_EXTRACT) -> Path:
+    return data_dir() / "interim" / "osm" / extract
 
 
-def ensure_layers(extract_path: Path, config: PipelineConfig) -> dict[str, pd.DataFrame]:
-    target = interim_dir()
+def ensure_layers(extract: str, extract_path: Path, config: PipelineConfig) -> dict[str, pd.DataFrame]:
+    target = interim_dir(extract)
+    target.mkdir(parents=True, exist_ok=True)
+    cities = config.extract_cities(extract)
     paths = {name: target / f"{name}.parquet" for name in INTERIM_LAYERS}
     signature_path = target / "extract_signature.json"
     signature = json.dumps(
         {
             "extract": extract_path.name,
-            "boxes": {code: city.extract_bbox for code, city in sorted(config.cities.items())},
+            "boxes": {code: city.extract_bbox for code, city in sorted(cities.items())},
         },
         ensure_ascii=False,
     )
@@ -132,7 +146,7 @@ def ensure_layers(extract_path: Path, config: PipelineConfig) -> dict[str, pd.Da
         and signature_path.read_text(encoding="utf-8") == signature
     )
     if not is_fresh:
-        boxes = {code: osm_extract.BoundingBox(*city.extract_bbox) for code, city in config.cities.items()}
+        boxes = {code: osm_extract.BoundingBox(*city.extract_bbox) for code, city in cities.items()}
         osm_extract.write_layers(osm_extract.extract_layers(extract_path, boxes), target)
         signature_path.write_text(signature, encoding="utf-8")
     return {name: pd.read_parquet(path) for name, path in paths.items()}
@@ -403,9 +417,9 @@ def run_city(city_code: str, collected_at: date | None = None) -> dict[str, floa
     config = load_pipeline_config()
     city_config = config.cities[city_code]
     with timer.step("выгрузка OSM"):
-        extract_path = ensure_extract(config.osm_extract)
+        extract_path = ensure_extract(config.osm_extracts[city_config.extract])
     with timer.step("извлечение слоёв OSM"):
-        layers = ensure_layers(extract_path, config)
+        layers = ensure_layers(city_config.extract, extract_path, config)
     with timer.step("граница города"):
         boundary = city_boundary(city_config, layers)
     with timer.step("признаки ячеек"):
