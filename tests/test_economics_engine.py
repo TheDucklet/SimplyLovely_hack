@@ -2,7 +2,15 @@ import numpy as np
 import pytest
 import yaml
 
-from geostart.economics.credit import LoanTerms, Schedule, annual_dscr, loan_schedule, max_loan
+from geostart.economics.credit import (
+    LoanTerms,
+    Schedule,
+    annual_dscr,
+    get_product,
+    loan_schedule,
+    max_loan,
+    monthly_dscr,
+)
 from geostart.economics.engine import (
     PlanSettings,
     ScenarioInputs,
@@ -17,6 +25,7 @@ from geostart.economics.sampling import optional_summary, quantile_samples, summ
 from geostart.economics.taxes import (
     LegalForm,
     Regime,
+    ausn_active,
     block_taxes,
     owner_contributions,
     patent_cost,
@@ -46,6 +55,7 @@ def flat_inputs(revenue: float = 900_000.0, capex: float = 2_000_000.0) -> Scena
         capex=ones * capex,
         deposit=ones * 40_000,
         working_capital=ones * 100_000,
+        franchise_fee=np.zeros(RUNS),
         salary=60_000.0,
     )
 
@@ -68,6 +78,7 @@ def flat_settings(taxes: dict, regime: Regime = Regime.USN_INCOME, **changes: ob
         "dscr_threshold": 1.25,
         "rules": tax_rules(taxes, "coffee"),
         "taxes": taxes,
+        "start_year": 2026,
         "patent_annual": None,
     }
     values.update(changes)
@@ -210,7 +221,7 @@ def test_patent_falls_back_to_income_regime_above_limit(taxes: dict) -> None:
         np.zeros(2),
         cost.annual,
     )
-    assert list(result.patent_lost) == [False, True]
+    assert list(result.fallback) == [False, True]
     assert result.vat[0] == 0
     assert result.vat[1] == pytest.approx(30e6 * 0.05)
 
@@ -309,3 +320,138 @@ def test_norms_have_sources_or_explicit_gaps() -> None:
         assert all(norm.note for norm in items.values())
     with pytest.raises(ValueError, match="нет нормативов"):
         norms.niche("flowers")
+
+
+def test_grace_period_pays_interest_only() -> None:
+    interest, principal = loan_schedule(
+        np.array([1_000_000.0]), LoanTerms(0.12, 36, Schedule.ANNUITY, grace_months=6), 40
+    )
+    assert np.allclose(interest[0, :6], 10_000.0)
+    assert np.all(principal[0, :6] == 0)
+    assert principal.sum() == pytest.approx(1_000_000.0)
+    assert np.all(principal[0, 36:] == 0)
+
+
+def test_grace_must_be_shorter_than_term() -> None:
+    with pytest.raises(ValueError, match="Льготный период"):
+        LoanTerms(0.12, 12, Schedule.ANNUITY, grace_months=12)
+
+
+def test_monthly_dscr_skips_months_without_payments() -> None:
+    ratios = monthly_dscr(np.array([[100.0, 100.0]]), np.array([[50.0, 0.0]]))
+    assert ratios[0, 0] == pytest.approx(2.0)
+    assert np.isinf(ratios[0, 1])
+
+
+def test_vtb_product_has_sourced_rate() -> None:
+    product = get_product("vtb_express")
+    assert product.rate_annual.value == pytest.approx(0.26)
+    assert product.rate_annual.source
+    assert product.min_business_age_months.value == 12
+    with pytest.raises(ValueError, match="не найден"):
+        get_product("unknown")
+
+
+def test_ausn_applies_within_limits_and_dates(taxes: dict) -> None:
+    rules = tax_rules(taxes, "coffee", "tula")
+    staff = np.array([4.0, 4.0, 6.0])
+    revenue = np.array([10e6, 70e6, 10e6])
+    active = ausn_active(rules, Regime.AUSN_INCOME, 2026, revenue, 12, staff)
+    assert list(active) == [True, False, False]
+    assert not ausn_active(rules, Regime.AUSN_INCOME, 2028, revenue, 12, staff).any()
+    assert not ausn_active(rules, Regime.USN_INCOME, 2026, revenue, 12, staff).any()
+    assert tax_rules(taxes, "coffee", "kazan").ausn.region_start is None
+
+
+def test_ausn_income_tax_has_no_reduction_and_no_vat(taxes: dict) -> None:
+    rules = tax_rules(taxes, "coffee", "tula")
+    revenue = np.array([30e6])
+    active = np.array([True])
+    result = block_taxes(
+        rules,
+        Regime.AUSN_INCOME,
+        LegalForm.IP,
+        revenue,
+        np.zeros(1),
+        np.zeros(1),
+        np.array([4.0]),
+        12,
+        np.zeros(1),
+        None,
+        active,
+    )
+    assert result.main[0] == pytest.approx(30e6 * 0.08)
+    assert result.owner[0] == 0
+    assert result.vat[0] == 0
+
+
+def test_ausn_profit_uses_three_percent_minimum(taxes: dict) -> None:
+    rules = tax_rules(taxes, "coffee", "tula")
+    result = block_taxes(
+        rules,
+        Regime.AUSN_PROFIT,
+        LegalForm.OOO,
+        np.array([10e6]),
+        np.array([9.9e6]),
+        np.zeros(1),
+        np.array([4.0]),
+        12,
+        np.zeros(1),
+        None,
+        np.array([True]),
+    )
+    assert result.main[0] == pytest.approx(10e6 * 0.03)
+
+
+def test_ausn_removes_employer_contributions(taxes: dict) -> None:
+    inputs = flat_inputs()
+    rules = tax_rules(taxes, "coffee", "tula")
+    usn = project(inputs, flat_settings(taxes, Regime.USN_INCOME, rules=rules, horizon=24))
+    ausn = project(inputs, flat_settings(taxes, Regime.AUSN_INCOME, rules=rules, horizon=24))
+    assert usn.contributions[0, 0] > 1000
+    assert ausn.contributions[0, 0] == pytest.approx(2959 / 12)
+    assert not ausn.fallback.any()
+    assert not ausn.ausn_ended
+
+
+def test_ausn_after_experiment_returns_contributions(taxes: dict) -> None:
+    inputs = flat_inputs()
+    settings = flat_settings(
+        taxes, Regime.AUSN_INCOME, rules=tax_rules(taxes, "coffee", "tula"), horizon=36, start_year=2027
+    )
+    projection = project(inputs, settings)
+    assert projection.ausn_ended
+    assert projection.contributions[0, 0] == pytest.approx(2959 / 12)
+    assert projection.contributions[0, 12] > 1000
+    assert not projection.fallback.any()
+
+
+def test_depreciation_follows_asset_lives(taxes: dict) -> None:
+    inputs = flat_inputs(capex=1_200_000.0)
+    settings = flat_settings(taxes, capex_lives=((0.5, 12), (0.5, 24)))
+    depreciation = project(inputs, settings).depreciation[0]
+    assert depreciation[0] == pytest.approx(600_000 / 12 + 600_000 / 24)
+    assert depreciation[12] == pytest.approx(600_000 / 24)
+    assert depreciation[24] == 0
+    assert depreciation.sum() == pytest.approx(1_200_000.0)
+
+
+def test_first_profit_month_follows_ramp(taxes: dict) -> None:
+    inputs = flat_inputs()
+    settings = flat_settings(taxes, ramp=(0.2, 0.4, 0.6, 1.0))
+    metrics = evaluate(inputs, settings, project(inputs, settings))
+    projection = project(inputs, settings)
+    first = int(metrics.first_profit_month[0])
+    assert projection.net_profit[0, first - 1] > 0
+    assert (projection.net_profit[0, : first - 1] <= 0).all()
+
+
+def test_months_sum_to_year_totals(taxes: dict) -> None:
+    inputs = flat_inputs()
+    settings = flat_settings(taxes, start_month=7, ramp=(0.5, 0.8), revenue_growth=0.065)
+    projection = project(inputs, settings)
+    yearly = projection.taxes.reshape(RUNS, 3, 12).sum(axis=2).sum(axis=1)
+    assert yearly == pytest.approx(projection.taxes.sum(axis=1))
+    assert projection.revenue[:, :12].sum(axis=1) + projection.revenue[:, 12:].sum(axis=1) == pytest.approx(
+        projection.revenue.sum(axis=1)
+    )

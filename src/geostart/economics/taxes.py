@@ -1,5 +1,6 @@
 from collections.abc import Mapping
 from dataclasses import dataclass
+from datetime import date
 from enum import StrEnum
 
 import numpy as np
@@ -15,6 +16,8 @@ class Regime(StrEnum):
     USN_INCOME = "usn_income_6"
     USN_PROFIT = "usn_income_minus_expenses_15"
     PATENT = "patent"
+    AUSN_INCOME = "ausn_income_8"
+    AUSN_PROFIT = "ausn_income_minus_expenses_20"
 
 
 class LegalForm(StrEnum):
@@ -26,7 +29,15 @@ REGIME_NAMES = {
     Regime.USN_INCOME: "УСН «Доходы» 6%",
     Regime.USN_PROFIT: "УСН «Доходы минус расходы» 15%",
     Regime.PATENT: "Патентная система",
+    Regime.AUSN_INCOME: "АУСН «Доходы» 8%",
+    Regime.AUSN_PROFIT: "АУСН «Доходы минус расходы» 20%",
 }
+FALLBACK = {
+    Regime.PATENT: Regime.USN_INCOME,
+    Regime.AUSN_INCOME: Regime.USN_INCOME,
+    Regime.AUSN_PROFIT: Regime.USN_PROFIT,
+}
+AUSN_REGIMES = (Regime.AUSN_INCOME, Regime.AUSN_PROFIT)
 
 
 def rule_value(section: Mapping[str, object], name: str, niche: str) -> float:
@@ -35,6 +46,20 @@ def rule_value(section: Mapping[str, object], name: str, niche: str) -> float:
     if applies is not None and niche not in applies:
         return 0.0
     return float(item["value"])
+
+
+@dataclass(frozen=True)
+class AusnRules:
+    income_rate: float
+    profit_rate: float
+    minimum_tax_rate: float
+    revenue_limit: float
+    staff_limit: float
+    injury_annual: float
+    end_year: int
+    region_start: date | None
+    source: str | None
+    region_source: str | None
 
 
 @dataclass(frozen=True)
@@ -59,15 +84,36 @@ class TaxRules:
     patent_applies: bool
     patent_revenue_limit: float
     patent_staff_limit: float
+    ausn: AusnRules | None
     sources: Mapping[str, str | None]
 
 
-def tax_rules(taxes: Mapping[str, object], niche: str) -> TaxRules:
+def ausn_rules(taxes: Mapping[str, object], niche: str, city: str) -> AusnRules | None:
+    section = taxes.get("ausn")
+    if not section or niche not in section["income_rate"]["applies_to"]:
+        return None
+    start = section["regions"]["start_dates"].get(city)
+    return AusnRules(
+        income_rate=float(section["income_rate"]["value"]),
+        profit_rate=float(section["profit_rate"]["value"]),
+        minimum_tax_rate=float(section["min_tax_rate_profit_object"]["value"]),
+        revenue_limit=float(section["max_annual_revenue_limit"]["value"]),
+        staff_limit=float(section["max_staff_limit"]["value"]),
+        injury_annual=float(section["injury_fixed_annual"]["value"]),
+        end_year=date.fromisoformat(str(section["experiment_end"]["value"])).year,
+        region_start=None if start is None else date.fromisoformat(str(start)),
+        source=section["income_rate"].get("source"),
+        region_source=section["regions"].get("source"),
+    )
+
+
+def tax_rules(taxes: Mapping[str, object], niche: str, city: str = "") -> TaxRules:
     usn = taxes["usn"]
     owner = taxes["ip_self_contributions"]
     vat = taxes["vat_on_usn"]
     patent = taxes.get("patent_system", {})
     patent_applies = bool(patent) and niche in patent["max_annual_revenue_limit"]["applies_to"]
+    ausn = ausn_rules(taxes, niche, city)
     return TaxRules(
         niche=niche,
         usn_income_rate=float(taxes["usn_income_rate"]["value"]),
@@ -89,10 +135,13 @@ def tax_rules(taxes: Mapping[str, object], niche: str) -> TaxRules:
         patent_applies=patent_applies,
         patent_revenue_limit=float(patent["max_annual_revenue_limit"]["value"]) if patent_applies else 0.0,
         patent_staff_limit=float(patent["max_staff_limit"]["value"]) if patent_applies else 0.0,
+        ausn=ausn,
         sources={
             Regime.USN_INCOME: taxes["usn_income_rate"].get("source"),
             Regime.USN_PROFIT: taxes["usn_income_minus_expenses_rate"].get("source"),
             Regime.PATENT: patent["max_annual_revenue_limit"].get("source") if patent_applies else None,
+            Regime.AUSN_INCOME: None if ausn is None else ausn.source,
+            Regime.AUSN_PROFIT: None if ausn is None else ausn.source,
             "owner": owner["fixed_annual"].get("source"),
             "vat": vat["special_rate_tier1"].get("source"),
         },
@@ -161,13 +210,25 @@ def vat_rates(rules: TaxRules, annual_revenue: np.ndarray) -> np.ndarray:
     )
 
 
+def ausn_active(
+    rules: TaxRules, regime: Regime, year: int, revenue: np.ndarray, months: int, staff: np.ndarray
+) -> np.ndarray:
+    if regime not in AUSN_REGIMES:
+        return np.zeros(len(revenue), dtype=bool)
+    ausn = rules.ausn
+    if ausn is None or ausn.region_start is None or year > ausn.end_year or year < ausn.region_start.year:
+        return np.zeros(len(revenue), dtype=bool)
+    annual_revenue = revenue * MONTHS_PER_YEAR / months
+    return (annual_revenue <= ausn.revenue_limit) & (staff <= ausn.staff_limit)
+
+
 @dataclass(frozen=True)
 class BlockTaxes:
     main: np.ndarray
     owner: np.ndarray
     vat: np.ndarray
     loss_carry: np.ndarray
-    patent_lost: np.ndarray
+    fallback: np.ndarray
     general_vat: np.ndarray
 
 
@@ -177,6 +238,48 @@ def income_tax(
     gross = revenue * rules.usn_income_rate
     limit = np.where(staff > 0, rules.reduction_limit_with_staff, rules.reduction_limit_without_staff)
     return gross - np.minimum(contributions + owner, gross * limit)
+
+
+def usn_taxes(
+    rules: TaxRules,
+    regime: Regime,
+    is_ip: bool,
+    revenue: np.ndarray,
+    expenses: np.ndarray,
+    contributions: np.ndarray,
+    staff: np.ndarray,
+    months: int,
+    loss_carry: np.ndarray,
+) -> BlockTaxes:
+    annual_revenue = revenue * MONTHS_PER_YEAR / months
+    vat = revenue * vat_rates(rules, annual_revenue)
+    general = annual_revenue > rules.vat_tier2_max
+    none = np.zeros(len(revenue), dtype=bool)
+    if regime == Regime.USN_PROFIT:
+        margin = revenue - expenses
+        owner = (
+            owner_contributions(rules, np.maximum(margin, 0.0), months) if is_ip else np.zeros_like(revenue)
+        )
+        profit = margin - owner
+        used = np.minimum(loss_carry, np.maximum(profit, 0.0))
+        base = np.maximum(profit - used, 0.0)
+        main = np.maximum(base * rules.usn_profit_rate, revenue * rules.minimum_tax_rate)
+        carry = loss_carry - used + np.maximum(-profit, 0.0)
+        return BlockTaxes(main, owner, vat, carry, none, general)
+    owner = owner_contributions(rules, revenue, months) if is_ip else np.zeros_like(revenue)
+    main = income_tax(rules, revenue, contributions, owner, staff)
+    return BlockTaxes(main, owner, vat, loss_carry, none, general)
+
+
+def combine(active: np.ndarray, special: BlockTaxes, fallback: BlockTaxes) -> BlockTaxes:
+    return BlockTaxes(
+        np.where(active, special.main, fallback.main),
+        np.where(active, special.owner, fallback.owner),
+        np.where(active, special.vat, fallback.vat),
+        np.where(active, special.loss_carry, fallback.loss_carry),
+        ~active,
+        np.where(active, special.general_vat, fallback.general_vat),
+    )
 
 
 def block_taxes(
@@ -190,35 +293,35 @@ def block_taxes(
     months: int,
     loss_carry: np.ndarray,
     patent_annual: np.ndarray | None,
+    active: np.ndarray | None = None,
 ) -> BlockTaxes:
-    annual_revenue = revenue * MONTHS_PER_YEAR / months
     is_ip = legal_form == LegalForm.IP
-    no_patent = np.zeros(len(revenue), dtype=bool)
-    if regime == Regime.USN_PROFIT:
-        margin = revenue - expenses
-        owner = (
-            owner_contributions(rules, np.maximum(margin, 0.0), months) if is_ip else np.zeros_like(revenue)
-        )
-        profit = margin - owner
-        used = np.minimum(loss_carry, np.maximum(profit, 0.0))
-        base = np.maximum(profit - used, 0.0)
-        main = np.maximum(base * rules.usn_profit_rate, revenue * rules.minimum_tax_rate)
-        carry = loss_carry - used + np.maximum(-profit, 0.0)
-        vat = revenue * vat_rates(rules, annual_revenue)
-        return BlockTaxes(main, owner, vat, carry, no_patent, annual_revenue > rules.vat_tier2_max)
-    owner = owner_contributions(rules, revenue, months) if is_ip else np.zeros_like(revenue)
-    main = income_tax(rules, revenue, contributions, owner, staff)
-    vat = revenue * vat_rates(rules, annual_revenue)
-    lost = no_patent
+    if regime in (Regime.USN_INCOME, Regime.USN_PROFIT):
+        return usn_taxes(rules, regime, is_ip, revenue, expenses, contributions, staff, months, loss_carry)
+    fallback = usn_taxes(
+        rules, FALLBACK[regime], is_ip, revenue, expenses, contributions, staff, months, loss_carry
+    )
+    none = np.zeros(len(revenue), dtype=bool)
     if regime == Regime.PATENT:
         if patent_annual is None or not is_ip:
             raise ValueError("Патент доступен только ИП в нишах и городах с исследованной стоимостью")
-        lost = (annual_revenue > rules.patent_revenue_limit) | (staff > rules.patent_staff_limit)
+        annual_revenue = revenue * MONTHS_PER_YEAR / months
+        eligible = (annual_revenue <= rules.patent_revenue_limit) & (staff <= rules.patent_staff_limit)
         cost = patent_annual * months / MONTHS_PER_YEAR
-        patent_owner = owner_contributions(rules, patent_annual / PATENT_RATE, months)
+        owner = owner_contributions(rules, patent_annual / PATENT_RATE, months)
         limit = np.where(staff > 0, rules.reduction_limit_with_staff, rules.reduction_limit_without_staff)
-        patent_main = cost - np.minimum(contributions + patent_owner, cost * limit)
-        main = np.where(lost, main, patent_main)
-        owner = np.where(lost, owner, patent_owner)
-        vat = np.where(lost, vat, 0.0)
-    return BlockTaxes(main, owner, vat, loss_carry, lost, annual_revenue > rules.vat_tier2_max)
+        main = cost - np.minimum(contributions + owner, cost * limit)
+        special = BlockTaxes(main, owner, np.zeros_like(revenue), loss_carry, none, none)
+        return combine(eligible, special, fallback)
+    ausn = rules.ausn
+    if ausn is None:
+        raise ValueError("АУСН не применяется в этой нише")
+    if active is None:
+        raise ValueError("Для АУСН нужен признак применимости режима по сценариям")
+    if regime == Regime.AUSN_INCOME:
+        main = revenue * ausn.income_rate
+    else:
+        main = np.maximum((revenue - expenses) * ausn.profit_rate, revenue * ausn.minimum_tax_rate)
+    zeros = np.zeros_like(revenue)
+    special = BlockTaxes(main, zeros, zeros, loss_carry, none, none)
+    return combine(active, special, fallback)

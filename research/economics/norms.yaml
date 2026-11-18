@@ -78,6 +78,14 @@ niches:
       unit: share
       source: null
       note: "доля зала обслуживания в площади кофейни для стоимости патента в Туле, допущение команды"
+    capex_structure:
+      source: null
+      note: "доли статей вложений кофейни и срок полезного использования, допущение команды до задачи S2-Ц8"
+      items:
+        renovation: {name: "Ремонт помещения", share: 0.35, life_months: 60}
+        equipment: {name: "Кофейное и холодильное оборудование", share: 0.45, life_months: 60}
+        furniture: {name: "Мебель и вывеска", share: 0.10, life_months: 60}
+        other: {name: "Прочие стартовые расходы", share: 0.10, life_months: 12}
   pickup_point:
     unit_name: "заказ"
     unit_value_parameter: "payout_per_order_rub"
@@ -106,3 +114,11 @@ niches:
       unit: share
       source: null
       note: "у пункта выдачи нет зала обслуживания"
+    capex_structure:
+      source: null
+      note: "доли статей вложений пункта выдачи и срок полезного использования, допущение команды до задачи S2-Ц8"
+      items:
+        renovation: {name: "Ремонт по стандарту маркетплейса", share: 0.45, life_months: 60}
+        furniture: {name: "Стеллажи, мебель и примерочные", share: 0.25, life_months: 60}
+        equipment: {name: "Оргтехника и видеонаблюдение", share: 0.20, life_months: 36}
+        other: {name: "Прочие стартовые расходы", share: 0.10, life_months: 12}

@@ -3,12 +3,13 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from geostart.economics.credit import LoanTerms, annual_dscr, loan_schedule, max_loan
+from geostart.economics.credit import LoanTerms, annual_dscr, loan_schedule, max_loan, monthly_dscr
 from geostart.economics.norms import MONTHS_PER_YEAR
-from geostart.economics.taxes import LegalForm, Regime, TaxRules, block_taxes
+from geostart.economics.taxes import AUSN_REGIMES, LegalForm, Regime, TaxRules, ausn_active, block_taxes
 from geostart.model.finance import employee_contributions
 
-MODEL_VERSION = "economics-0.1.0"
+MODEL_VERSION = "economics-0.2.0"
+DEFAULT_ASSET_LIFE_MONTHS = 60
 IRR_ITERATIONS = 80
 IRR_LOWER_MONTHLY = -0.99
 IRR_UPPER_MONTHLY = 1.0
@@ -40,6 +41,7 @@ class ScenarioInputs:
     capex: np.ndarray
     deposit: np.ndarray
     working_capital: np.ndarray
+    franchise_fee: np.ndarray
     salary: float
 
     def __post_init__(self) -> None:
@@ -53,6 +55,7 @@ class ScenarioInputs:
             "вложения": self.capex,
             "залог": self.deposit,
             "оборотный капитал": self.working_capital,
+            "паушальный взнос": self.franchise_fee,
         }
         size = len(self.revenue_steady)
         for name, values in arrays.items():
@@ -71,7 +74,7 @@ class ScenarioInputs:
 
     @property
     def investment(self) -> np.ndarray:
-        return self.capex + self.deposit + self.working_capital
+        return self.capex + self.franchise_fee + self.deposit + self.working_capital
 
 
 @dataclass(frozen=True)
@@ -92,7 +95,10 @@ class PlanSettings:
     dscr_threshold: float
     rules: TaxRules
     taxes: Mapping[str, object]
+    start_year: int
     patent_annual: np.ndarray | None = None
+    capex_lives: tuple[tuple[float, int], ...] = ((1.0, DEFAULT_ASSET_LIFE_MONTHS),)
+    franchise_life_months: int = DEFAULT_ASSET_LIFE_MONTHS
 
     def __post_init__(self) -> None:
         if self.horizon < MONTHS_PER_YEAR:
@@ -124,8 +130,14 @@ class Projection:
     loan: np.ndarray
     investment: np.ndarray
     recovery: np.ndarray
-    patent_lost: np.ndarray
+    fallback: np.ndarray
     general_vat: np.ndarray
+    depreciation: np.ndarray
+    ausn_ended: bool
+
+    @property
+    def ebit(self) -> np.ndarray:
+        return self.ebitda - self.depreciation
 
     @property
     def taxes(self) -> np.ndarray:
@@ -176,6 +188,24 @@ def contributions_by_year(salary: float, settings: PlanSettings) -> np.ndarray:
     )
 
 
+def depreciation_schedule(inputs: ScenarioInputs, settings: PlanSettings) -> np.ndarray:
+    months = np.arange(settings.horizon)
+    result = np.zeros((inputs.runs, settings.horizon))
+    parts = [(inputs.capex * share, life) for share, life in settings.capex_lives]
+    parts.append((inputs.franchise_fee, settings.franchise_life_months))
+    for amount, life in parts:
+        result += amount[:, None] / life * (months < life)
+    return result
+
+
+def regime_contributions(
+    inputs: ScenarioInputs, settings: PlanSettings, per_employee: float, active: np.ndarray
+) -> np.ndarray:
+    injury = settings.rules.ausn.injury_annual / MONTHS_PER_YEAR if settings.rules.ausn else 0.0
+    special = np.where(inputs.staff > 0, injury, 0.0)
+    return np.where(active, special, inputs.staff * per_employee)
+
+
 def allocate(total: np.ndarray, weights: np.ndarray) -> np.ndarray:
     sums = weights.sum(axis=1, keepdims=True)
     shares = np.divide(weights, sums, out=np.full_like(weights, 1.0 / weights.shape[1]), where=sums > 0)
@@ -194,8 +224,26 @@ def project(inputs: ScenarioInputs, settings: PlanSettings) -> Projection:
     rent = (inputs.area_m2 * inputs.rent_rate)[:, None] * growth_index(settings.rent_growth, horizon)
     wage_index = growth_index(settings.wage_growth, horizon)
     wages = inputs.staff[:, None] * inputs.salary * wage_index
-    contributions = inputs.staff[:, None] * contributions_by_year(inputs.salary, settings)[opening_year]
+    per_employee = contributions_by_year(inputs.salary, settings)
     other = inputs.other_opex[:, None] * growth_index(settings.opex_growth, horizon)
+    blocks = np.unique(fiscal)
+    actives = {}
+    contributions = np.zeros_like(revenue)
+    for block in blocks:
+        mask = fiscal == block
+        active = ausn_active(
+            settings.rules,
+            settings.regime,
+            settings.start_year + int(block),
+            revenue[:, mask].sum(axis=1),
+            int(mask.sum()),
+            inputs.staff,
+        )
+        actives[block] = active
+        for month in np.flatnonzero(mask):
+            contributions[:, month] = regime_contributions(
+                inputs, settings, float(per_employee[opening_year[month]]), active
+            )
     operating = cogs + rent + wages + contributions + other
     ebitda = revenue - operating
     loan = np.minimum(settings.loan_amount, inputs.investment)
@@ -204,13 +252,21 @@ def project(inputs: ScenarioInputs, settings: PlanSettings) -> Projection:
     owner_tax = np.zeros_like(revenue)
     vat = np.zeros_like(revenue)
     carry = np.zeros(inputs.runs)
-    patent_lost = np.zeros(inputs.runs, dtype=bool)
+    fallback = np.zeros(inputs.runs, dtype=bool)
     general_vat = np.zeros(inputs.runs, dtype=bool)
-    for block in np.unique(fiscal):
+    ausn_ended = False
+    for block in blocks:
         mask = fiscal == block
         expenses = operating[:, mask].sum(axis=1) + interest[:, mask].sum(axis=1)
         if block == fiscal[0]:
-            expenses = expenses + inputs.capex
+            expenses = expenses + inputs.capex + inputs.franchise_fee
+        year = settings.start_year + int(block)
+        ended = (
+            settings.regime in AUSN_REGIMES
+            and settings.rules.ausn is not None
+            and year > settings.rules.ausn.end_year
+        )
+        ausn_ended |= ended
         result = block_taxes(
             settings.rules,
             settings.regime,
@@ -222,13 +278,15 @@ def project(inputs: ScenarioInputs, settings: PlanSettings) -> Projection:
             int(mask.sum()),
             carry,
             settings.patent_annual,
+            actives[block],
         )
         carry = result.loss_carry
         weights = revenue[:, mask]
         main_tax[:, mask] = allocate(result.main, weights)
         owner_tax[:, mask] = allocate(result.owner, weights)
         vat[:, mask] = allocate(result.vat, weights)
-        patent_lost |= result.patent_lost
+        if not ended:
+            fallback |= result.fallback
         general_vat |= result.general_vat
     return Projection(
         revenue,
@@ -246,8 +304,10 @@ def project(inputs: ScenarioInputs, settings: PlanSettings) -> Projection:
         loan,
         inputs.investment,
         inputs.deposit + inputs.working_capital,
-        patent_lost,
+        fallback,
         general_vat,
+        depreciation_schedule(inputs, settings),
+        ausn_ended,
     )
 
 
@@ -255,7 +315,16 @@ def steady_year(inputs: ScenarioInputs, settings: PlanSettings, revenue: np.ndar
     cogs = revenue * inputs.cogs_share
     rent = inputs.area_m2 * inputs.rent_rate
     wages = inputs.staff * inputs.salary
-    contributions = inputs.staff * employee_contributions(inputs.salary, settings.taxes, settings.rules.niche)
+    active = ausn_active(
+        settings.rules,
+        settings.regime,
+        settings.start_year,
+        revenue * MONTHS_PER_YEAR,
+        MONTHS_PER_YEAR,
+        inputs.staff,
+    )
+    per_employee = employee_contributions(inputs.salary, settings.taxes, settings.rules.niche)
+    contributions = regime_contributions(inputs, settings, per_employee, active)
     other = inputs.other_opex
     operating = cogs + rent + wages + contributions + other
     taxes = block_taxes(
@@ -269,6 +338,7 @@ def steady_year(inputs: ScenarioInputs, settings: PlanSettings, revenue: np.ndar
         MONTHS_PER_YEAR,
         np.zeros(inputs.runs),
         settings.patent_annual,
+        active,
     )
     main = taxes.main / MONTHS_PER_YEAR
     owner = taxes.owner / MONTHS_PER_YEAR
@@ -345,6 +415,11 @@ def payback(cumulative: np.ndarray, flows: np.ndarray) -> np.ndarray:
     return np.where(found, index + np.clip(fraction, 0.0, 1.0), np.nan)
 
 
+def first_month(condition: np.ndarray) -> np.ndarray:
+    found = condition.any(axis=1)
+    return np.where(found, np.argmax(condition, axis=1) + 1.0, np.nan)
+
+
 @dataclass(frozen=True)
 class Metrics:
     npv: np.ndarray
@@ -356,8 +431,17 @@ class Metrics:
     safety_margin: np.ndarray
     dscr_first_year: np.ndarray
     dscr_min: np.ndarray
+    dscr_monthly: np.ndarray
     max_loan: np.ndarray
+    first_profit_month: np.ndarray
     representative: int
+
+    @property
+    def dscr_monthly_min(self) -> np.ndarray:
+        return self.dscr_monthly.min(axis=1)
+
+    def months_below(self, threshold: float) -> np.ndarray:
+        return (self.dscr_monthly < threshold).sum(axis=1)
 
     @property
     def probability_no_payback(self) -> float:
@@ -397,6 +481,8 @@ def evaluate(inputs: ScenarioInputs, settings: PlanSettings, projection: Project
         safety_margin=safety,
         dscr_first_year=dscr_first,
         dscr_min=dscr_min,
+        dscr_monthly=monthly_dscr(flows, projection.interest + projection.principal),
+        first_profit_month=first_month(projection.net_profit > 0),
         max_loan=max_loan(steady["profit"] * MONTHS_PER_YEAR, settings.loan_terms, settings.dscr_threshold),
         representative=int(order[len(order) // 2]),
     )

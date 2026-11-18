@@ -60,10 +60,26 @@ class Norm:
 
 
 @dataclass(frozen=True)
+class CapexItem:
+    code: str
+    name: str
+    share: float
+    life_months: int
+
+
+@dataclass(frozen=True)
+class CapexStructure:
+    items: tuple[CapexItem, ...]
+    source: str | None
+    note: str
+
+
+@dataclass(frozen=True)
 class NicheNorms:
     unit_name: str
     unit_value_parameter: str
     items: Mapping[str, Norm]
+    capex: CapexStructure
 
     def value(self, code: str) -> float:
         return float(self.items[code].value)
@@ -118,6 +134,20 @@ def validate_niche(code: str, items: Mapping[str, Norm]) -> None:
         raise ValueError(f"Доля зала ниши {code} должна быть от 0 до 1")
 
 
+def parse_capex(niche: str, raw: Mapping[str, object]) -> CapexStructure:
+    items = tuple(
+        CapexItem(str(code), str(item["name"]), float(item["share"]), int(item["life_months"]))
+        for code, item in raw["items"].items()
+    )
+    shares = np.array([item.share for item in items])
+    if not items or (shares < 0).any() or not np.isclose(shares.sum(), 1.0):
+        raise ValueError(f"Доли статей вложений ниши {niche} должны быть неотрицательными и давать в сумме 1")
+    if any(item.life_months < 1 for item in items):
+        raise ValueError(f"Срок использования статей вложений ниши {niche} должен быть не меньше месяца")
+    source = raw.get("source")
+    return CapexStructure(items, None if source is None else str(source), str(raw["note"]))
+
+
 def parse_norms(raw: Mapping[str, object]) -> Norms:
     common_raw = raw["common"]
     missing = [code for code in COMMON_NORMS if code not in common_raw]
@@ -128,12 +158,17 @@ def parse_norms(raw: Mapping[str, object]) -> Norms:
         raise ValueError("Порог покрытия долга и срок кредита должны быть положительными")
     niches = {}
     for niche, block in raw["niches"].items():
-        absent = [code for code in NICHE_NORMS if code not in block]
+        absent = [code for code in (*NICHE_NORMS, "capex_structure") if code not in block]
         if absent:
             raise ValueError(f"В нормативах ниши {niche} нет значений {', '.join(absent)}")
         items = {code: parse_norm(code, block[code]) for code in NICHE_NORMS}
         validate_niche(niche, items)
-        niches[niche] = NicheNorms(str(block["unit_name"]), str(block["unit_value_parameter"]), items)
+        niches[niche] = NicheNorms(
+            str(block["unit_name"]),
+            str(block["unit_value_parameter"]),
+            items,
+            parse_capex(niche, block["capex_structure"]),
+        )
     return Norms(str(raw["version"]), common, niches)
 
 

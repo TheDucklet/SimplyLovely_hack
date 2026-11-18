@@ -4,7 +4,9 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from geostart.schemas import Assumption, MoneyRange, RiskLevel
 
-RegimeCode = Literal["usn_income_6", "usn_income_minus_expenses_15", "patent"]
+RegimeCode = Literal[
+    "usn_income_6", "usn_income_minus_expenses_15", "patent", "ausn_income_8", "ausn_income_minus_expenses_20"
+]
 ScheduleCode = Literal["annuity", "differentiated"]
 CheckStatus = Literal["below", "within", "above"]
 Verdict = Literal["confirmed", "needs_review", "not_confirmed"]
@@ -72,6 +74,7 @@ class Operations(StrictModel):
 class Investment(StrictModel):
     capex_rub: float | None = Field(default=None, ge=0, le=10000000000)
     working_capital_rub: float | None = Field(default=None, ge=0, le=10000000000)
+    franchise_fee_rub: float = Field(default=0, ge=0, le=10000000000)
 
 
 class Financing(StrictModel):
@@ -79,7 +82,10 @@ class Financing(StrictModel):
     loan_share: float | None = Field(default=None, ge=0, le=1)
     rate_annual: float | None = Field(default=None, ge=0, le=1)
     term_months: int | None = Field(default=None, ge=1, le=360)
-    schedule: ScheduleCode = "annuity"
+    schedule: ScheduleCode | None = None
+    grace_months: int | None = Field(default=None, ge=0, le=60)
+    product: str | None = Field(default=None, max_length=50)
+    business_age_months: int = Field(default=0, ge=0, le=1200)
 
     @model_validator(mode="after")
     def one_amount(self) -> Self:
@@ -90,7 +96,14 @@ class Financing(StrictModel):
 
 class TaxSettings(StrictModel):
     legal_form: Literal["ip", "ooo"] = "ip"
-    regime: Literal["auto", "usn_income_6", "usn_income_minus_expenses_15", "patent"] = "auto"
+    regime: Literal[
+        "auto",
+        "usn_income_6",
+        "usn_income_minus_expenses_15",
+        "patent",
+        "ausn_income_8",
+        "ausn_income_minus_expenses_20",
+    ] = "auto"
 
 
 class EconomicsRequest(StrictModel):
@@ -104,6 +117,7 @@ class EconomicsRequest(StrictModel):
     tax: TaxSettings = Field(default_factory=TaxSettings)
     horizon_months: int = Field(default=36, ge=12, le=120)
     start_month: int | None = Field(default=None, ge=1, le=12)
+    start_year: int | None = Field(default=None, ge=2025, le=2040)
     discount_rate_annual: float | None = Field(default=None, ge=0, le=1)
 
 
@@ -135,6 +149,8 @@ class RegimeOption(BaseModel):
     reason: str | None
     taxes_first_year_p50: float | None
     taxes_horizon_p50: float | None
+    contributions_horizon_p50: float | None
+    burden_horizon_p50: float | None
 
 
 class TaxSummary(BaseModel):
@@ -142,16 +158,26 @@ class TaxSummary(BaseModel):
     name: str
     legal_form: Literal["ip", "ooo"]
     chosen_automatically: bool
+    explanation: str
     options: list[RegimeOption]
+
+
+class InvestmentItem(BaseModel):
+    code: str
+    name: str
+    amount: float
+    life_months: int | None
 
 
 class InvestmentSummary(BaseModel):
     capex: float
+    franchise_fee: float
     security_deposit: float
     working_capital: float
     total: MoneyRange
     loan: float
     own_funds: float
+    items: list[InvestmentItem]
 
 
 class SteadyMonth(BaseModel):
@@ -178,11 +204,13 @@ class MonthRow(BaseModel):
     other: float
     taxes: float
     ebitda: float
+    depreciation: float
     interest: float
     principal: float
     net_profit: float
     owner_cash_flow: float
     cumulative_project_cash: float
+    dscr: float | None
 
 
 class CashBand(BaseModel):
@@ -197,6 +225,8 @@ class YearRow(BaseModel):
     revenue: float
     operating_costs: float
     ebitda: float
+    depreciation: float
+    ebit: float
     taxes: float
     interest: float
     principal: float
@@ -209,6 +239,7 @@ class EconomicsMetrics(BaseModel):
     irr_annual: OptionalRange
     payback_months: OptionalRange
     discounted_payback_months: OptionalRange
+    first_profit_month: OptionalRange
     probability_no_payback: float
     probability_loss: float
     risk_level: RiskLevel
@@ -223,14 +254,19 @@ class EconomicsMetrics(BaseModel):
 
 
 class CreditSummary(BaseModel):
+    product: str | None
+    product_name: str | None
     amount: float
     rate_annual: float
     term_months: int
+    grace_months: int
     schedule: ScheduleCode
     first_payment: float
     total_interest: float
     dscr_first_year: OptionalRange
     dscr_min: OptionalRange
+    dscr_monthly_min: OptionalRange
+    months_below_threshold_p50: float
     dscr_threshold: float
     probability_dscr_below_threshold: float
     max_loan_rub: MoneyRange
@@ -243,6 +279,7 @@ class EconomicsReport(BaseModel):
     scenarios: int
     horizon_months: int
     start_month: int
+    start_year: int
     discount_rate_annual: float
     demand: DemandSummary
     tax: TaxSummary
@@ -264,7 +301,10 @@ class BusinessPlan(StrictModel):
     loan_amount_rub: float = Field(ge=0, le=10000000000)
     rate_annual: float | None = Field(default=None, ge=0, le=1)
     term_months: int | None = Field(default=None, ge=1, le=360)
-    schedule: ScheduleCode = "annuity"
+    schedule: ScheduleCode | None = None
+    grace_months: int | None = Field(default=None, ge=0, le=60)
+    product: str | None = Field(default=None, max_length=50)
+    business_age_months: int = Field(default=0, ge=0, le=1200)
 
 
 class CreditCheckRequest(StrictModel):
@@ -321,3 +361,20 @@ class NormsResponse(BaseModel):
     common: list[NormValue]
     niche_norms: list[NormValue]
     parameters: list[ParameterValue]
+
+
+class ProductCondition(BaseModel):
+    value: float
+    source: str | None
+    note: str
+
+
+class CreditProductInfo(BaseModel):
+    code: str
+    name: str
+    rate_annual: ProductCondition
+    max_term_months: ProductCondition
+    max_amount_rub: ProductCondition
+    min_business_age_months: ProductCondition
+    grace_months: ProductCondition
+    schedule: ScheduleCode

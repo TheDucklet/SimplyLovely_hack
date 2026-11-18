@@ -42,7 +42,7 @@ uv run python -m geostart.model score --city all --niche all
 
 ## API v2
 
-Пути `/api/v2/economics`, `/api/v2/credit-check` и `/api/v2/norms/{niche}` отдают финансовый движок из [economics.md](economics.md). Формат запросов и ответов описан в разделе «HTTP API v2» файла [contracts.md](contracts.md), машиночитаемый контракт лежит в [api-v2.openapi.json](api-v2.openapi.json).
+Пути `/api/v2/economics`, `/api/v2/credit-check`, `/api/v2/norms/{niche}` и `/api/v2/credit-products` отдают финансовый движок из [economics.md](economics.md). Формат запросов и ответов описан в разделе «HTTP API v2» файла [contracts.md](contracts.md), машиночитаемый контракт лежит в [api-v2.openapi.json](api-v2.openapi.json).
 
 Ошибки второй версии приходят с типом `application/problem+json` и полями `type`, `title`, `status` и `detail`, у ошибок проверки запроса есть ещё список `errors` с путём к полю и текстом на русском. Обработчики `src/geostart/api/validation.py:validation_error_handler` и `http_error_handler` выбирают формат по префиксу пути, поэтому ответы первой версии сохраняют прежнее поле `detail`.
 

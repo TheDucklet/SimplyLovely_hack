@@ -46,6 +46,13 @@
       "BusinessPlan": {
         "additionalProperties": false,
         "properties": {
+          "business_age_months": {
+            "default": 0,
+            "maximum": 1200.0,
+            "minimum": 0.0,
+            "title": "Business Age Months",
+            "type": "integer"
+          },
           "capex_rub": {
             "anyOf": [
               {
@@ -58,6 +65,19 @@
               }
             ],
             "title": "Capex Rub"
+          },
+          "grace_months": {
+            "anyOf": [
+              {
+                "maximum": 60.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grace Months"
           },
           "loan_amount_rub": {
             "maximum": 10000000000.0,
@@ -77,6 +97,18 @@
               }
             ],
             "title": "Payback Months"
+          },
+          "product": {
+            "anyOf": [
+              {
+                "maxLength": 50,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Product"
           },
           "rate_annual": {
             "anyOf": [
@@ -98,13 +130,19 @@
             "type": "number"
           },
           "schedule": {
-            "default": "annuity",
-            "enum": [
-              "annuity",
-              "differentiated"
+            "anyOf": [
+              {
+                "enum": [
+                  "annuity",
+                  "differentiated"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
             ],
-            "title": "Schedule",
-            "type": "string"
+            "title": "Schedule"
           },
           "term_months": {
             "anyOf": [
@@ -224,6 +262,53 @@
         "title": "CreditCheckRequest",
         "type": "object"
       },
+      "CreditProductInfo": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "grace_months": {
+            "$ref": "#/components/schemas/ProductCondition"
+          },
+          "max_amount_rub": {
+            "$ref": "#/components/schemas/ProductCondition"
+          },
+          "max_term_months": {
+            "$ref": "#/components/schemas/ProductCondition"
+          },
+          "min_business_age_months": {
+            "$ref": "#/components/schemas/ProductCondition"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "rate_annual": {
+            "$ref": "#/components/schemas/ProductCondition"
+          },
+          "schedule": {
+            "enum": [
+              "annuity",
+              "differentiated"
+            ],
+            "title": "Schedule",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "name",
+          "rate_annual",
+          "max_term_months",
+          "max_amount_rub",
+          "min_business_age_months",
+          "grace_months",
+          "schedule"
+        ],
+        "title": "CreditProductInfo",
+        "type": "object"
+      },
       "CreditSummary": {
         "properties": {
           "amount": {
@@ -236,6 +321,9 @@
           "dscr_min": {
             "$ref": "#/components/schemas/OptionalRange"
           },
+          "dscr_monthly_min": {
+            "$ref": "#/components/schemas/OptionalRange"
+          },
           "dscr_threshold": {
             "title": "Dscr Threshold",
             "type": "number"
@@ -244,12 +332,42 @@
             "title": "First Payment",
             "type": "number"
           },
+          "grace_months": {
+            "title": "Grace Months",
+            "type": "integer"
+          },
           "max_loan_rub": {
             "$ref": "#/components/schemas/MoneyRange"
+          },
+          "months_below_threshold_p50": {
+            "title": "Months Below Threshold P50",
+            "type": "number"
           },
           "probability_dscr_below_threshold": {
             "title": "Probability Dscr Below Threshold",
             "type": "number"
+          },
+          "product": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Product"
+          },
+          "product_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Product Name"
           },
           "rate_annual": {
             "title": "Rate Annual",
@@ -273,14 +391,19 @@
           }
         },
         "required": [
+          "product",
+          "product_name",
           "amount",
           "rate_annual",
           "term_months",
+          "grace_months",
           "schedule",
           "first_payment",
           "total_interest",
           "dscr_first_year",
           "dscr_min",
+          "dscr_monthly_min",
+          "months_below_threshold_p50",
           "dscr_threshold",
           "probability_dscr_below_threshold",
           "max_loan_rub"
@@ -372,6 +495,9 @@
             ],
             "title": "Ebitda Margin P50"
           },
+          "first_profit_month": {
+            "$ref": "#/components/schemas/OptionalRange"
+          },
           "irr_annual": {
             "$ref": "#/components/schemas/OptionalRange"
           },
@@ -418,6 +544,7 @@
           "irr_annual",
           "payback_months",
           "discounted_payback_months",
+          "first_profit_month",
           "probability_no_payback",
           "probability_loss",
           "risk_level",
@@ -492,6 +619,10 @@
             "title": "Start Month",
             "type": "integer"
           },
+          "start_year": {
+            "title": "Start Year",
+            "type": "integer"
+          },
           "steady_month": {
             "$ref": "#/components/schemas/SteadyMonth"
           },
@@ -523,6 +654,7 @@
           "scenarios",
           "horizon_months",
           "start_month",
+          "start_year",
           "discount_rate_annual",
           "demand",
           "tax",
@@ -624,6 +756,19 @@
             ],
             "title": "Start Month"
           },
+          "start_year": {
+            "anyOf": [
+              {
+                "maximum": 2040.0,
+                "minimum": 2025.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Year"
+          },
           "tax": {
             "$ref": "#/components/schemas/TaxSettings"
           }
@@ -666,6 +811,26 @@
       "Financing": {
         "additionalProperties": false,
         "properties": {
+          "business_age_months": {
+            "default": 0,
+            "maximum": 1200.0,
+            "minimum": 0.0,
+            "title": "Business Age Months",
+            "type": "integer"
+          },
+          "grace_months": {
+            "anyOf": [
+              {
+                "maximum": 60.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grace Months"
+          },
           "loan_amount_rub": {
             "anyOf": [
               {
@@ -692,6 +857,18 @@
             ],
             "title": "Loan Share"
           },
+          "product": {
+            "anyOf": [
+              {
+                "maxLength": 50,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Product"
+          },
           "rate_annual": {
             "anyOf": [
               {
@@ -706,13 +883,19 @@
             "title": "Rate Annual"
           },
           "schedule": {
-            "default": "annuity",
-            "enum": [
-              "annuity",
-              "differentiated"
+            "anyOf": [
+              {
+                "enum": [
+                  "annuity",
+                  "differentiated"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
             ],
-            "title": "Schedule",
-            "type": "string"
+            "title": "Schedule"
           },
           "term_months": {
             "anyOf": [
@@ -776,6 +959,13 @@
             ],
             "title": "Capex Rub"
           },
+          "franchise_fee_rub": {
+            "default": 0,
+            "maximum": 10000000000.0,
+            "minimum": 0.0,
+            "title": "Franchise Fee Rub",
+            "type": "number"
+          },
           "working_capital_rub": {
             "anyOf": [
               {
@@ -793,11 +983,57 @@
         "title": "Investment",
         "type": "object"
       },
+      "InvestmentItem": {
+        "properties": {
+          "amount": {
+            "title": "Amount",
+            "type": "number"
+          },
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "life_months": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Life Months"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "name",
+          "amount",
+          "life_months"
+        ],
+        "title": "InvestmentItem",
+        "type": "object"
+      },
       "InvestmentSummary": {
         "properties": {
           "capex": {
             "title": "Capex",
             "type": "number"
+          },
+          "franchise_fee": {
+            "title": "Franchise Fee",
+            "type": "number"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/InvestmentItem"
+            },
+            "title": "Items",
+            "type": "array"
           },
           "loan": {
             "title": "Loan",
@@ -821,11 +1057,13 @@
         },
         "required": [
           "capex",
+          "franchise_fee",
           "security_deposit",
           "working_capital",
           "total",
           "loan",
-          "own_funds"
+          "own_funds",
+          "items"
         ],
         "title": "InvestmentSummary",
         "type": "object"
@@ -866,6 +1104,21 @@
           "cumulative_project_cash": {
             "title": "Cumulative Project Cash",
             "type": "number"
+          },
+          "depreciation": {
+            "title": "Depreciation",
+            "type": "number"
+          },
+          "dscr": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dscr"
           },
           "ebitda": {
             "title": "Ebitda",
@@ -922,11 +1175,13 @@
           "other",
           "taxes",
           "ebitda",
+          "depreciation",
           "interest",
           "principal",
           "net_profit",
           "owner_cash_flow",
-          "cumulative_project_cash"
+          "cumulative_project_cash",
+          "dscr"
         ],
         "title": "MonthRow",
         "type": "object"
@@ -1317,8 +1572,60 @@
         "title": "Premises",
         "type": "object"
       },
+      "ProductCondition": {
+        "properties": {
+          "note": {
+            "title": "Note",
+            "type": "string"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          },
+          "value": {
+            "title": "Value",
+            "type": "number"
+          }
+        },
+        "required": [
+          "value",
+          "source",
+          "note"
+        ],
+        "title": "ProductCondition",
+        "type": "object"
+      },
       "RegimeOption": {
         "properties": {
+          "burden_horizon_p50": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Burden Horizon P50"
+          },
+          "contributions_horizon_p50": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contributions Horizon P50"
+          },
           "eligible": {
             "title": "Eligible",
             "type": "boolean"
@@ -1342,7 +1649,9 @@
             "enum": [
               "usn_income_6",
               "usn_income_minus_expenses_15",
-              "patent"
+              "patent",
+              "ausn_income_8",
+              "ausn_income_minus_expenses_20"
             ],
             "title": "Regime",
             "type": "string"
@@ -1376,7 +1685,9 @@
           "eligible",
           "reason",
           "taxes_first_year_p50",
-          "taxes_horizon_p50"
+          "taxes_horizon_p50",
+          "contributions_horizon_p50",
+          "burden_horizon_p50"
         ],
         "title": "RegimeOption",
         "type": "object"
@@ -1523,7 +1834,9 @@
               "auto",
               "usn_income_6",
               "usn_income_minus_expenses_15",
-              "patent"
+              "patent",
+              "ausn_income_8",
+              "ausn_income_minus_expenses_20"
             ],
             "title": "Regime",
             "type": "string"
@@ -1537,6 +1850,10 @@
           "chosen_automatically": {
             "title": "Chosen Automatically",
             "type": "boolean"
+          },
+          "explanation": {
+            "title": "Explanation",
+            "type": "string"
           },
           "legal_form": {
             "enum": [
@@ -1561,7 +1878,9 @@
             "enum": [
               "usn_income_6",
               "usn_income_minus_expenses_15",
-              "patent"
+              "patent",
+              "ausn_income_8",
+              "ausn_income_minus_expenses_20"
             ],
             "title": "Regime",
             "type": "string"
@@ -1572,6 +1891,7 @@
           "name",
           "legal_form",
           "chosen_automatically",
+          "explanation",
           "options"
         ],
         "title": "TaxSummary",
@@ -1652,6 +1972,14 @@
       },
       "YearRow": {
         "properties": {
+          "depreciation": {
+            "title": "Depreciation",
+            "type": "number"
+          },
+          "ebit": {
+            "title": "Ebit",
+            "type": "number"
+          },
           "ebitda": {
             "title": "Ebitda",
             "type": "number"
@@ -1694,6 +2022,8 @@
           "revenue",
           "operating_costs",
           "ebitda",
+          "depreciation",
+          "ebit",
           "taxes",
           "interest",
           "principal",
@@ -1749,6 +2079,43 @@
           }
         },
         "summary": "Проверка бизнес-плана заявки на кредит",
+        "tags": [
+          "v2"
+        ]
+      }
+    },
+    "/api/v2/credit-products": {
+      "get": {
+        "operationId": "products_api_v2_credit_products_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CreditProductInfo"
+                  },
+                  "title": "Response Products Api V2 Credit Products Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {}
+            },
+            "description": "Город, ниша или данные не найдены"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {}
+            },
+            "description": "Параметры расчёта некорректны"
+          }
+        },
+        "summary": "Кредитные продукты и их условия с источниками",
         "tags": [
           "v2"
         ]
