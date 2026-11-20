@@ -54,7 +54,33 @@ class TrafficDemand(StrictModel):
     provider: str | None = Field(default=None, max_length=100)
 
 
-Demand = Annotated[GeoDemand | RevenueDemand | TrafficDemand, Field(discriminator="source")]
+class GeoSquare(StrictModel):
+    square_id: str = Field(min_length=1, max_length=64)
+    south: float = Field(ge=-90, le=90)
+    west: float = Field(ge=-180, le=180)
+    north: float = Field(ge=-90, le=90)
+    east: float = Field(ge=-180, le=180)
+    spend_rub_month: Estimate
+    footfall_day: Estimate | None = None
+
+    @model_validator(mode="after")
+    def ordered_bounds(self) -> Self:
+        if self.south >= self.north or self.west >= self.east:
+            raise ValueError("Границы квадрата должны соблюдать порядок south < north и west < east")
+        return self
+
+
+class GeoPlatformDemand(StrictModel):
+    source: Literal["geoplatform"]
+    lat: float = Field(ge=-90, le=90)
+    lon: float = Field(ge=-180, le=180)
+    squares: list[GeoSquare] | None = Field(default=None, min_length=1, max_length=400)
+    provider: str | None = Field(default=None, max_length=100)
+
+
+Demand = Annotated[
+    GeoDemand | RevenueDemand | TrafficDemand | GeoPlatformDemand, Field(discriminator="source")
+]
 
 
 class Premises(StrictModel):
@@ -135,7 +161,7 @@ class Versions(BaseModel):
 
 
 class DemandSummary(BaseModel):
-    source: Literal["geostart", "revenue", "traffic"]
+    source: Literal["geostart", "revenue", "traffic", "geoplatform"]
     provider: str | None
     revenue_steady_month: MoneyRange
     h3: str | None
