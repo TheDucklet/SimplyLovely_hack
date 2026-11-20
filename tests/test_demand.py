@@ -211,3 +211,13 @@ def test_unknown_niche_is_rejected_by_demand_model() -> None:
 
     with pytest.raises(ValueError, match="Неизвестная ниша dentistry"):
         parse_niche("dentistry")
+
+
+def test_missing_profession_uses_city_median_salary() -> None:
+    from geostart.model.assumptions import profession_salary
+
+    wages = pd.DataFrame({"profession": ["barista", "pickup_operator"], "salary_p50": [40000.0, 60000.0]})
+    assert profession_salary(wages, "barista") == (40000.0, False)
+    assert profession_salary(wages, "florist") == (50000.0, True)
+    with pytest.raises(ValueError, match="Нет зарплаты профессии florist"):
+        profession_salary(wages.iloc[:0], "florist")

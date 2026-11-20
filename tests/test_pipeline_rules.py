@@ -127,3 +127,25 @@ def test_fast_food_excludes_coffee_points() -> None:
         "fast_food": ["n2"],
         "flowers": ["n3"],
     }
+
+
+def test_failed_profession_is_skipped_without_losing_city(tmp_path, monkeypatch) -> None:
+    import requests
+
+    def flaky_fetch(region: str, query: str) -> list[dict]:
+        if query == "флорист":
+            raise requests.ConnectionError("нет ответа")
+        return [
+            {"id": f"{query}{index}", "salary_min": 50000 + index * 1000, "creation-date": "2026-11-01"}
+            for index in range(6)
+        ]
+
+    monkeypatch.setattr(trudvsem, "fetch_vacancies", flaky_fetch)
+    monkeypatch.setattr(
+        trudvsem,
+        "PROFESSION_QUERIES",
+        {key: trudvsem.PROFESSION_QUERIES[key] for key in ("barista", "florist")},
+    )
+    wages = trudvsem.build_wages("7100000000000", tmp_path, date(2026, 11, 20))
+    assert wages["profession"].tolist() == ["barista"]
+    assert not (tmp_path / "7100000000000_florist.json").exists()

@@ -418,7 +418,37 @@ def build_osm_addresses(city: CityConfig, addresses: pd.DataFrame, cells: set[st
     ].reset_index(drop=True)
 
 
-def run_city(city_code: str, collected_at: date | None = None) -> dict[str, float | int]:
+def merge_wages(existing: pd.DataFrame | None, fresh: pd.DataFrame) -> pd.DataFrame:
+    if existing is None or existing.empty:
+        return fresh
+    kept = existing[~existing["profession"].isin(fresh["profession"])]
+    return pd.concat([kept, fresh], ignore_index=True) if not fresh.empty else existing
+
+
+def existing_wages(city_code: str) -> pd.DataFrame | None:
+    path = processed_dir(city_code) / "wages.parquet"
+    return pd.read_parquet(path) if path.is_file() else None
+
+
+def collect_wages(city_code: str, collected_at: date | None = None) -> pd.DataFrame:
+    city_config = load_pipeline_config().cities[city_code]
+    fresh = trudvsem.build_wages(
+        city_config.trudvsem_region, data_dir() / "raw" / "trudvsem", collected_at or date.today()
+    )
+    return merge_wages(existing_wages(city_code), fresh)
+
+
+def refresh_wages(city_code: str, collected_at: date | None = None) -> dict[str, object]:
+    wages = collect_wages(city_code, collected_at)
+    target = processed_dir(city_code)
+    target.mkdir(parents=True, exist_ok=True)
+    wages.to_parquet(target / "wages.parquet", index=False)
+    return {"professions": sorted(wages["profession"]), "wage_rows": len(wages)}
+
+
+def run_city(
+    city_code: str, collected_at: date | None = None, skip_wages: bool = False
+) -> dict[str, float | int]:
     timer = StepTimer(durations={})
     city = get_city(city_code)
     config = load_pipeline_config()
@@ -445,9 +475,9 @@ def run_city(city_code: str, collected_at: date | None = None) -> dict[str, floa
     with timer.step("адреса"):
         addresses = build_osm_addresses(city, layers["addresses"], cells)
     with timer.step("зарплаты"):
-        wages = trudvsem.build_wages(
-            city_config.trudvsem_region, data_dir() / "raw" / "trudvsem", collected_at or date.today()
-        )
+        previous = existing_wages(city_code)
+        reuse = skip_wages and previous is not None
+        wages = previous if reuse else collect_wages(city_code, collected_at)
     target = processed_dir(city_code)
     target.mkdir(parents=True, exist_ok=True)
     hex_features.to_parquet(target / "hex_features.parquet", index=False)
