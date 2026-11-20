@@ -112,6 +112,8 @@ docker compose -f compose.demo.yml up -d --build --wait
 | [docs/auth.md](docs/auth.md) | вход через OIDC, роли, заглушка единого входа и журнал обращений |
 | [docs/product/](docs/product/README.md) | проблема, рынок, конкуренты, метрики, доказательства по гипотезам, опрос и план пилота (материалы Никиты) |
 | [docs/demo.md](docs/demo.md) | демо-стенд в Docker, запуск и работа без интернета |
+| [docs/data-passport.md](docs/data-passport.md) | паспорт источников данных с лицензиями, версиями и способом обновления |
+| [docs/quality.md](docs/quality.md) | проверки полноты и диапазонов данных и отчёт о качестве |
 | [docs/release.md](docs/release.md) | пересчёт данных с порогами расхождений, архив данных, образы в CI, выкладка на стенд |
 | [docs/vps.md](docs/vps.md) | публичный стенд на VPS, лимиты ресурсов, запуск без sudo |
 | [docs/storage.md](docs/storage.md) | хранилище PostgreSQL с PostGIS, роли, загрузка |

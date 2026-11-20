@@ -1,0 +1,9 @@
+bbox_margin_deg: 0.02
+salary_rub_month: [15000, 400000]
+wages_max_age_days: 180
+min_vacancies: 3
+empty_residents_share_warning: 0.30
+unknown_district_share_warning: 0.10
+metro_dist_m: [0, 5000]
+revenue_rub_month_max: 50000000
+counts_max_per_cell: 2000

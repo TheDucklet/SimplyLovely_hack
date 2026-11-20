@@ -4,6 +4,8 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
+from geostart.quality.checks import errors, run_checks
+from geostart.quality.report import render_report
 from geostart.release.compare import as_json, compare, failed, load_thresholds, render
 from geostart.release.manifest import build_manifest, write_manifest
 
@@ -17,6 +19,7 @@ class RebuildResult:
     report_dir: Path
     failed: int
     total: int
+    quality_errors: int
     kept: bool
 
 
@@ -77,10 +80,13 @@ def rebuild(
     current = build_manifest(root)
     checks = compare(previous, current, load_thresholds(), saved, root, cities=set(cities))
     problems = failed(checks)
-    kept = accept or not problems
+    quality = run_checks(root, cities)
+    quality_errors = errors(quality)
+    kept = accept or not (problems or quality_errors)
     report_dir = releases_dir(root) / current["version"]
     report_dir.mkdir(parents=True, exist_ok=True)
     (report_dir / "report.md").write_text(render(previous, current, checks), encoding="utf-8")
+    (report_dir / "quality.md").write_text(render_report(root, quality), encoding="utf-8")
     (report_dir / "checks.json").write_text(
         json.dumps(as_json(checks), ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
     )
@@ -95,5 +101,6 @@ def rebuild(
         report_dir=report_dir,
         failed=len(problems),
         total=len(checks),
+        quality_errors=len(quality_errors),
         kept=kept,
     )
