@@ -14,7 +14,8 @@ uv run python -m geostart.release rebuild --city tula --niche all
 2. Запускает конвейер `geostart.pipeline` по городу и расчёт модели по каждой нише.
 3. Строит манифест новой версии и сравнивает его с прошлым по порогам из `config/release.yaml`.
 4. Пишет отчёт `data/releases/<версия>/report.md`, проверки в `checks.json` и манифест версии.
-5. Если все проверки в пределах порогов, записывает `data/manifest.json`. Иначе возвращает прежние файлы и завершается с кодом 2.
+5. Проверяет полноту и диапазоны данных города ([quality.md](quality.md)) и пишет отчёт `quality.md` рядом.
+6. Если все проверки в пределах порогов и ошибок качества нет, записывает `data/manifest.json`. Иначе возвращает прежние файлы и завершается с кодом 2.
 
 | Параметр | Назначение |
 | --- | --- |
@@ -61,7 +62,7 @@ uv run python -m geostart.release compare old_manifest.json new_manifest.json --
 uv run python -m geostart.release package --output dist --with-basemap
 ```
 
-Команда пишет `data/manifest.json` и собирает `dist/geostart_data_<версия>.zip` с файлами `data/processed/`, `data/scores/`, манифестом и подложкой PMTiles, если указан `--with-basemap`. Рядом кладётся файл `.sha256`. Архив распаковывается в корень репозитория. Команда `uv run python -m geostart.release verify` сверяет файлы в `data/` с контрольными суммами манифеста.
+Команда проверяет качество данных, при ошибках архив не собирается без флага `--force`. Затем она пишет `data/manifest.json` и собирает `dist/geostart_data_<версия>.zip` с файлами `data/processed/`, `data/scores/`, манифестом, отчётом о качестве `data/quality.md` и подложкой PMTiles, если указан `--with-basemap`. Рядом кладётся файл `.sha256`. Архив распаковывается в корень репозитория. Команда `uv run python -m geostart.release verify` сверяет файлы в `data/` с контрольными суммами манифеста.
 
 ## Образы в CI
 

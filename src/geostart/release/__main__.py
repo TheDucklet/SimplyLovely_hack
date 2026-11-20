@@ -7,7 +7,7 @@ from pathlib import Path
 from geostart.config import load_cities, load_niches
 from geostart.release.compare import as_json, compare, failed, load_thresholds, render
 from geostart.release.manifest import build_manifest, read_manifest, write_manifest
-from geostart.release.package import package, verify
+from geostart.release.package import QualityError, package, verify
 from geostart.release.rebuild import MANIFEST_NAME, rebuild
 from geostart.settings import data_dir
 
@@ -49,6 +49,7 @@ def main(argv: list[str] | None = None) -> int:
     package_parser = commands.add_parser("package", help="собрать архив данных для стенда")
     package_parser.add_argument("--output", type=Path, default=Path("dist"))
     package_parser.add_argument("--with-basemap", action="store_true", help="добавить подложку PMTiles")
+    package_parser.add_argument("--force", action="store_true", help="собрать архив при ошибках качества")
     commands.add_parser("verify", help="сверить файлы данных с data/manifest.json")
     arguments = parser.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -75,10 +76,10 @@ def main(argv: list[str] | None = None) -> int:
         print(
             f"Проверок {result.total}, выше порогов {result.failed}, отчёт {result.report_dir / 'report.md'}"
         )
+        print(f"Ошибок качества {result.quality_errors}, отчёт {result.report_dir / 'quality.md'}")
         if not result.kept:
-            print(
-                "Расхождения выше порогов, прежние данные возвращены. Чтобы принять версию, добавьте --accept"
-            )
+            print("Расхождения выше порогов или ошибки качества, прежние данные возвращены")
+            print("Чтобы принять версию после разбора отчётов, добавьте --accept")
             return THRESHOLDS_EXCEEDED
         return 0
     if arguments.command == "compare":
@@ -99,7 +100,11 @@ def main(argv: list[str] | None = None) -> int:
         print(f"{root / MANIFEST_NAME}: версия {manifest['version']}, файлов {len(manifest['files'])}")
         return 0
     if arguments.command == "package":
-        archive = package(root, arguments.output, arguments.with_basemap)
+        try:
+            archive = package(root, arguments.output, arguments.with_basemap, force=arguments.force)
+        except QualityError as error:
+            print(error)
+            return 1
         print(f"{archive}: {archive.stat().st_size / 1e6:.1f} МБ")
         return 0
     problems = verify(root)
