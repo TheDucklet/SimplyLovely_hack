@@ -9,7 +9,7 @@ from geostart.config import CityConfig, load_cities, load_niches
 from geostart.model import evaluate_location
 from geostart.model.service import city_context
 from geostart.schemas import AddressMatch, Competitor, HexesResponse, HexScore, LocationReport, ReportRequest
-from geostart.settings import data_dir, processed_dir, storage_mode
+from geostart.settings import data_dir, processed_dir, storage_mode, warmup_cities
 from geostart.storage import reader
 
 logger = logging.getLogger("geostart.api")
@@ -157,7 +157,10 @@ def data_report(city: CityConfig, request: ReportRequest) -> LocationReport:
 
 def warm_model_cache() -> dict[str, float]:
     durations: dict[str, float] = {}
+    selected = warmup_cities()
     for city in load_cities():
+        if selected is not None and city.code not in selected:
+            continue
         for niche in load_niches():
             started = time.perf_counter()
             try:

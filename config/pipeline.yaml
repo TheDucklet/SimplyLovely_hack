@@ -1,8 +1,24 @@
-osm_extract:
-  url: https://download.geofabrik.de/russia/central-fed-district-261013.osm.pbf
-  file: central-fed-district-261013.osm.pbf
-  region: Центральный федеральный округ
-  date: 2026-10-13
+osm_extracts:
+  central:
+    url: https://download.geofabrik.de/russia/central-fed-district-261013.osm.pbf
+    file: central-fed-district-261013.osm.pbf
+    region: Центральный федеральный округ
+    date: 2026-10-13
+  northwestern:
+    url: https://download.geofabrik.de/russia/northwestern-fed-district-261117.osm.pbf
+    file: northwestern-fed-district-261117.osm.pbf
+    region: Северо-Западный федеральный округ
+    date: 2026-11-17
+  siberian:
+    url: https://download.geofabrik.de/russia/siberian-fed-district-261117.osm.pbf
+    file: siberian-fed-district-261117.osm.pbf
+    region: Сибирский федеральный округ
+    date: 2026-11-17
+  ural:
+    url: https://download.geofabrik.de/russia/ural-fed-district-261117.osm.pbf
+    file: ural-fed-district-261117.osm.pbf
+    region: Уральский федеральный округ
+    date: 2026-11-17
 cities:
   moscow:
     extract_bbox: [36.80, 55.13, 37.97, 56.03]
@@ -45,3 +61,82 @@ cities:
       population: 533607
       date: 2025-01-01
       source: https://www.tsn24.ru/2025/04/16/329641-chislennost-naseleniya-tuly-za-god-sokratilas-pochti-na-pyat-tysyach-chelovek/
+  yaroslavl:
+    extract_bbox: [37.30, 56.50, 41.25, 58.95]
+    boundary: admin
+    boundary_name: городской округ Ярославль
+    boundary_admin_level: "6"
+    district_admin_level: "9"
+    drop_empty_cells: true
+    trudvsem_region: "7600000000000"
+    population_region:
+      name: Ярославская область
+      admin_level: "4"
+      population: 1187558
+      date: 2024-01-01
+      source: https://76.rosstat.gov.ru/storage/mediabank/chislennost_naseleniya_yaroslavskoy_oblasti_2024.pdf
+    population_scope:
+      name: городской округ Ярославль
+      population: 563700
+      date: 2025-01-01
+      source: https://76.rosstat.gov.ru/news/document/261374
+  saint_petersburg:
+    extract: northwestern
+    extract_bbox: [29.30, 59.55, 30.85, 60.28]
+    boundary: admin
+    boundary_name: Санкт-Петербург
+    boundary_admin_level: "4"
+    district_admin_level: "5"
+    drop_empty_cells: true
+    trudvsem_region: "7800000000000"
+    population_region:
+      name: Санкт-Петербург
+      admin_level: "4"
+      population: 5652900
+      date: 2025-01-01
+      source: http://www.mojgorod.ru/cities/pop2025_1.html
+    population_scope:
+      name: Санкт-Петербург
+      population: 5652900
+      date: 2025-01-01
+      source: http://www.mojgorod.ru/cities/pop2025_1.html
+  novosibirsk:
+    extract: siberian
+    extract_bbox: [82.60, 54.75, 83.30, 55.22]
+    boundary: admin
+    boundary_name: городской округ Новосибирск
+    boundary_admin_level: "6"
+    district_admin_level: "9"
+    drop_empty_cells: true
+    trudvsem_region: "5400000000000"
+    population_region:
+      name: Новосибирская область
+      admin_level: "4"
+      population: 2786500
+      date: 2025-01-01
+      source: https://54.rosstat.gov.ru/storage/mediabank/54_PRESS053_2025.pdf
+    population_scope:
+      name: городской округ Новосибирск
+      population: 1637300
+      date: 2025-01-01
+      source: http://www.mojgorod.ru/cities/pop2025_1.html
+  yekaterinburg:
+    extract: ural
+    extract_bbox: [59.90, 56.55, 61.20, 57.15]
+    boundary: admin
+    boundary_name: городской округ Екатеринбург
+    boundary_admin_level: "6"
+    district_admin_level: "9"
+    drop_empty_cells: true
+    trudvsem_region: "6600000000000"
+    population_region:
+      name: Свердловская область
+      admin_level: "4"
+      population: 4221452
+      date: 2025-01-01
+      source: https://t-j.ru/demography-sverdlovskaya-oblast/
+    population_scope:
+      name: городской округ Екатеринбург
+      population: 1589134
+      date: 2025-01-01
+      source: https://66.rosstat.gov.ru/storage/mediabank/%D0%9F%D1%80%D0%B5%D0%B4%D0%B2%D0%B0%D1%80%D0%B8%D1%82_%D1%87%D0%B8%D1%81%D0%BB_%D0%9C%D0%9E_2025.pdf

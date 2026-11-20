@@ -1,0 +1,9 @@
+city,zone,zone_type,rent_rub_m2_month_p10,rent_rub_m2_month_p50,rent_rub_m2_month_p90,property_type,source,date,note
+yekaterinburg,Академический,periphery,1078,1507,2496,street_retail,https://ekb.cian.ru/snyat-torgovuyu-ploshad/,2026-11,"выборка Циан по району, 42 объявления"
+yekaterinburg,Верх-Исетский,center,800,1449,2229,street_retail,https://ekb.cian.ru/snyat-torgovuyu-ploshad/,2026-11,"выборка Циан по району, 25 объявлений"
+yekaterinburg,Железнодорожный,periphery,594,1900,2575,street_retail,https://ekb.cian.ru/snyat-torgovuyu-ploshad/,2026-11,"выборка Циан по району, 25 объявлений"
+yekaterinburg,Кировский,center,868,1317,2500,street_retail,https://ekb.cian.ru/snyat-torgovuyu-ploshad/,2026-11,"выборка Циан по району, 18 объявлений"
+yekaterinburg,Ленинский,center,980,1295,3026,street_retail,https://ekb.cian.ru/snyat-torgovuyu-ploshad/,2026-11,"выборка Циан по району, 10 объявлений"
+yekaterinburg,Октябрьский,center,845,1500,2869,street_retail,https://ekb.cian.ru/snyat-torgovuyu-ploshad/,2026-11,"выборка Циан по району, 22 объявления"
+yekaterinburg,Орджоникидзевский,periphery,720,1339,1876,street_retail,https://ekb.cian.ru/snyat-torgovuyu-ploshad/,2026-11,"выборка Циан по району, 41 объявление"
+yekaterinburg,Чкаловский,periphery,987,1481,2225,street_retail,https://ekb.cian.ru/snyat-torgovuyu-ploshad/,2026-11,"выборка Циан по району, 50 объявлений"

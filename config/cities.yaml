@@ -13,3 +13,31 @@ cities:
     h3_resolution: 9
     center: [54.1931, 37.6173]
     zoom: 12
+  - code: yaroslavl
+    name: Ярославль
+    osm_boundary: городской округ Ярославль
+    scope: city_boundary
+    h3_resolution: 9
+    center: [57.6261, 39.8845]
+    zoom: 12
+  - code: saint_petersburg
+    name: Санкт-Петербург
+    osm_boundary: Санкт-Петербург
+    scope: city_boundary
+    h3_resolution: 9
+    center: [59.9386, 30.3141]
+    zoom: 11
+  - code: novosibirsk
+    name: Новосибирск
+    osm_boundary: городской округ Новосибирск
+    scope: city_boundary
+    h3_resolution: 9
+    center: [55.0302, 82.9204]
+    zoom: 11
+  - code: yekaterinburg
+    name: Екатеринбург
+    osm_boundary: городской округ Екатеринбург
+    scope: city_boundary
+    h3_resolution: 9
+    center: [56.8389, 60.6057]
+    zoom: 11

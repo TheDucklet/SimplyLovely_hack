@@ -7,6 +7,8 @@ services:
       dockerfile: docker/api/Dockerfile
     volumes:
       - ./data:/app/data
+    environment:
+      GEOSTART_WARMUP_CITIES: ${GEOSTART_WARMUP_CITIES:-moscow,tula}
     restart: unless-stopped
 
   web:

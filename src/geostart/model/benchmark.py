@@ -7,6 +7,7 @@ import pandas as pd
 import yaml
 
 from geostart import settings
+from geostart.config import load_cities
 from geostart.model.data import load_demand_inputs, scores_directory
 from geostart.model.demand import DEFAULT_RUNS, DEFAULT_SEED, Niche, simulate_demand
 from geostart.model.service import load_inputs
@@ -41,7 +42,11 @@ def print_benchmarks(cities: list[str], niches: list[str]) -> None:
     print("| --- | --- | --- | --- | --- | --- | --- | --- | --- |")
     for city in cities:
         for niche in niches:
-            row = benchmark_comparison(city, niche)
+            try:
+                row = benchmark_comparison(city, niche)
+            except (FileNotFoundError, ValueError) as error:
+                print(f"| {city} | {niche} | – | {error} | | | | | |")
+                continue
             values = [row[group][key] for group in ("model", "benchmark") for key in ("p10", "p50", "p90")]
             formatted = " | ".join(f"{value:.2f}" for value in values)
             print(f"| {city} | {niche} | {row['occupied_cells']} | {formatted} |")
@@ -51,7 +56,7 @@ def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description="Замер расчёта спроса без записи в каталог данных")
     parser.add_argument("--data-dir", type=Path)
     parser.add_argument("--research-dir", type=Path, default=settings.research_dir())
-    parser.add_argument("--city", choices=("moscow", "tula"), default="moscow")
+    parser.add_argument("--city", choices=[city.code for city in load_cities()], default="moscow")
     parser.add_argument("--niche", choices=list(Niche), default=Niche.COFFEE)
     parser.add_argument("--runs", type=int, default=DEFAULT_RUNS)
     parser.add_argument("--seed", type=int, default=DEFAULT_SEED)

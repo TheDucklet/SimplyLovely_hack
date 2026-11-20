@@ -20,7 +20,14 @@ def test_health_reports_mock_mode() -> None:
 
 def test_cities_follow_config() -> None:
     body = client.get("/api/v1/cities").json()
-    assert [city["code"] for city in body] == ["moscow", "tula"]
+    assert [city["code"] for city in body] == [
+        "moscow",
+        "tula",
+        "yaroslavl",
+        "saint_petersburg",
+        "novosibirsk",
+        "yekaterinburg",
+    ]
     assert body[0] == {"code": "moscow", "name": "Москва", "center": [55.7558, 37.6176], "zoom": 11}
 
 
