@@ -91,6 +91,7 @@ docker compose -f compose.demo.yml up -d --build --wait
 | `GEOSTART_STORAGE` | `files` | `postgres` переключает карту, конкурентов и поиск на базу, параметры базы описаны в docs/storage.md |
 | `GEOSTART_DATA_DIR` | `data/` в корне репозитория | каталог данных |
 | `GEOSTART_CONFIG_DIR` | `config/` в корне репозитория | каталог с `cities.yaml` и `niches.yaml` |
+| `GEOSTART_AUTH_MODE` | `off` | `oidc` включает вход через сервер банка, роли и журнал обращений, настройки в docs/auth.md |
 | `GEOSTART_CORS_ORIGINS` | `http://localhost:5173,http://localhost:4173` | адреса интерфейса, которым разрешены запросы к API, через запятую |
 
 Города и ниши описаны в `config/cities.yaml` и `config/niches.yaml`. Параметры ниш, ставки аренды и налоги лежат в `research/`. Параметры ниш с 2026-10-16 взяты из исследования Ивана (S1-I2), ставки аренды с 2026-10-16 построены по выборке объявлений Циан (`research/rent/notes.md`), а налоги 2026 года с 2026-10-18 взяты из исследования Ивана (S1-I4, `research/taxes/notes.md`).
@@ -108,6 +109,7 @@ docker compose -f compose.demo.yml up -d --build --wait
 | [docs/data-sources.md](docs/data-sources.md) | источники данных и способы оценки признаков |
 | [docs/decisions.md](docs/decisions.md) | журнал решений |
 | [docs/security.md](docs/security.md) | защита данных и развёртывание в контуре банка |
+| [docs/auth.md](docs/auth.md) | вход через OIDC, роли, заглушка единого входа и журнал обращений |
 | [docs/product/](docs/product/README.md) | проблема, рынок, конкуренты, метрики, доказательства по гипотезам, опрос и план пилота (материалы Никиты) |
 | [docs/demo.md](docs/demo.md) | демо-стенд в Docker, запуск и работа без интернета |
 | [docs/vps.md](docs/vps.md) | публичный стенд на VPS, лимиты ресурсов, запуск без sudo |

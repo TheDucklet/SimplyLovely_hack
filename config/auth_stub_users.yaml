@@ -1,0 +1,17 @@
+users:
+  - sub: demo-entrepreneur
+    name: Предприниматель
+    roles: [entrepreneur]
+    note: карта, отчёт по адресу и финансовая модель
+  - sub: demo-credit-officer
+    name: Кредитный специалист
+    roles: [credit_officer]
+    note: всё, что у предпринимателя, и проверка бизнес-плана заёмщика
+  - sub: demo-analyst
+    name: Аналитик
+    roles: [analyst]
+    note: отчёты и сводка обращений по городам и нишам без пользователей
+  - sub: demo-admin
+    name: Администратор
+    roles: [admin]
+    note: отчёты, сводка и журнал обращений с псевдонимами пользователей
