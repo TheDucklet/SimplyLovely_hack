@@ -32,7 +32,8 @@
 
 ```
 docker compose -f compose.demo.yml build
-docker save geostart-demo-api geostart-demo-web | gzip > geostart_images_<ГГГГ-ММ-ДД>.tar.gz
+docker pull protomaps/go-pmtiles:v1.31.2
+docker save geostart-demo-api geostart-demo-web protomaps/go-pmtiles:v1.31.2 | gzip > geostart_images_<ГГГГ-ММ-ДД>.tar.gz
 ```
 
 Архив весит около 420 МБ. Вместе с ним Никита получает архив данных `geostart_data_2026-10-16_v2.zip` (3,7 МБ).
@@ -75,8 +76,9 @@ docker compose -f compose.vps.yml up -d --wait
 | Команда | Ожидаемый результат |
 | --- | --- |
 | `curl -s http://127.0.0.1:8081/api/v1/health` | `{"status":"ok","mode":"data","data_version":"2026-10-16"}` |
-| `docker compose -f compose.vps.yml ps` | оба контейнера в состоянии `healthy` |
-| `docker stats --no-stream` | `api` до 640 МБ, `web` до 48 МБ |
+| `docker compose -f compose.vps.yml ps` | `api` и `web` в состоянии `healthy`, `tiles` в состоянии `running` |
+| `curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8081/basemap/tiles/geostart/10/618/320.mvt` | `200` |
+| `docker stats --no-stream` | `api` до 640 МБ, `web` до 48 МБ, `tiles` до 32 МБ |
 | `ss -ltn \| grep 8081` | слушает только `127.0.0.1:8081` |
 | открыть `http://fintech.shenti.space` | карта Москвы с ячейками, внизу версия данных 2026-10-16 |
 
