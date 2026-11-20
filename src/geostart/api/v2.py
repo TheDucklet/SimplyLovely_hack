@@ -5,6 +5,7 @@ from fastapi import APIRouter, HTTPException, Query
 from geostart.api import mocks
 from geostart.api.data_backend import DataNotReadyError
 from geostart.config import UnknownCityError, UnknownNicheError, get_city
+from geostart.economics.sensitivity import evaluate_sensitivity
 from geostart.economics.service import check_plan, credit_products, evaluate_economics, norms_response
 from geostart.schemas import ReportRequest
 from geostart.schemas_v2 import (
@@ -17,6 +18,8 @@ from geostart.schemas_v2 import (
     GeoDemand,
     NormsResponse,
     RevenueDemand,
+    SensitivityReport,
+    SensitivityRequest,
 )
 from geostart.settings import use_mocks
 
@@ -38,7 +41,7 @@ def guarded[ResultT](load: Callable[[], ResultT]) -> ResultT:
         raise HTTPException(status_code=422, detail=str(error)) from error
 
 
-def with_mock_demand(request: EconomicsRequest) -> EconomicsRequest:
+def with_mock_demand[RequestT: EconomicsRequest](request: RequestT) -> RequestT:
     demand = request.demand
     if not use_mocks() or not isinstance(demand, GeoDemand):
         return request
@@ -65,6 +68,11 @@ def with_mock_demand(request: EconomicsRequest) -> EconomicsRequest:
 @router.post("/economics", summary="Финансовая модель точки")
 def economics(request: EconomicsRequest) -> EconomicsReport:
     return guarded(lambda: evaluate_economics(with_mock_demand(request)))
+
+
+@router.post("/sensitivity", summary="Анализ чувствительности финансовой модели")
+def sensitivity(request: SensitivityRequest) -> SensitivityReport:
+    return guarded(lambda: evaluate_sensitivity(with_mock_demand(request)))
 
 
 @router.post("/credit-check", summary="Проверка бизнес-плана заявки на кредит")

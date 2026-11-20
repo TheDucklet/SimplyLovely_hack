@@ -331,6 +331,7 @@ def evaluate_location(
 | Метод и путь | Назначение |
 | --- | --- |
 | `POST /economics` | помесячная финансовая модель точки |
+| `POST /sensitivity` | анализ чувствительности к пяти факторам и четырём стресс-сценариям |
 | `POST /credit-check` | сверка бизнес-плана заявки на кредит с моделью |
 | `GET /norms/{niche}?city=tula` | нормативы и параметры затрат ниши в городе с источниками |
 | `GET /credit-products` | кредитные продукты с условиями и источниками |
@@ -669,7 +670,55 @@ def evaluate_location(
 
 Флаг риска ставится, если выручка плана выше p90 модели, вложения ниже p10 или окупаемость короче p10. Вердикт `confirmed` выдаётся без флагов при доле сценариев с DSCR не ниже порога от 80%, вердикт `not_confirmed` при двух флагах и больше или при доле ниже 50%, в остальных случаях выдаётся `needs_review`. Поле `economics` содержит полный ответ `/economics` с кредитом из плана.
 
-Ошибки второй версии отдаются в формате `application/problem+json`:
+### Анализ чувствительности
+
+Запрос `POST /sensitivity` принимает поля `POST /economics` и необязательное поле `shift_share`. Допустимый диапазон 0,05-0,5, значение по умолчанию 0,2.
+
+```json
+{
+  "city": "tula",
+  "niche": "coffee",
+  "demand": {"source": "geostart", "lat": 54.1931, "lon": 37.6173},
+  "financing": {"loan_share": 0.7, "rate_annual": 0.26, "term_months": 36},
+  "start_month": 1,
+  "start_year": 2027,
+  "shift_share": 0.2
+}
+```
+
+Сокращённый ответ показывает один из пяти факторов и один из четырёх стрессов. Суммы и месяцы округлены, полный состав полей описан в OpenAPI.
+
+```json
+{
+  "versions": {"model": "economics-0.3.0", "norms": "2026-11-20", "data": "2026-11-20", "taxes": "2026-10-18"},
+  "shift_share": 0.2,
+  "base": {
+    "profit_steady_month_p50": 218135, "npv_p50": 3155252,
+    "payback_months_p50": 14.51, "probability_no_payback_24": 0.305
+  },
+  "factors": [
+    {
+      "code": "revenue",
+      "name": "Выручка",
+      "low": {"change": -0.2, "profit_steady_month_p50": 121022, "npv_p50": 407611, "payback_months_p50": 24.99},
+      "high": {"change": 0.2, "profit_steady_month_p50": 314089, "npv_p50": 5963097, "payback_months_p50": 10.65}
+    }
+  ],
+  "stresses": [
+    {
+      "code": "revenue_minus_20", "name": "Выручка ниже на 20%",
+      "profit_steady_month_p50": 121022, "npv_p50": 407611,
+      "payback_months_p50": 24.99, "probability_no_payback_24": 0.52
+    }
+  ]
+}
+```
+
+Метод расчёта медиан, порядок факторов и состав стрессов описаны в разделе [«Анализ чувствительности»](economics.md#анализ-чувствительности).
+
+### Ошибки API v2
+
+Ошибки второй версии отдаются в формате `application/problem+json`.
 
 ```json
 {

@@ -1843,6 +1843,322 @@
         "title": "RevenueDemand",
         "type": "object"
       },
+      "SensitivityFactor": {
+        "properties": {
+          "code": {
+            "enum": [
+              "revenue",
+              "rent",
+              "wages",
+              "cogs_share",
+              "capex"
+            ],
+            "title": "Code",
+            "type": "string"
+          },
+          "high": {
+            "$ref": "#/components/schemas/SensitivityPoint"
+          },
+          "low": {
+            "$ref": "#/components/schemas/SensitivityPoint"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "name",
+          "low",
+          "high"
+        ],
+        "title": "SensitivityFactor",
+        "type": "object"
+      },
+      "SensitivityPoint": {
+        "properties": {
+          "change": {
+            "title": "Change",
+            "type": "number"
+          },
+          "npv_p50": {
+            "title": "Npv P50",
+            "type": "number"
+          },
+          "payback_months_p50": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payback Months P50"
+          },
+          "profit_steady_month_p50": {
+            "title": "Profit Steady Month P50",
+            "type": "number"
+          }
+        },
+        "required": [
+          "profit_steady_month_p50",
+          "npv_p50",
+          "payback_months_p50",
+          "change"
+        ],
+        "title": "SensitivityPoint",
+        "type": "object"
+      },
+      "SensitivityReport": {
+        "properties": {
+          "base": {
+            "$ref": "#/components/schemas/SensitivitySummary"
+          },
+          "factors": {
+            "items": {
+              "$ref": "#/components/schemas/SensitivityFactor"
+            },
+            "title": "Factors",
+            "type": "array"
+          },
+          "shift_share": {
+            "title": "Shift Share",
+            "type": "number"
+          },
+          "stresses": {
+            "items": {
+              "$ref": "#/components/schemas/SensitivityStress"
+            },
+            "title": "Stresses",
+            "type": "array"
+          },
+          "versions": {
+            "$ref": "#/components/schemas/Versions"
+          }
+        },
+        "required": [
+          "versions",
+          "shift_share",
+          "base",
+          "factors",
+          "stresses"
+        ],
+        "title": "SensitivityReport",
+        "type": "object"
+      },
+      "SensitivityRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "city": {
+            "title": "City",
+            "type": "string"
+          },
+          "demand": {
+            "discriminator": {
+              "mapping": {
+                "geoplatform": "#/components/schemas/GeoPlatformDemand",
+                "geostart": "#/components/schemas/GeoDemand",
+                "revenue": "#/components/schemas/RevenueDemand",
+                "traffic": "#/components/schemas/TrafficDemand"
+              },
+              "propertyName": "source"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/GeoDemand"
+              },
+              {
+                "$ref": "#/components/schemas/RevenueDemand"
+              },
+              {
+                "$ref": "#/components/schemas/TrafficDemand"
+              },
+              {
+                "$ref": "#/components/schemas/GeoPlatformDemand"
+              }
+            ],
+            "title": "Demand"
+          },
+          "discount_rate_annual": {
+            "anyOf": [
+              {
+                "maximum": 1.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Discount Rate Annual"
+          },
+          "financing": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Financing"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "horizon_months": {
+            "default": 36,
+            "maximum": 120.0,
+            "minimum": 12.0,
+            "title": "Horizon Months",
+            "type": "integer"
+          },
+          "investment": {
+            "$ref": "#/components/schemas/Investment"
+          },
+          "niche": {
+            "title": "Niche",
+            "type": "string"
+          },
+          "operations": {
+            "$ref": "#/components/schemas/Operations"
+          },
+          "premises": {
+            "$ref": "#/components/schemas/Premises"
+          },
+          "shift_share": {
+            "default": 0.2,
+            "maximum": 0.5,
+            "minimum": 0.05,
+            "title": "Shift Share",
+            "type": "number"
+          },
+          "start_month": {
+            "anyOf": [
+              {
+                "maximum": 12.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Month"
+          },
+          "start_year": {
+            "anyOf": [
+              {
+                "maximum": 2040.0,
+                "minimum": 2025.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Year"
+          },
+          "tax": {
+            "$ref": "#/components/schemas/TaxSettings"
+          }
+        },
+        "required": [
+          "city",
+          "niche",
+          "demand"
+        ],
+        "title": "SensitivityRequest",
+        "type": "object"
+      },
+      "SensitivityStress": {
+        "properties": {
+          "code": {
+            "enum": [
+              "revenue_minus_20",
+              "rent_plus_15",
+              "rate_plus_3",
+              "combined"
+            ],
+            "title": "Code",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "npv_p50": {
+            "title": "Npv P50",
+            "type": "number"
+          },
+          "payback_months_p50": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payback Months P50"
+          },
+          "probability_no_payback_24": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Probability No Payback 24",
+            "type": "number"
+          },
+          "profit_steady_month_p50": {
+            "title": "Profit Steady Month P50",
+            "type": "number"
+          }
+        },
+        "required": [
+          "profit_steady_month_p50",
+          "npv_p50",
+          "payback_months_p50",
+          "probability_no_payback_24",
+          "code",
+          "name"
+        ],
+        "title": "SensitivityStress",
+        "type": "object"
+      },
+      "SensitivitySummary": {
+        "properties": {
+          "npv_p50": {
+            "title": "Npv P50",
+            "type": "number"
+          },
+          "payback_months_p50": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payback Months P50"
+          },
+          "probability_no_payback_24": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Probability No Payback 24",
+            "type": "number"
+          },
+          "profit_steady_month_p50": {
+            "title": "Profit Steady Month P50",
+            "type": "number"
+          }
+        },
+        "required": [
+          "profit_steady_month_p50",
+          "npv_p50",
+          "payback_months_p50",
+          "probability_no_payback_24"
+        ],
+        "title": "SensitivitySummary",
+        "type": "object"
+      },
       "ShareEstimate": {
         "additionalProperties": false,
         "properties": {
@@ -2333,6 +2649,49 @@
           }
         },
         "summary": "Нормативы и параметры ниши в городе",
+        "tags": [
+          "v2"
+        ]
+      }
+    },
+    "/api/v2/sensitivity": {
+      "post": {
+        "operationId": "sensitivity_api_v2_sensitivity_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SensitivityRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SensitivityReport"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {}
+            },
+            "description": "Город, ниша или данные не найдены"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {}
+            },
+            "description": "Параметры расчёта некорректны"
+          }
+        },
+        "summary": "Анализ чувствительности финансовой модели",
         "tags": [
           "v2"
         ]

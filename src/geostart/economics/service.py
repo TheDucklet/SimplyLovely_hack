@@ -99,6 +99,7 @@ REJECTED_DSCR_PROBABILITY = 0.5
 REJECTED_FLAGS = 2
 PERCENT = 100.0
 FRANCHISE_NAME = "Паушальный взнос"
+MAX_COGS_SHARE = 0.99
 COST_PARAMETERS = {
     "area_m2": ("Площадь помещения", "м²"),
     "staff_count": ("Число сотрудников", "чел."),
@@ -411,8 +412,20 @@ def cost_samples(context: EconomicContext, request: EconomicsRequest, runs: int)
     for name, value in overrides.items():
         if value is not None:
             sampled[name] = np.full(runs, float(value))
-    sampled["cogs_share_of_revenue"] = np.minimum(sampled["cogs_share_of_revenue"], 0.99)
     return sampled
+
+
+@dataclass(frozen=True)
+class Adjustments:
+    revenue: float = 1.0
+    rent: float = 1.0
+    wages: float = 1.0
+    cogs_share: float = 1.0
+    capex: float = 1.0
+    loan_rate_add: float = 0.0
+
+
+DEFAULT_ADJUSTMENTS = Adjustments()
 
 
 @dataclass(frozen=True)
@@ -441,7 +454,11 @@ def money_text(value: float) -> str:
 
 
 def loan_terms(
-    context: EconomicContext, financing: Financing | None, warnings: list[str]
+    context: EconomicContext,
+    financing: Financing | None,
+    warnings: list[str],
+    *,
+    rate_add: float = 0.0,
 ) -> tuple[LoanTerms, CreditProduct | None]:
     norms = context.norms
     product = get_product(financing.product) if financing and financing.product else None
@@ -467,7 +484,7 @@ def loan_terms(
             )
     if grace >= term:
         raise ValueError("Льготный период должен быть короче срока кредита")
-    return LoanTerms(rate, term, schedule, grace), product
+    return LoanTerms(rate + rate_add, term, schedule, grace), product
 
 
 def loan_amount(financing: Financing | None, investment: np.ndarray) -> np.ndarray:
@@ -540,13 +557,19 @@ def regime_explanation(chosen: Regime, options: list[RegimeOption], automatic: b
     )
 
 
-def calculate(request: EconomicsRequest) -> Calculation:
+def calculate(
+    request: EconomicsRequest,
+    *,
+    adjustments: Adjustments = DEFAULT_ADJUSTMENTS,
+    demand: DemandSamples | None = None,
+) -> Calculation:
     city = get_city(request.city).code
     niche = get_niche(request.niche).code
     context = load_context(city, niche)
     norms = context.norms
     niche_norms = norms.niche(niche)
-    demand = resolve_demand(context, request)
+    if demand is None:
+        demand = resolve_demand(context, request)
     runs = len(demand.revenue)
     costs = cost_samples(context, request, runs)
     warnings: list[str] = []
@@ -557,6 +580,7 @@ def calculate(request: EconomicsRequest) -> Calculation:
         rent_rate, rent_source = demand.rent_rate, rent_reference(context.rents, demand.district)
     else:
         rent_rate, rent_source = city_rent(context.rents), rent_reference(context.rents, None)
+    rent_rate *= adjustments.rent
     salary = request.operations.salary_rub_month or context.salary
     if salary is None:
         raise ValueError(
@@ -570,24 +594,25 @@ def calculate(request: EconomicsRequest) -> Calculation:
         else niche_norms.value("security_deposit_months")
     )
     area = costs["area_m2"]
-    cogs_share = costs["cogs_share_of_revenue"]
+    revenue = demand.revenue * adjustments.revenue
+    cogs_share = np.minimum(costs["cogs_share_of_revenue"] * adjustments.cogs_share, MAX_COGS_SHARE)
     working_capital = (
         np.full(runs, request.investment.working_capital_rub)
         if request.investment.working_capital_rub is not None
-        else niche_norms.value("working_capital_cogs_months") * demand.revenue * cogs_share
+        else niche_norms.value("working_capital_cogs_months") * revenue * cogs_share
     )
     inputs = ScenarioInputs(
-        revenue_steady=demand.revenue,
+        revenue_steady=revenue,
         area_m2=area,
         rent_rate=np.full(runs, float(rent_rate)),
         staff=costs["staff_count"],
         cogs_share=cogs_share,
         other_opex=costs["other_opex_rub"],
-        capex=costs["capex_rub"],
+        capex=costs["capex_rub"] * adjustments.capex,
         deposit=deposit_months * area * rent_rate,
         working_capital=working_capital,
         franchise_fee=np.full(runs, float(request.investment.franchise_fee_rub)),
-        salary=float(salary),
+        salary=float(salary) * adjustments.wages,
     )
     rules = tax_rules(context.taxes, niche, city)
     central = (
@@ -595,7 +620,7 @@ def calculate(request: EconomicsRequest) -> Calculation:
     )
     patent = patent_cost(context.taxes, city, niche, area, niche_norms.value("hall_share_of_area"), central)
     legal_form = LegalForm(request.tax.legal_form)
-    terms, product = loan_terms(context, request.financing, warnings)
+    terms, product = loan_terms(context, request.financing, warnings, rate_add=adjustments.loan_rate_add)
     loan = loan_amount(request.financing, inputs.investment)
     if (loan > inputs.investment).any():
         warnings.append("Сумма кредита больше вложений, в расчёте кредит ограничен суммой вложений")
@@ -963,6 +988,15 @@ def investment_items(calc: Calculation) -> list[InvestmentItem]:
     return items
 
 
+def calculation_versions(context: EconomicContext) -> Versions:
+    return Versions(
+        model=MODEL_VERSION,
+        norms=context.norms.version,
+        data=context.data_version,
+        taxes=str(context.taxes.get("updated", context.taxes.get("year"))),
+    )
+
+
 def build_report(calc: Calculation) -> EconomicsReport:
     context = calc.context
     p = calc.projection
@@ -985,12 +1019,7 @@ def build_report(calc: Calculation) -> EconomicsReport:
     return EconomicsReport(
         city=context.city,
         niche=context.niche,
-        versions=Versions(
-            model=MODEL_VERSION,
-            norms=context.norms.version,
-            data=context.data_version,
-            taxes=str(context.taxes.get("updated", context.taxes.get("year"))),
-        ),
+        versions=calculation_versions(context),
         scenarios=calc.inputs.runs,
         horizon_months=calc.settings.horizon,
         start_month=calc.settings.start_month,
