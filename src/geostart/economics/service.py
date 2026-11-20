@@ -31,6 +31,13 @@ from geostart.economics.engine import (
     project,
     total_taxes,
 )
+from geostart.economics.geoplatform import (
+    PLATFORM_ORDERS_ERROR,
+    STUB_PROVIDER,
+    SquareLayer,
+    load_stub,
+    platform_revenue,
+)
 from geostart.economics.norms import MONTHS_PER_YEAR, Norm, Norms, load_norms, norms_path
 from geostart.economics.sampling import bounds_samples, optional_summary, quantile_samples, summary
 from geostart.economics.taxes import (
@@ -45,7 +52,7 @@ from geostart.economics.taxes import (
     tax_rules,
 )
 from geostart.model.assumptions import fallback_salary_assumption, profession_salary
-from geostart.model.demand import DEFAULT_RUNS, DEFAULT_SEED
+from geostart.model.demand import DEFAULT_RUNS, DEFAULT_SEED, DemandKind, demand_kind
 from geostart.model.finance import HIGH_RISK_THRESHOLD, MEDIUM_RISK_THRESHOLD
 from geostart.research import city_parameters
 from geostart.schemas import Assumption, MoneyRange
@@ -61,6 +68,8 @@ from geostart.schemas_v2 import (
     EconomicsRequest,
     Financing,
     GeoDemand,
+    GeoPlatformDemand,
+    GeoSquare,
     InvestmentItem,
     InvestmentSummary,
     MonthRow,
@@ -201,7 +210,19 @@ def unit_value(context: EconomicContext) -> float:
     return float(context.parameters["demand"][parameter]["p50"])
 
 
-def geo_demand(context: EconomicContext, demand: GeoDemand) -> DemandSamples:
+@dataclass(frozen=True)
+class PointLocation:
+    inputs: object
+    cell: str
+    district: str
+    central: bool | None
+    rent_rate: float
+    samples: pd.DataFrame
+    model: object
+    index: int
+
+
+def point_location(context: EconomicContext, lat: float, lon: float) -> PointLocation:
     from geostart.model.service import (
         cached_location,
         city_context,
@@ -210,22 +231,30 @@ def geo_demand(context: EconomicContext, demand: GeoDemand) -> DemandSamples:
         rent_rates,
         validate_location,
     )
-    from geostart.model.simulation import simulate_revenues
 
     inputs = load_inputs(context.city, context.niche)
-    validate_location(inputs, demand.lat, demand.lon, context.city)
-    cell = h3.latlng_to_cell(demand.lat, demand.lon, get_city(context.city).h3_resolution)
+    validate_location(inputs, lat, lon, context.city)
+    cell = h3.latlng_to_cell(lat, lon, get_city(context.city).h3_resolution)
     samples = city_context(context.city, context.niche).samples
     features, index, model = cached_location(
         context.city, context.niche, input_revision(context.city, context.niche), cell
     )
-    revenue = simulate_revenues(model, samples, index)[:, 0]
     row = features.iloc[[index]]
     district = str(row.district.iloc[0])
     central = None
     if context.city == MOSCOW:
         okrug = inputs.district_okrugs.get(district)
         central = None if okrug is None else okrug == CENTRAL_OKRUG
+    return PointLocation(
+        inputs, cell, district, central, float(rent_rates(inputs, row)[0]), samples, model, index
+    )
+
+
+def geo_demand(context: EconomicContext, demand: GeoDemand) -> DemandSamples:
+    from geostart.model.simulation import simulate_revenues
+
+    point = point_location(context, demand.lat, demand.lon)
+    revenue = simulate_revenues(point.model, point.samples, point.index)[:, 0]
     note = Assumption(
         name="Источник выручки",
         value="Модель Хаффа ГеоСтарт по открытым данным, 200 сценариев параметров спроса",
@@ -233,7 +262,85 @@ def geo_demand(context: EconomicContext, demand: GeoDemand) -> DemandSamples:
         source="https://www.openstreetmap.org",
     )
     return DemandSamples(
-        revenue, "geostart", None, cell, district, float(rent_rates(inputs, row)[0]), central, [note]
+        revenue, "geostart", None, point.cell, point.district, point.rent_rate, point.central, [note]
+    )
+
+
+def request_layers(squares: list[GeoSquare]) -> list[SquareLayer]:
+    return [
+        SquareLayer(
+            square.square_id,
+            square.south,
+            square.west,
+            square.north,
+            square.east,
+            square.spend_rub_month.p10,
+            square.spend_rub_month.p50,
+            square.spend_rub_month.p90,
+            None if square.footfall_day is None else square.footfall_day.p50,
+        )
+        for square in squares
+    ]
+
+
+def platform_demand(context: EconomicContext, demand: GeoPlatformDemand) -> DemandSamples:
+    if demand_kind(context.niche) != DemandKind.VISITS:
+        raise ValueError(PLATFORM_ORDERS_ERROR)
+    point = point_location(context, demand.lat, demand.lon)
+    layers = request_layers(demand.squares) if demand.squares else load_stub(context.city, context.niche)
+    provider = demand.provider or (None if demand.squares else STUB_PROVIDER)
+    result = platform_revenue(
+        point.inputs.features,
+        point.inputs.competitors,
+        context.niche,
+        point.samples,
+        layers,
+        demand.lat,
+        demand.lon,
+        DEFAULT_SEED,
+    )
+    label = provider or "данные геоплатформы из запроса"
+    notes = [
+        Assumption(
+            name="Источник выручки",
+            value=(
+                f"Траты категории по квадратам 500 м ({label}), разнесённые по ячейкам H3 и разделённые "
+                "с конкурентами по модели Хаффа ГеоСтарт"
+            ),
+            unit="",
+            source=None,
+        ),
+        Assumption(
+            name="Квадратов геоплатформы в радиусе доступности",
+            value=float(result.squares_used),
+            unit="шт.",
+            source=None,
+        ),
+        Assumption(
+            name="Траты категории в этих квадратах, p50",
+            value=result.spend_in_reach_p50,
+            unit="₽/месяц",
+            source=None,
+        ),
+    ]
+    if result.footfall_p50 is not None:
+        notes.append(
+            Assumption(
+                name="Поток людей в этих квадратах, p50",
+                value=result.footfall_p50,
+                unit="чел./день",
+                source=None,
+            )
+        )
+    return DemandSamples(
+        result.revenue,
+        "geoplatform",
+        provider,
+        point.cell,
+        point.district,
+        point.rent_rate,
+        point.central,
+        notes,
     )
 
 
@@ -278,6 +385,8 @@ def resolve_demand(context: EconomicContext, request: EconomicsRequest) -> Deman
     demand = request.demand
     if isinstance(demand, GeoDemand):
         return geo_demand(context, demand)
+    if isinstance(demand, GeoPlatformDemand):
+        return platform_demand(context, demand)
     if isinstance(demand, RevenueDemand):
         return estimate_demand(demand, DEFAULT_RUNS)
     return traffic_demand(context, demand, DEFAULT_RUNS)

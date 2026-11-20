@@ -453,7 +453,8 @@
             "enum": [
               "geostart",
               "revenue",
-              "traffic"
+              "traffic",
+              "geoplatform"
             ],
             "title": "Source",
             "type": "string"
@@ -681,6 +682,7 @@
           "demand": {
             "discriminator": {
               "mapping": {
+                "geoplatform": "#/components/schemas/GeoPlatformDemand",
                 "geostart": "#/components/schemas/GeoDemand",
                 "revenue": "#/components/schemas/RevenueDemand",
                 "traffic": "#/components/schemas/TrafficDemand"
@@ -696,6 +698,9 @@
               },
               {
                 "$ref": "#/components/schemas/TrafficDemand"
+              },
+              {
+                "$ref": "#/components/schemas/GeoPlatformDemand"
               }
             ],
             "title": "Demand"
@@ -941,6 +946,121 @@
           "lon"
         ],
         "title": "GeoDemand",
+        "type": "object"
+      },
+      "GeoPlatformDemand": {
+        "additionalProperties": false,
+        "properties": {
+          "lat": {
+            "maximum": 90.0,
+            "minimum": -90.0,
+            "title": "Lat",
+            "type": "number"
+          },
+          "lon": {
+            "maximum": 180.0,
+            "minimum": -180.0,
+            "title": "Lon",
+            "type": "number"
+          },
+          "provider": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider"
+          },
+          "source": {
+            "const": "geoplatform",
+            "title": "Source",
+            "type": "string"
+          },
+          "squares": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/GeoSquare"
+                },
+                "maxItems": 400,
+                "minItems": 1,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Squares"
+          }
+        },
+        "required": [
+          "source",
+          "lat",
+          "lon"
+        ],
+        "title": "GeoPlatformDemand",
+        "type": "object"
+      },
+      "GeoSquare": {
+        "additionalProperties": false,
+        "properties": {
+          "east": {
+            "maximum": 180.0,
+            "minimum": -180.0,
+            "title": "East",
+            "type": "number"
+          },
+          "footfall_day": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Estimate"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "north": {
+            "maximum": 90.0,
+            "minimum": -90.0,
+            "title": "North",
+            "type": "number"
+          },
+          "south": {
+            "maximum": 90.0,
+            "minimum": -90.0,
+            "title": "South",
+            "type": "number"
+          },
+          "spend_rub_month": {
+            "$ref": "#/components/schemas/Estimate"
+          },
+          "square_id": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Square Id",
+            "type": "string"
+          },
+          "west": {
+            "maximum": 180.0,
+            "minimum": -180.0,
+            "title": "West",
+            "type": "number"
+          }
+        },
+        "required": [
+          "square_id",
+          "south",
+          "west",
+          "north",
+          "east",
+          "spend_rub_month"
+        ],
+        "title": "GeoSquare",
         "type": "object"
       },
       "Investment": {
