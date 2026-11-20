@@ -14,8 +14,17 @@ def test_cities_from_config_list_six_cities() -> None:
     ]
 
 
-def test_niches_from_config_are_coffee_and_pickup_point() -> None:
-    assert [niche.code for niche in load_niches()] == ["coffee", "pickup_point"]
+def test_niches_from_config_list_seven_niches() -> None:
+    assert [niche.code for niche in load_niches()] == [
+        "coffee",
+        "pickup_point",
+        "grocery",
+        "beauty_salon",
+        "fast_food",
+        "bakery",
+        "flowers",
+    ]
+    assert {niche.code: niche.demand_kind for niche in load_niches()}["pickup_point"] == "orders"
 
 
 def test_niche_params_files_exist() -> None:
@@ -35,4 +44,4 @@ def test_unknown_city_error_lists_available_cities() -> None:
 
 def test_unknown_niche_error_lists_available_niches() -> None:
     with pytest.raises(UnknownNicheError, match="доступны: coffee, pickup_point"):
-        get_niche("bakery")
+        get_niche("dentistry")

@@ -66,13 +66,25 @@ COMPETITOR_COUNTS = {
 COMPETITOR_TITLES = {"coffee": "Кофейня", "pickup_point": "Пункт выдачи"}
 PICKUP_BRANDS = ["Ozon", "Wildberries", "Яндекс Маркет"]
 MOS_RU_SHARE = 0.3
+NEW_NICHE_WAGES = {
+    "grocery_seller": 45000,
+    "hairdresser": 50000,
+    "fast_food_cook": 45000,
+    "baker": 48000,
+    "florist": 42000,
+}
 WAGE_MEDIANS = {
-    "moscow": {"barista": 72000, "pickup_operator": 65000},
-    "tula": {"barista": 42000, "pickup_operator": 40000},
+    "moscow": {
+        "barista": 72000,
+        "pickup_operator": 65000,
+        **{key: value * 1.5 for key, value in NEW_NICHE_WAGES.items()},
+    },
+    "tula": {"barista": 42000, "pickup_operator": 40000, **NEW_NICHE_WAGES},
 }
 DEFAULT_DISTRICTS = ["Центральный", "Северный", "Южный", "Восточный", "Западный"]
 DEFAULT_COMPETITOR_COUNTS = {"coffee": 90, "pickup_point": 220}
-DEFAULT_WAGE_MEDIANS = {"barista": 42000, "pickup_operator": 40000}
+DEFAULT_NICHE_COMPETITORS = 120
+DEFAULT_WAGE_MEDIANS = {"barista": 42000, "pickup_operator": 40000, **NEW_NICHE_WAGES}
 STREET_NAMES = ["Тестовая улица", "Синтетический переулок", "Модельный проспект", "Пробная улица"]
 
 
@@ -154,7 +166,9 @@ def build_competitors(city_code: str) -> pd.DataFrame:
     rng = city_rng(city, salt=1)
     rows = []
     for niche in load_niches():
-        count = COMPETITOR_COUNTS.get(city.code, DEFAULT_COMPETITOR_COUNTS)[niche.code]
+        count = COMPETITOR_COUNTS.get(city.code, DEFAULT_COMPETITOR_COUNTS).get(
+            niche.code, DEFAULT_NICHE_COMPETITORS
+        )
         latitudes, longitudes = sample_points(features, count, rng)
         for index, (latitude, longitude) in enumerate(zip(latitudes, longitudes, strict=True), start=1):
             from_mos_ru = city.code == "moscow" and niche.code == "coffee" and rng.random() < MOS_RU_SHARE
@@ -162,7 +176,7 @@ def build_competitors(city_code: str) -> pd.DataFrame:
                 {
                     "poi_id": f"fixture-{niche.code}-{index:05d}",
                     "niche": niche.code,
-                    "name": f"{COMPETITOR_TITLES[niche.code]} {index}",
+                    "name": f"{COMPETITOR_TITLES.get(niche.code, niche.name)} {index}",
                     "brand": competitor_brand(niche.code, rng),
                     "lat": float(latitude),
                     "lon": float(longitude),

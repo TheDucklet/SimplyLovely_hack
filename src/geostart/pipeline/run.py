@@ -345,20 +345,27 @@ def matches_tag_rule(pois: pd.DataFrame, rule: dict[str, str]) -> pd.Series:
     return mask
 
 
+def niche_mask(located: pd.DataFrame, niche: NicheConfig) -> pd.Series:
+    mask = pd.Series(False, index=located.index)
+    for rule in niche.osm_tags:
+        mask |= matches_tag_rule(located, rule)
+    for name_rule in niche.osm_name_rules:
+        label = located["name"].fillna("") + " " + located["brand"].fillna("")
+        mask |= matches_tag_rule(located, name_rule.tags) & label.str.contains(name_rule.pattern, regex=True)
+    return mask
+
+
 def build_osm_competitors(
     city: CityConfig, niches: list[NicheConfig], pois: pd.DataFrame, cells: set[str]
 ) -> pd.DataFrame:
     located = with_cells(pois[pois["city"] == city.code], city.h3_resolution, cells)
+    masks = {niche.code: niche_mask(located, niche) for niche in niches}
     frames = []
     for niche in niches:
-        mask = pd.Series(False, index=located.index)
-        for rule in niche.osm_tags:
-            mask |= matches_tag_rule(located, rule)
-        for name_rule in niche.osm_name_rules:
-            label = located["name"].fillna("") + " " + located["brand"].fillna("")
-            mask |= matches_tag_rule(located, name_rule.tags) & label.str.contains(
-                name_rule.pattern, regex=True
-            )
+        mask = masks[niche.code]
+        for excluded in niche.exclude_niches:
+            if excluded in masks:
+                mask = mask & ~masks[excluded]
         selected = located[mask]
         frames.append(
             pd.DataFrame(

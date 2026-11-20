@@ -1,0 +1,89 @@
+niche: bakery
+currency: RUB
+period: month
+updated: '2026-11-20'
+status: draft
+note: черновик параметров ниши для запуска модели, значения с source null уточняются в задаче S2-Ц8
+demand:
+  avg_check_rub:
+    p10: 250
+    p50: 350
+    p90: 500
+    source: null
+    note: выпечка с собой и напиток, допущение команды до задачи S2-Ц8
+  visits_per_resident_month:
+    p10: 0.8
+    p50: 1.5
+    p90: 3.0
+    source: null
+    note: покупок жителя в пекарне у дома, допущение команды до задачи S2-Ц8
+  visits_per_worker_month:
+    p10: 1.0
+    p50: 2.0
+    p90: 3.5
+    source: null
+    note: покупок по дороге на работу, допущение команды до задачи S2-Ц8
+  max_walk_distance_m:
+    p10: 300
+    p50: 500
+    p90: 800
+    source: null
+    note: основная зона притяжения пекарни в пределах километра по обзору Битрикс24, допущение команды до задачи S2-Ц8
+  distance_decay_beta:
+    p10: 1.8
+    p50: 2.3
+    p90: 3.0
+    source: null
+    note: как у кофейни, допущение команды до задачи S2-Ц8
+  outside_option_weight:
+    p10: 1.0
+    p50: 1.5
+    p90: 2.0
+    source: null
+    note: хлеб и выпечка в продуктовых магазинах, допущение команды до задачи S2-Ц8
+  transit_visits_per_stop_month:
+    p10: 20
+    p50: 40
+    p90: 80
+    source: null
+    note: покупки у остановок наземного транспорта, допущение команды до задачи S2-Ц8
+  max_units_per_day:
+    p10: 150
+    p50: 300
+    p90: 500
+    source: null
+    note: предел чеков в день мини-пекарни, допущение команды до задачи S2-Ц8
+costs:
+  area_m2:
+    p10: 40
+    p50: 60
+    p90: 100
+    source: null
+    note: мини-пекарня с производством и витриной, допущение команды до задачи S2-Ц8
+  staff_count:
+    p10: 4
+    p50: 5
+    p90: 7
+    source: null
+    note: пекари и продавцы в две смены, допущение команды до задачи S2-Ц8
+  wage_profession: baker
+  cogs_share_of_revenue:
+    p10: 0.3
+    p50: 0.35
+    p90: 0.4
+    source: null
+    note: сырьё и упаковка, списания нераспроданной выпечки, допущение команды до задачи S2-Ц8
+  other_opex_rub:
+    p10: 60000
+    p50: 90000
+    p90: 130000
+    source: null
+    note: электроэнергия печей, коммунальные услуги, эквайринг, допущение команды до задачи S2-Ц8
+capex_rub:
+  p10: 2000000
+  p50: 3000000
+  p90: 4500000
+  source: https://finance.mail.ru/article/kak-otkryt-pekarnyu-s-nulya-237/
+  note: минимальные затраты 2-2,5 млн руб. по обзору Finance Mail, 3,65 млн руб. для пекарни на 9 посадочных мест по бизнес-плану Т-Банка
+tax_regime_default: usn_income_6
+benchmarks: {}

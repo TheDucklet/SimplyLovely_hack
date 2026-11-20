@@ -30,7 +30,15 @@ PARAMETER_NAMES = {
     "max_pickup_distance_m": "Расширенный радиус получения заказа",
     "max_cups_per_day": "Пропускная способность кофейни, чашек в день",
 }
-PROFESSION_NAMES = {"barista": "бариста", "pickup_operator": "оператора пункта выдачи"}
+PROFESSION_NAMES = {
+    "barista": "бариста",
+    "pickup_operator": "оператора пункта выдачи",
+    "grocery_seller": "продавца-кассира",
+    "hairdresser": "парикмахера",
+    "fast_food_cook": "повара фастфуда",
+    "baker": "пекаря",
+    "florist": "флориста",
+}
 
 
 def tax_assumptions(

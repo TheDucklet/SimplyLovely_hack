@@ -187,3 +187,27 @@ def test_explicit_data_directory_overrides_environment(tmp_path: Path, monkeypat
     (directory / "boundary.geojson").write_text("{}", encoding="utf-8")
     monkeypatch.setenv("GEOSTART_DATA_DIR", str(tmp_path / "missing"))
     assert not load_demand_inputs("tula", tmp_path)[0].empty
+
+
+def test_new_visit_niche_uses_visit_formula_and_capacity() -> None:
+    from geostart.model.demand import DemandKind, demand_kind, limit_revenue
+
+    features = pd.DataFrame({"residents": [1000.0], "workers": [200.0]})
+    parameters = {
+        **PARAMETERS,
+        "visits_per_resident_month": 6.0,
+        "visits_per_worker_month": 1.5,
+        "avg_check_rub": 600.0,
+    }
+    assert demand_kind("grocery") == DemandKind.VISITS
+    assert demand_kind("pickup_point") == DemandKind.ORDERS
+    assert cell_demand(features, "grocery", parameters)[0] == pytest.approx((1000 * 6 + 200 * 1.5) * 600)
+    limited = limit_revenue(np.array([10_000_000.0]), "grocery", {**parameters, "max_units_per_day": 100})
+    assert limited[0] == pytest.approx(100 * 30 * 600)
+
+
+def test_unknown_niche_is_rejected_by_demand_model() -> None:
+    from geostart.model.demand import parse_niche
+
+    with pytest.raises(ValueError, match="Неизвестная ниша dentistry"):
+        parse_niche("dentistry")

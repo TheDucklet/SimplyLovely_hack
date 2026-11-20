@@ -191,7 +191,7 @@ def cached_context(city: str, niche: str, revision: tuple) -> CityContext:
 
 
 def local_demand_model(context: CityContext, features: pd.DataFrame) -> DemandModel:
-    from geostart.model.demand import Niche, competitor_attractiveness
+    from geostart.model.demand import competitor_attractiveness
 
     source_indices = np.array([context.cells[cell] for cell in features.h3])
     niche = str(context.inputs.parameters["niche"])
@@ -218,7 +218,7 @@ def local_demand_model(context: CityContext, features: pd.DataFrame) -> DemandMo
     np.add.at(attraction, selected.h3.map(indices).to_numpy(dtype=int), competitor_attractiveness(selected))
     return DemandModel(
         features.copy(deep=True),
-        Niche(niche),
+        niche,
         origins[order],
         destinations[order],
         global_distances[keep][order],

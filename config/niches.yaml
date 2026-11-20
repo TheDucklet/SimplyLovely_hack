@@ -14,10 +14,56 @@ niches:
         pattern: "(?i)коф|coffee|cofe|cofix|даблби|дринкит|skuratov"
     mos_ru_name_pattern: "(?i)коф|coffee|cofe|cofix|даблби|дринкит|шоколадница|кофемания|skuratov"
     okved: ["56.10", "56.30"]
+    demand_kind: visits
     params_file: research/niche_params/coffee.yaml
   - code: pickup_point
     name: Пункт выдачи заказов
     osm_tags:
       - {shop: outpost}
     okved: ["47.91", "52.29", "53.20", "82.92"]
+    demand_kind: orders
     params_file: research/niche_params/pickup_point.yaml
+  - code: grocery
+    name: Продукты у дома
+    osm_tags:
+      - {shop: convenience}
+      - {shop: supermarket}
+      - {shop: greengrocer}
+      - {shop: butcher}
+      - {shop: dairy}
+      - {shop: deli}
+    okved: ["47.11", "47.29"]
+    demand_kind: visits
+    params_file: research/niche_params/grocery.yaml
+  - code: beauty_salon
+    name: Салон красоты и парикмахерская
+    osm_tags:
+      - {shop: beauty}
+      - {shop: hairdresser}
+    okved: ["96.02"]
+    demand_kind: visits
+    params_file: research/niche_params/beauty_salon.yaml
+  - code: fast_food
+    name: Фастфуд
+    osm_tags:
+      - {amenity: fast_food}
+    exclude_niches: [coffee]
+    okved: ["56.10"]
+    demand_kind: visits
+    params_file: research/niche_params/fast_food.yaml
+  - code: bakery
+    name: Пекарня и кондитерская
+    osm_tags:
+      - {shop: bakery}
+      - {shop: pastry}
+      - {shop: confectionery}
+    okved: ["10.71", "47.24"]
+    demand_kind: visits
+    params_file: research/niche_params/bakery.yaml
+  - code: flowers
+    name: Цветы
+    osm_tags:
+      - {shop: florist}
+    okved: ["47.76"]
+    demand_kind: visits
+    params_file: research/niche_params/flowers.yaml

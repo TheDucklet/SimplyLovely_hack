@@ -50,6 +50,11 @@ def test_proxy_wages_are_used_when_direct_vacancies_are_scarce(tmp_path, monkeyp
         return [{"id": "b1", "salary_min": 60000, "creation-date": "2026-09-01"}]
 
     monkeypatch.setattr(trudvsem, "fetch_vacancies", fake_fetch)
+    monkeypatch.setattr(
+        trudvsem,
+        "PROFESSION_QUERIES",
+        {key: trudvsem.PROFESSION_QUERIES[key] for key in ("barista", "pickup_operator")},
+    )
     wages = trudvsem.build_wages("7100000000000", tmp_path, date(2026, 10, 14))
     assert wages["profession"].tolist() == ["barista", "pickup_operator"]
     assert wages["basis"].tolist() == ["proxy", "proxy"]
@@ -80,3 +85,45 @@ def test_vacancy_cache_keeps_no_contacts(tmp_path, monkeypatch) -> None:
     legacy_path.write_text(json.dumps([vacancy], ensure_ascii=False), encoding="utf-8")
     trudvsem.load_vacancies("7700000000000", "legacy", [], tmp_path)
     assert "+7 900" not in legacy_path.read_text(encoding="utf-8")
+
+
+def test_fast_food_excludes_coffee_points() -> None:
+    city = get_city("tula")
+    cell = h3.latlng_to_cell(54.19, 37.62, city.h3_resolution)
+    pois = pd.DataFrame(
+        {
+            "city": ["tula"] * 3,
+            "osm_id": ["n1", "n2", "n3"],
+            "lat": [54.19] * 3,
+            "lon": [37.62] * 3,
+            "amenity": ["fast_food", "fast_food", None],
+            "cuisine": ["coffee_shop", "burger", None],
+            "shop": [None, None, "florist"],
+            "name": ["Кофе с собой", "Бургерная", "Цветы"],
+            "brand": [None] * 3,
+        }
+    )
+    coffee = NicheConfig(
+        code="coffee",
+        name="Кофейня",
+        osm_tags=[{"amenity": "fast_food", "cuisine": "coffee_shop"}],
+        okved=[],
+        params_file="",
+    )
+    fast_food = NicheConfig(
+        code="fast_food",
+        name="Фастфуд",
+        osm_tags=[{"amenity": "fast_food"}],
+        exclude_niches=["coffee"],
+        okved=[],
+        params_file="",
+    )
+    flowers = NicheConfig(
+        code="flowers", name="Цветы", osm_tags=[{"shop": "florist"}], okved=[], params_file=""
+    )
+    competitors = run.build_osm_competitors(city, [coffee, fast_food, flowers], pois, {cell})
+    assert competitors.groupby("niche")["poi_id"].apply(sorted).to_dict() == {
+        "coffee": ["n1"],
+        "fast_food": ["n2"],
+        "flowers": ["n3"],
+    }

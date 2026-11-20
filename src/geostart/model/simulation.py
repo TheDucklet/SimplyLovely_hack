@@ -5,8 +5,8 @@ from geostart.model.demand import (
     DISTANCE_SCALE_M,
     DISTANCE_TOLERANCE_M,
     MIN_DISTANCE_M,
+    DemandKind,
     DemandModel,
-    Niche,
     cell_demand,
     limit_revenue,
 )
@@ -19,7 +19,7 @@ def simulate_revenues(
     if max_walk > model.max_distance_m:
         raise ValueError("Радиус превышает подготовленную область, пересоздайте модель")
     active = model.distances <= max_walk
-    fallback_enabled = model.niche == Niche.PICKUP_POINT and "max_pickup_distance_m" in samples
+    fallback_enabled = model.kind == DemandKind.ORDERS and "max_pickup_distance_m" in samples
     nearest = model.nearest_distances if fallback_enabled else None
     if fallback_enabled:
         max_pickup = float(samples.max_pickup_distance_m.max())

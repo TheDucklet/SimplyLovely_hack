@@ -16,7 +16,6 @@ from geostart.model.demand import (
     DEFAULT_SEED,
     SEATS_SCALE,
     DemandModel,
-    Niche,
     Source,
     cell_demand,
     competitor_attractiveness,
@@ -33,6 +32,8 @@ from geostart.model.validation import (
     validation_metrics,
 )
 from geostart.model.validation_run import CITIES, NICHES, score_summary, verify_baseline_inputs
+
+COFFEE = "coffee"
 
 SEAT_SCALES = (10.0, 20.0, 40.0)
 SEAT_SCENARIOS = (0, 6, 50)
@@ -69,7 +70,7 @@ def legacy_osm_points(labels: pd.DataFrame) -> pd.DataFrame:
     points = labels[["poi_id", "h3"]].copy()
     centers = np.array([h3.cell_to_latlng(cell) for cell in points.h3])
     points["lat"], points["lon"] = centers[:, 0], centers[:, 1]
-    points["niche"], points["source"], points["seats"] = Niche.COFFEE, Source.OSM, np.nan
+    points["niche"], points["source"], points["seats"] = COFFEE, Source.OSM, np.nan
     return points
 
 
@@ -122,7 +123,7 @@ def binary_label_comparison(
 
 
 def seat_analysis(inputs: CityInputs, model: DemandModel, samples: pd.DataFrame) -> dict:
-    points = inputs.competitors.loc[inputs.competitors.niche.eq(Niche.COFFEE)].reset_index(drop=True)
+    points = inputs.competitors.loc[inputs.competitors.niche.eq(COFFEE)].reset_index(drop=True)
     actual = point_simulation(model, points, samples, competitor_attractiveness(points))
     total_captured = actual.revenues.sum(axis=1)
     city_demand = np.array(
@@ -284,7 +285,7 @@ def run_recheck(output: Path, baseline: Path) -> dict:
                 }
             )
             logging.info("%s %s, AUC %.4f, lift %.3f", city, niche, metrics["roc_auc"], metrics["lift"])
-            if city == "moscow" and niche == Niche.COFFEE:
+            if city == "moscow" and niche == COFFEE:
                 coffee_points = inputs.competitors.loc[inputs.competitors.niche.eq(niche)]
                 if (
                     len(coffee_points) != COMBINED_COFFEE_COUNT

@@ -1,7 +1,8 @@
-import sys
+import argparse
 
 import pandas as pd
 
+from geostart.config import load_niches
 from geostart.model.data import configure_environment, scores_directory
 from geostart.model.demand import (
     DEFAULT_SEED,
@@ -12,8 +13,6 @@ from geostart.model.demand import (
 )
 from geostart.model.service import load_inputs
 from geostart.model.validation import leave_one_out_potentials, validation_metrics
-
-NICHES = ("coffee", "pickup_point")
 
 
 def validate(city: str, niche: str) -> dict:
@@ -41,14 +40,18 @@ def validate(city: str, niche: str) -> dict:
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser(description="Проверка модели на существующих точках городов")
+    parser.add_argument("cities", nargs="+")
+    parser.add_argument("--niches", nargs="+", default=[niche.code for niche in load_niches()])
+    arguments = parser.parse_args()
     configure_environment()
     print(
         "| Город | Ниша | Точек | ROC AUC | AUC без исключения | Доля в верхних 20% | Lift "
         "| Медиана точек, ₽ | Медиана контроля, ₽ |"
     )
     print("| --- | --- | --- | --- | --- | --- | --- | --- | --- |")
-    for city in sys.argv[1:]:
-        for niche in NICHES:
+    for city in arguments.cities:
+        for niche in arguments.niches:
             m = validate(city, niche)
             print(
                 f"| {city} | {niche} | {m['points']} | {m['roc_auc']:.3f} | {m['naive_auc']:.3f} "

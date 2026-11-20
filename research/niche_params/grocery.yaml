@@ -1,0 +1,89 @@
+niche: grocery
+currency: RUB
+period: month
+updated: '2026-11-20'
+status: draft
+note: черновик параметров ниши для запуска модели, значения с source null уточняются в задаче S2-Ц8
+demand:
+  avg_check_rub:
+    p10: 400
+    p50: 600
+    p90: 850
+    source: null
+    note: 'ориентир: средний чек категории «Супермаркеты» 597 руб. в августе 2026 года по данным Т-Банка из выдачи поиска 20.11.2026, страницу нужно сверить'
+  visits_per_resident_month:
+    p10: 3.0
+    p50: 6.0
+    p90: 10.0
+    source: null
+    note: покупок жителя в магазинах у дома в месяц, остальные покупки уходят в супермаркеты и онлайн через внешнюю альтернативу, допущение команды до задачи S2-Ц8
+  visits_per_worker_month:
+    p10: 0.5
+    p50: 1.5
+    p90: 3.0
+    source: null
+    note: покупок работающего рядом с работой, допущение команды до задачи S2-Ц8
+  max_walk_distance_m:
+    p10: 300
+    p50: 500
+    p90: 800
+    source: null
+    note: пешая доступность магазина у дома, допущение команды до задачи S2-Ц8
+  distance_decay_beta:
+    p10: 1.8
+    p50: 2.3
+    p90: 3.0
+    source: null
+    note: как у кофейни, допущение команды до задачи S2-Ц8
+  outside_option_weight:
+    p10: 1.0
+    p50: 2.0
+    p90: 3.0
+    source: null
+    note: 'сильная внешняя альтернатива: сетевые супермаркеты и доставка, допущение команды до задачи S2-Ц8'
+  max_units_per_day:
+    p10: 400
+    p50: 700
+    p90: 1000
+    source: null
+    note: предел чеков в день для магазина 50-150 м², допущение команды до задачи S2-Ц8
+costs:
+  area_m2:
+    p10: 40
+    p50: 60
+    p90: 100
+    source: https://pay.yandex.ru/blog/articles/kak-otkryt-magazin-produktov-s-nulya
+    note: формат магазина у дома до 50 м² в бизнес-плане МойСклад и 50-150 м² в обзоре Яндекс Пэй
+  staff_count:
+    p10: 2
+    p50: 3
+    p90: 5
+    source: null
+    note: продавцы-кассиры посменно, допущение команды до задачи S2-Ц8
+  wage_profession: grocery_seller
+  cogs_share_of_revenue:
+    p10: 0.7
+    p50: 0.75
+    p90: 0.8
+    source: null
+    note: закупка товара при торговой наценке 25-43%, допущение команды до задачи S2-Ц8
+  other_opex_rub:
+    p10: 40000
+    p50: 70000
+    p90: 110000
+    source: null
+    note: коммунальные услуги, эквайринг, вывоз отходов, списания, допущение команды до задачи S2-Ц8
+capex_rub:
+  p10: 1000000
+  p50: 2500000
+  p90: 4500000
+  source: https://www.moysklad.ru/poleznoe/shablony/biznes-plan-produktovogo-magazina/
+  note: вложения 1 млн руб. для магазина до 50 м² по бизнес-плану МойСклад, от 1,9 млн руб. по франшизе «Фермер-центр», верхняя граница с холодильным оборудованием на 150 м²
+tax_regime_default: usn_income_6
+benchmarks:
+  revenue_rub_month:
+    p10: 900000
+    p50: 1400000
+    p90: 2500000
+    source: https://www.moysklad.ru/poleznoe/shablony/biznes-plan-produktovogo-magazina/
+    note: выручка магазина у дома через год работы 1,4 млн руб. в месяц по бизнес-плану МойСклад
