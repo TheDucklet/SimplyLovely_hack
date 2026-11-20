@@ -2,7 +2,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from geostart.api.main import app
-from geostart.config import get_city
+from geostart.config import get_city, load_niches
 
 client = TestClient(app)
 
@@ -33,10 +33,11 @@ def test_cities_follow_config() -> None:
 
 def test_niches_follow_config() -> None:
     body = client.get("/api/v1/niches").json()
-    assert body == [
+    assert body[:2] == [
         {"code": "coffee", "name": "Кофейня"},
         {"code": "pickup_point", "name": "Пункт выдачи заказов"},
     ]
+    assert [niche["code"] for niche in body] == [niche.code for niche in load_niches()]
 
 
 @pytest.mark.parametrize("niche", ["coffee", "pickup_point"])

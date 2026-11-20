@@ -11,13 +11,19 @@ def main(argv: list[str] | None = None) -> None:
     commands = parser.add_subparsers(dest="command", required=True)
     run_parser = commands.add_parser("run", help="загрузить источники и собрать data/processed/<город>")
     run_parser.add_argument("--city", required=True, choices=[*city_codes, "all"])
+    run_parser.add_argument("--skip-wages", action="store_true", help="оставить собранные ранее зарплаты")
+    wages_parser = commands.add_parser("wages", help="обновить только зарплаты по вакансиям Работы России")
+    wages_parser.add_argument("--city", required=True, choices=[*city_codes, "all"])
     arguments = parser.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
-    from geostart.pipeline.run import run_city
+    from geostart.pipeline.run import refresh_wages, run_city
 
     selected = city_codes if arguments.city == "all" else [arguments.city]
     for city_code in selected:
-        summary = run_city(city_code)
+        if arguments.command == "wages":
+            summary = refresh_wages(city_code)
+        else:
+            summary = run_city(city_code, skip_wages=arguments.skip_wages)
         print(json.dumps({"city": city_code, **summary}, ensure_ascii=False, indent=2))
 
 

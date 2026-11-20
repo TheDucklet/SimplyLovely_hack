@@ -13,7 +13,7 @@ import yaml
 from shapely.geometry import box, mapping
 
 from geostart import settings
-from geostart.config import load_cities
+from geostart.config import load_cities, load_niches
 from geostart.model import evaluate_location, score_city
 from geostart.model.__main__ import main
 from geostart.model.demand import limit_revenue
@@ -189,7 +189,9 @@ def test_missing_cell_inside_boundary_has_valid_report(model_data: Path) -> None
 def test_cli_scores_all_four_combinations(model_data: Path) -> None:
     main(["score", "--city", "all", "--niche", "all"])
     assert {path.name for path in (model_data / "scores").glob("*.parquet")} == {
-        f"{city.code}_{niche}.parquet" for city in load_cities() for niche in ("coffee", "pickup_point")
+        f"{city.code}_{niche}.parquet"
+        for city in load_cities()
+        for niche in [item.code for item in load_niches()]
     }
 
 

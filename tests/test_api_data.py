@@ -5,7 +5,7 @@ from fastapi.testclient import TestClient
 
 from geostart.api import data_backend
 from geostart.api.main import app
-from geostart.config import get_city
+from geostart.config import get_city, load_niches
 from geostart.model import score_city
 from geostart.pipeline.fixtures import build_addresses, write_fixtures
 
@@ -101,7 +101,7 @@ def test_large_responses_are_compressed() -> None:
 
 def test_warmup_prepares_loaded_cities_and_skips_missing() -> None:
     durations = data_backend.warm_model_cache()
-    assert set(durations) == {"tula_coffee", "tula_pickup_point"}
+    assert set(durations) == {f"tula_{niche.code}" for niche in load_niches()}
 
 
 def test_startup_with_warmup_serves_reports() -> None:

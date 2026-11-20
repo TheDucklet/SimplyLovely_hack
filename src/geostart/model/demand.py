@@ -26,9 +26,9 @@ DISTANCE_TOLERANCE_M = 1e-6
 DAYS_PER_MONTH = 30
 
 
-class Niche(StrEnum):
-    COFFEE = "coffee"
-    PICKUP_POINT = "pickup_point"
+class DemandKind(StrEnum):
+    VISITS = "visits"
+    ORDERS = "orders"
 
 
 class Source(StrEnum):
@@ -37,19 +37,21 @@ class Source(StrEnum):
 
 
 REQUIRED_PARAMETERS = {
-    Niche.COFFEE: ("visits_per_resident_month", "visits_per_worker_month", "avg_check_rub"),
-    Niche.PICKUP_POINT: ("orders_per_resident_month", "marketplace_share", "payout_per_order_rub"),
+    DemandKind.VISITS: ("visits_per_resident_month", "visits_per_worker_month", "avg_check_rub"),
+    DemandKind.ORDERS: ("orders_per_resident_month", "marketplace_share", "payout_per_order_rub"),
 }
 COMMON_PARAMETERS = ("max_walk_distance_m", "distance_decay_beta", "outside_option_weight")
 OPTIONAL_PARAMETERS = {
-    Niche.COFFEE: (
+    DemandKind.VISITS: (
         "metro_visits_per_month",
         "metro_influence_distance_m",
         "transit_visits_per_stop_month",
         "max_cups_per_day",
+        "max_units_per_day",
     ),
-    Niche.PICKUP_POINT: ("max_pickup_distance_m",),
+    DemandKind.ORDERS: ("max_pickup_distance_m",),
 }
+CAPACITY_PARAMETERS = ("max_units_per_day", "max_cups_per_day")
 
 
 def preparation_distance(samples: pd.DataFrame) -> float:
@@ -57,18 +59,35 @@ def preparation_distance(samples: pd.DataFrame) -> float:
     return float(samples[columns].max().max())
 
 
-def parse_niche(niche: str) -> Niche:
-    try:
-        return Niche(niche)
-    except ValueError as error:
-        raise ValueError("Неизвестная ниша, выберите coffee или pickup_point") from error
+@cache
+def configured_kinds(config_path: str) -> dict[str, DemandKind]:
+    from geostart.config import load_niches
+
+    return {niche.code: DemandKind(niche.demand_kind) for niche in load_niches()}
+
+
+def niche_kinds() -> dict[str, DemandKind]:
+    from geostart.settings import config_dir
+
+    return configured_kinds(str(config_dir()))
+
+
+def parse_niche(niche: str) -> str:
+    kinds = niche_kinds()
+    if niche not in kinds:
+        raise ValueError(f"Неизвестная ниша {niche}, доступны: {', '.join(kinds)}")
+    return niche
+
+
+def demand_kind(niche: str) -> DemandKind:
+    return niche_kinds()[parse_niche(niche)]
 
 
 @cache
 def niche_defaults(niche: str) -> dict:
     selected = parse_niche(niche)
     with Path(__file__).with_name("niche_defaults.yaml").open(encoding="utf-8") as stream:
-        return yaml.safe_load(stream)[selected]
+        return yaml.safe_load(stream).get(selected, {})
 
 
 def demand_ranges(niche: str, ranges: Mapping[str, Mapping[str, object]]) -> dict:
@@ -76,15 +95,15 @@ def demand_ranges(niche: str, ranges: Mapping[str, Mapping[str, object]]) -> dic
 
 
 def validate_parameters(niche: str, parameters: Mapping[str, float]) -> None:
-    selected = parse_niche(niche)
-    for name in (*REQUIRED_PARAMETERS[selected], *COMMON_PARAMETERS):
+    kind = demand_kind(niche)
+    for name in (*REQUIRED_PARAMETERS[kind], *COMMON_PARAMETERS):
         value = parameters[name]
         if not np.isfinite(value) or value < 0:
             raise ValueError(f"Параметр {name} должен быть конечным и неотрицательным")
     for name in ("max_walk_distance_m", "distance_decay_beta"):
         if parameters[name] <= 0:
             raise ValueError(f"Параметр {name} должен быть положительным")
-    for name in OPTIONAL_PARAMETERS[selected]:
+    for name in OPTIONAL_PARAMETERS[kind]:
         value = parameters.get(name, 0)
         if not np.isfinite(value) or value < 0:
             raise ValueError(f"Параметр {name} должен быть конечным и неотрицательным")
@@ -93,16 +112,15 @@ def validate_parameters(niche: str, parameters: Mapping[str, float]) -> None:
         and parameters.get("metro_influence_distance_m", 0) <= 0
     ):
         raise ValueError("Для спроса у метро нужен положительный радиус его влияния")
-    if selected == Niche.COFFEE and parameters["outside_option_weight"] <= 0:
-        raise ValueError("Параметр outside_option_weight для кофейни должен быть положительным")
-    if selected == Niche.PICKUP_POINT and parameters["marketplace_share"] > 1:
+    if kind == DemandKind.VISITS and parameters["outside_option_weight"] <= 0:
+        raise ValueError("Параметр outside_option_weight для ниши с визитами должен быть положительным")
+    if kind == DemandKind.ORDERS and parameters["marketplace_share"] > 1:
         raise ValueError("Доля маркетплейса должна быть от 0 до 1")
 
 
 def cell_demand(features: pd.DataFrame, niche: str, parameters: Mapping[str, float]) -> np.ndarray:
-    selected = parse_niche(niche)
     residents = features["residents"].to_numpy(dtype=float)
-    if selected == Niche.COFFEE:
+    if demand_kind(niche) == DemandKind.VISITS:
         workers = features["workers"].to_numpy(dtype=float)
         return (
             residents * parameters["visits_per_resident_month"]
@@ -117,10 +135,14 @@ def cell_demand(features: pd.DataFrame, niche: str, parameters: Mapping[str, flo
     )
 
 
+def daily_capacity(parameters: Mapping[str, float]) -> float:
+    return next((parameters[name] for name in CAPACITY_PARAMETERS if parameters.get(name, 0) > 0), 0)
+
+
 def limit_revenue(revenue: np.ndarray, niche: str, parameters: Mapping[str, float]) -> np.ndarray:
-    cups = parameters.get("max_cups_per_day", 0)
-    if niche == Niche.COFFEE and cups > 0:
-        return np.minimum(revenue, cups * DAYS_PER_MONTH * parameters["avg_check_rub"])
+    capacity = daily_capacity(parameters)
+    if demand_kind(niche) == DemandKind.VISITS and capacity > 0:
+        return np.minimum(revenue, capacity * DAYS_PER_MONTH * parameters["avg_check_rub"])
     return revenue
 
 
@@ -163,12 +185,16 @@ def distances_m(origins: np.ndarray, destinations: np.ndarray) -> np.ndarray:
 @dataclass(frozen=True)
 class DemandModel:
     features: pd.DataFrame
-    niche: Niche
+    niche: str
     origin_indices: np.ndarray
     destination_indices: np.ndarray
     distances: np.ndarray
     attraction: np.ndarray
     max_distance_m: float
+
+    @cached_property
+    def kind(self) -> DemandKind:
+        return demand_kind(self.niche)
 
     @cached_property
     def nearest_distances(self) -> np.ndarray:
@@ -182,7 +208,7 @@ class DemandModel:
             -parameters["distance_decay_beta"]
         )
         weights *= self.distances <= parameters["max_walk_distance_m"]
-        if self.niche == Niche.PICKUP_POINT and parameters.get("max_pickup_distance_m", 0) > 0:
+        if self.kind == DemandKind.ORDERS and parameters.get("max_pickup_distance_m", 0) > 0:
             nearest = self.nearest_distances[self.origin_indices]
             fallback = (
                 (nearest > parameters["max_walk_distance_m"])
@@ -207,7 +233,7 @@ class DemandModel:
         distances = self.distances[candidate_edges]
         candidate_weights = weights[candidate_edges].copy()
         candidate_pressure = pressure[origins].copy()
-        if self.niche == Niche.PICKUP_POINT and parameters.get("max_pickup_distance_m", 0) > 0:
+        if self.kind == DemandKind.ORDERS and parameters.get("max_pickup_distance_m", 0) > 0:
             nearest = self.nearest_distances[origins]
             uncovered = nearest > parameters["max_walk_distance_m"]
             walk = distances <= parameters["max_walk_distance_m"]
@@ -298,8 +324,9 @@ def sample_parameters(
     samples = {}
     lower_parameters = {}
     upper_parameters = {}
-    names = (*REQUIRED_PARAMETERS[selected], *COMMON_PARAMETERS)
-    names += tuple(name for name in OPTIONAL_PARAMETERS[selected] if name in supplied_ranges)
+    kind = demand_kind(selected)
+    names = (*REQUIRED_PARAMETERS[kind], *COMMON_PARAMETERS)
+    names += tuple(name for name in OPTIONAL_PARAMETERS[kind] if name in supplied_ranges)
     for name in names:
         bounds = supplied_ranges[name]
         lower, upper = float(bounds["p10"]), float(bounds["p90"])

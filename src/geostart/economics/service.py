@@ -44,6 +44,7 @@ from geostart.economics.taxes import (
     patent_cost,
     tax_rules,
 )
+from geostart.model.assumptions import fallback_salary_assumption, profession_salary
 from geostart.model.demand import DEFAULT_RUNS, DEFAULT_SEED
 from geostart.model.finance import HIGH_RISK_THRESHOLD, MEDIUM_RISK_THRESHOLD
 from geostart.research import city_parameters
@@ -123,6 +124,7 @@ class EconomicContext:
     salary: float | None
     data_version: str
     norms: Norms
+    salary_fallback: bool = False
 
 
 def context_revision(city: str, niche: str) -> tuple:
@@ -153,23 +155,21 @@ def cached_context(city: str, niche: str, revision: tuple) -> EconomicContext:
     rent_path = root / "rent" / f"{city}.csv"
     if not rent_path.is_file():
         raise FileNotFoundError(f"Нет ставок аренды города {city}, добавьте research/rent/{city}.csv")
-    salary, version = city_salary(settings.processed_dir(city) / "wages.parquet", parameters)
+    salary, version, fallback = city_salary(settings.processed_dir(city) / "wages.parquet", parameters)
     return EconomicContext(
-        city, niche, parameters, taxes, pd.read_csv(rent_path), salary, version, load_norms()
+        city, niche, parameters, taxes, pd.read_csv(rent_path), salary, version, load_norms(), fallback
     )
 
 
-def city_salary(path: Path, parameters: Mapping[str, object]) -> tuple[float | None, str]:
+def city_salary(path: Path, parameters: Mapping[str, object]) -> tuple[float | None, str, bool]:
     if not path.is_file():
-        return None, UNKNOWN_DATA_VERSION
+        return None, UNKNOWN_DATA_VERSION, False
     wages = pd.read_parquet(path)
-    selected = wages.loc[wages["profession"].eq(parameters["costs"]["wage_profession"]), "salary_p50"]
-    version = (
-        pd.to_datetime(wages["collected_at"]).max().date().isoformat()
-        if not wages.empty
-        else UNKNOWN_DATA_VERSION
-    )
-    return (float(selected.median()) if not selected.empty else None), version
+    if wages.empty:
+        return None, UNKNOWN_DATA_VERSION, False
+    version = pd.to_datetime(wages["collected_at"]).max().date().isoformat()
+    salary, fallback = profession_salary(wages, str(parameters["costs"]["wage_profession"]))
+    return salary, version, fallback
 
 
 def city_rent(rents: pd.DataFrame) -> float:
@@ -667,6 +667,12 @@ def calculation_assumptions(calc: Calculation) -> list[Assumption]:
             continue
         result.append(
             Assumption(name=name, value=float(bounds["p50"]), unit=unit, source=bounds.get("source"))
+        )
+    if calc.salary_source and context.salary_fallback:
+        result.append(
+            fallback_salary_assumption(
+                str(context.parameters["costs"]["wage_profession"]), calc.inputs.salary
+            )
         )
     result.append(
         Assumption(

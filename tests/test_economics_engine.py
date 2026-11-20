@@ -319,7 +319,7 @@ def test_norms_have_sources_or_explicit_gaps() -> None:
         assert len(items["seasonality"].value) == 12
         assert all(norm.note for norm in items.values())
     with pytest.raises(ValueError, match="нет нормативов"):
-        norms.niche("flowers")
+        norms.niche("dentistry")
 
 
 def test_grace_period_pays_interest_only() -> None:

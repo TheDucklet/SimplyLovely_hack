@@ -16,6 +16,8 @@ from geostart.config import get_city, get_niche
 from geostart.model.assumptions import (
     PARAMETER_NAMES,
     demand_assumptions,
+    fallback_salary_assumption,
+    profession_salary,
     resolve_rent,
     tax_assumptions,
     wage_assumptions,
@@ -81,6 +83,7 @@ class CityInputs:
     city: str = ""
     rent_adjustment: dict = field(default_factory=dict)
     district_okrugs: dict = field(default_factory=dict)
+    salary_fallback: bool = False
 
 
 def input_revision(city: str, niche: str) -> tuple:
@@ -126,9 +129,7 @@ def cached_inputs(city: str, niche: str, revision: tuple) -> CityInputs:
     competitors = pd.read_parquet(directory / "competitors.parquet")
     wages = pd.read_parquet(directory / "wages.parquet")
     profession = parameters["costs"]["wage_profession"]
-    salaries = wages.loc[wages["profession"].eq(profession), "salary_p50"]
-    if salaries.empty:
-        raise ValueError(f"Нет зарплаты профессии {profession}, загрузите данные вакансий")
+    salary, salary_fallback = profession_salary(wages, profession)
     return CityInputs(
         directory,
         features,
@@ -137,11 +138,12 @@ def cached_inputs(city: str, niche: str, revision: tuple) -> CityInputs:
         pd.read_csv(root / "rent" / f"{city}.csv"),
         parameters,
         taxes,
-        float(salaries.median()),
+        salary,
         pd.to_datetime(wages["collected_at"]).max().date().isoformat(),
         city,
         adjustment,
         districts,
+        salary_fallback,
     )
 
 
@@ -191,7 +193,7 @@ def cached_context(city: str, niche: str, revision: tuple) -> CityContext:
 
 
 def local_demand_model(context: CityContext, features: pd.DataFrame) -> DemandModel:
-    from geostart.model.demand import Niche, competitor_attractiveness
+    from geostart.model.demand import competitor_attractiveness
 
     source_indices = np.array([context.cells[cell] for cell in features.h3])
     niche = str(context.inputs.parameters["niche"])
@@ -218,7 +220,7 @@ def local_demand_model(context: CityContext, features: pd.DataFrame) -> DemandMo
     np.add.at(attraction, selected.h3.map(indices).to_numpy(dtype=int), competitor_attractiveness(selected))
     return DemandModel(
         features.copy(deep=True),
-        Niche(niche),
+        niche,
         origins[order],
         destinations[order],
         global_distances[keep][order],
@@ -405,6 +407,8 @@ def report_assumptions(inputs: CityInputs, district: str, city: str) -> list[Ass
             )
         )
     assumptions.extend(wage_assumptions(inputs.wages, parameters["costs"]["wage_profession"]))
+    if inputs.salary_fallback:
+        assumptions.append(fallback_salary_assumption(parameters["costs"]["wage_profession"], inputs.salary))
     assumptions.append(
         Assumption(
             name="Медианная зарплата используемой профессии",

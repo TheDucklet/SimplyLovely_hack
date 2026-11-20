@@ -7,9 +7,9 @@ import pandas as pd
 import yaml
 
 from geostart import settings
-from geostart.config import load_cities
+from geostart.config import load_cities, load_niches
 from geostart.model.data import load_demand_inputs, scores_directory
-from geostart.model.demand import DEFAULT_RUNS, DEFAULT_SEED, Niche, simulate_demand
+from geostart.model.demand import DEFAULT_RUNS, DEFAULT_SEED, simulate_demand
 from geostart.model.service import load_inputs
 from geostart.research import city_parameters
 
@@ -57,7 +57,7 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--data-dir", type=Path)
     parser.add_argument("--research-dir", type=Path, default=settings.research_dir())
     parser.add_argument("--city", choices=[city.code for city in load_cities()], default="moscow")
-    parser.add_argument("--niche", choices=list(Niche), default=Niche.COFFEE)
+    parser.add_argument("--niche", choices=[niche.code for niche in load_niches()], default="coffee")
     parser.add_argument("--runs", type=int, default=DEFAULT_RUNS)
     parser.add_argument("--seed", type=int, default=DEFAULT_SEED)
     arguments = parser.parse_args(argv)

@@ -104,16 +104,28 @@ niches:
         pattern: "(?i)коф|coffee|cofe|cofix|даблби|дринкит|skuratov"
     mos_ru_name_pattern: "(?i)коф|coffee|cofe|cofix|даблби|дринкит|шоколадница|кофемания|skuratov"
     okved: ["56.10", "56.30"]
+    demand_kind: visits
     params_file: research/niche_params/coffee.yaml
   - code: pickup_point
     name: Пункт выдачи заказов
     osm_tags:
       - {shop: outpost}
     okved: ["47.91", "52.29", "53.20", "82.92"]
+    demand_kind: orders
     params_file: research/niche_params/pickup_point.yaml
+  - code: fast_food
+    name: Фастфуд
+    osm_tags:
+      - {amenity: fast_food}
+    exclude_niches: [coffee]
+    okved: ["56.10"]
+    demand_kind: visits
+    params_file: research/niche_params/fast_food.yaml
 ```
 
-Пример сокращён, полный список правил лежит в `config/niches.yaml`.
+Пример сокращён, полный список правил и всех семи ниш лежит в `config/niches.yaml`. Кроме кофейни и пункта выдачи в нём описаны продукты у дома (`grocery`), салон красоты и парикмахерская (`beauty_salon`), фастфуд (`fast_food`), пекарня и кондитерская (`bakery`) и цветы (`flowers`).
+
+Поле `demand_kind` выбирает формулу спроса. Тип `visits` описывает покупки жителей, работающих и прохожих, тип `orders` описывает заказы маркетплейсов с переходом к ближайшему пункту. Новая ниша с одним из этих типов подключается записью в `config/niches.yaml`, файлом параметров в `research/niche_params/`, блоком нормативов в `research/economics/norms.yaml` и кодом ниши в списках `applies_to` налогового файла без изменения кода модели. Поле `exclude_niches` убирает из ниши объекты, которые уже отнесены к перечисленным нишам, например кофейни с тегом `amenity=fast_food`.
 
 Правило `osm_name_rules` добавляет объекты с указанными тегами, в названии или бренде которых встречается регулярное выражение `pattern`. Оно нужно, так как большинство кофеен в OSM отмечено как `amenity=cafe` без кухни. Поле `mos_ru_name_pattern` задаёт выражение для отбора заведений ниши из набора общепита data.mos.ru по названию, ниши без поля из набора не берутся. Теги OpenStreetMap и коды ОКВЭД проверяет Иван в задаче S1-I2, исправления вносит Фёдор.
 
@@ -142,7 +154,7 @@ capex_rub: {p10: 1500000, p50: 3000000, p90: 5000000, source: "https://..."}
 tax_regime_default: usn_income_6
 ```
 
-Для пункта выдачи блок `demand` содержит `orders_per_resident_month`, `marketplace_share` и `payout_per_order_rub`, а блок `costs` содержит `wage_profession: pickup_operator`. Вес внешней альтернативы модели Хаффа задаётся в `demand.outside_option_weight`. Блок `benchmarks` содержит ориентиры месячной выручки действующей точки `revenue_rub_month_<city>` для сверки масштаба модели, в расчёт он не входит.
+Для ниш типа `orders` блок `demand` содержит `orders_per_resident_month`, `marketplace_share` и `payout_per_order_rub`, а блок `costs` содержит `wage_profession: pickup_operator`. Ниши типа `visits` могут задать предел покупок в день `max_units_per_day`, у кофейни он называется `max_cups_per_day`, а также покупки прохожих у метро и остановок. Поле `wage_profession` выбирает профессию из запросов «Работы России» в `src/geostart/pipeline/trudvsem.py:PROFESSION_QUERIES`. Вес внешней альтернативы модели Хаффа задаётся в `demand.outside_option_weight`. Блок `benchmarks` содержит ориентиры месячной выручки действующей точки `revenue_rub_month_<city>` для сверки масштаба модели, в расчёт он не входит.
 
 Значение, которое заметно отличается по городам, записывается рядом с базовым полем с суффиксом города, например `avg_check_rub_moscow` и `avg_check_rub_tula` в блоке `demand` или `capex_rub_moscow` на верхнем уровне. Функция `src/geostart/research.py:city_parameters` при чтении файла подставляет значение города вместо базового, а поля других городов отбрасывает. Если у города нет своего поля, используется базовое. Если Иван не нашёл источник для числа, поле получает `source: null` и `note` с объяснением, а Роман выводит такие допущения в отчёт отдельно.
 

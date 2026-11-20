@@ -30,7 +30,15 @@ PARAMETER_NAMES = {
     "max_pickup_distance_m": "Расширенный радиус получения заказа",
     "max_cups_per_day": "Пропускная способность кофейни, чашек в день",
 }
-PROFESSION_NAMES = {"barista": "бариста", "pickup_operator": "оператора пункта выдачи"}
+PROFESSION_NAMES = {
+    "barista": "бариста",
+    "pickup_operator": "оператора пункта выдачи",
+    "grocery_seller": "продавца-кассира",
+    "hairdresser": "парикмахера",
+    "fast_food_cook": "повара фастфуда",
+    "baker": "пекаря",
+    "florist": "флориста",
+}
 
 
 def tax_assumptions(
@@ -218,3 +226,22 @@ def resolve_rent(rents: pd.DataFrame, district: str) -> tuple[float, list[Assump
             source=None,
         )
     ]
+
+
+def profession_salary(wages: pd.DataFrame, profession: str) -> tuple[float, bool]:
+    selected = wages.loc[wages["profession"].eq(profession), "salary_p50"]
+    if not selected.empty:
+        return float(selected.median()), False
+    if wages.empty:
+        raise ValueError(f"Нет зарплаты профессии {profession}, загрузите данные вакансий")
+    return float(wages["salary_p50"].median()), True
+
+
+def fallback_salary_assumption(profession: str, salary: float) -> Assumption:
+    name = PROFESSION_NAMES.get(profession, profession)
+    return Assumption(
+        name=f"Зарплата {name} по медиане других профессий города – вакансии профессии не собраны",
+        value=salary,
+        unit="₽/месяц",
+        source="https://opendata.trudvsem.ru",
+    )

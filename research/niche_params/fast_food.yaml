@@ -1,0 +1,107 @@
+niche: fast_food
+currency: RUB
+period: month
+updated: '2026-11-20'
+status: draft
+note: черновик параметров ниши для запуска модели, значения с source null уточняются в задаче S2-Ц8
+demand:
+  avg_check_rub:
+    p10: 350
+    p50: 480
+    p90: 650
+    source: null
+    note: 'ориентир: средний чек фастфуда 481 руб. по публикации Чек Индекса из выдачи поиска 20.11.2026 без указания периода, средний чек 350 руб. по франшизе URBAN SHAURMA'
+  visits_per_resident_month:
+    p10: 0.5
+    p50: 1.0
+    p90: 2.0
+    source: null
+    note: покупок жителя в точке у дома, допущение команды до задачи S2-Ц8
+  visits_per_worker_month:
+    p10: 1.5
+    p50: 3.0
+    p90: 5.0
+    source: null
+    note: обедов и перекусов работающих рядом, допущение команды до задачи S2-Ц8
+  max_walk_distance_m:
+    p10: 300
+    p50: 450
+    p90: 700
+    source: null
+    note: как у кофейни, допущение команды до задачи S2-Ц8
+  distance_decay_beta:
+    p10: 1.8
+    p50: 2.3
+    p90: 3.0
+    source: null
+    note: как у кофейни, допущение команды до задачи S2-Ц8
+  outside_option_weight:
+    p10: 1.0
+    p50: 1.5
+    p90: 2.5
+    source: null
+    note: столовые, кафе и доставка, допущение команды до задачи S2-Ц8
+  metro_visits_per_month:
+    p10: 1000
+    p50: 2500
+    p90: 5000
+    source: null
+    note: покупки прохожих у выхода метро, допущение команды до задачи S2-Ц8
+  metro_influence_distance_m:
+    p10: 150
+    p50: 300
+    p90: 500
+    source: null
+    note: как у кофейни, допущение команды до задачи S2-Ц8
+  transit_visits_per_stop_month:
+    p10: 30
+    p50: 60
+    p90: 120
+    source: null
+    note: покупки у остановок наземного транспорта, допущение команды до задачи S2-Ц8
+  max_units_per_day:
+    p10: 150
+    p50: 300
+    p90: 500
+    source: null
+    note: предел заказов в день для точки с одной линией выдачи, допущение команды до задачи S2-Ц8
+costs:
+  area_m2:
+    p10: 20
+    p50: 35
+    p90: 60
+    source: null
+    note: островок или точка с небольшим залом, допущение команды до задачи S2-Ц8
+  staff_count:
+    p10: 3
+    p50: 4
+    p90: 6
+    source: null
+    note: повара-кассиры в две смены, допущение команды до задачи S2-Ц8
+  wage_profession: fast_food_cook
+  cogs_share_of_revenue:
+    p10: 0.3
+    p50: 0.35
+    p90: 0.4
+    source: null
+    note: продукты и упаковка, допущение команды до задачи S2-Ц8
+  other_opex_rub:
+    p10: 50000
+    p50: 70000
+    p90: 100000
+    source: null
+    note: коммунальные услуги, эквайринг, вытяжка и вывоз отходов, допущение команды до задачи S2-Ц8
+capex_rub:
+  p10: 900000
+  p50: 1600000
+  p90: 2500000
+  source: https://businessmens.ru/franchise/shauroom-2036
+  note: вложения 0,87-2,5 млн руб. по карточкам франшиз шаурмы и бургерных на Businessmens.ru, данные франчайзеров не проверены
+tax_regime_default: usn_income_6
+benchmarks:
+  revenue_rub_month:
+    p10: 850000
+    p50: 1200000
+    p90: 1650000
+    source: https://topfranchise.ru/products/shaurma-shop-franshiza-semeynogo-kafe-bystrogo-pitaniya/
+    note: выручка 0,85 млн руб. в месяц по описанию франшизы шаурмы и оборот от 1,65 млн руб. у Shaurma Shop по Topfranchise, данные франчайзеров

@@ -1,0 +1,107 @@
+niche: flowers
+currency: RUB
+period: month
+updated: '2026-11-20'
+status: draft
+note: черновик параметров ниши для запуска модели, значения с source null уточняются в задаче S2-Ц8
+demand:
+  avg_check_rub:
+    p10: 1200
+    p50: 2000
+    p90: 3500
+    source: null
+    note: 'ориентир: траты на букет около 3950 руб. в феврале 2026 года по данным Flowwow из выдачи поиска 20.11.2026, у офлайн-магазина в обычные дни чек ниже, допущение команды до задачи S2-Ц8'
+  visits_per_resident_month:
+    p10: 0.05
+    p50: 0.1
+    p90: 0.2
+    source: null
+    note: покупок цветов жителем в магазине у дома, допущение команды до задачи S2-Ц8
+  visits_per_worker_month:
+    p10: 0.03
+    p50: 0.06
+    p90: 0.1
+    source: null
+    note: покупок рядом с работой, допущение команды до задачи S2-Ц8
+  max_walk_distance_m:
+    p10: 500
+    p50: 800
+    p90: 1500
+    source: null
+    note: за букетом идут дальше, чем за повседневными покупками, допущение команды до задачи S2-Ц8
+  distance_decay_beta:
+    p10: 1.2
+    p50: 1.6
+    p90: 2.0
+    source: null
+    note: допущение команды до задачи S2-Ц8
+  outside_option_weight:
+    p10: 1.0
+    p50: 1.5
+    p90: 2.5
+    source: null
+    note: доставка цветов и цветы в супермаркетах, допущение команды до задачи S2-Ц8
+  metro_visits_per_month:
+    p10: 300
+    p50: 600
+    p90: 1200
+    source: null
+    note: покупки прохожих у выхода метро, допущение команды до задачи S2-Ц8
+  metro_influence_distance_m:
+    p10: 150
+    p50: 300
+    p90: 500
+    source: null
+    note: как у кофейни, допущение команды до задачи S2-Ц8
+  transit_visits_per_stop_month:
+    p10: 5
+    p50: 10
+    p90: 20
+    source: null
+    note: покупки у остановок наземного транспорта, допущение команды до задачи S2-Ц8
+  max_units_per_day:
+    p10: 30
+    p50: 60
+    p90: 120
+    source: null
+    note: предел покупок в день, допущение команды до задачи S2-Ц8
+costs:
+  area_m2:
+    p10: 15
+    p50: 30
+    p90: 50
+    source: null
+    note: павильон или магазин у метро, допущение команды до задачи S2-Ц8
+  staff_count:
+    p10: 2
+    p50: 3
+    p90: 4
+    source: null
+    note: флористы в смену, допущение команды до задачи S2-Ц8
+  wage_profession: florist
+  cogs_share_of_revenue:
+    p10: 0.35
+    p50: 0.42
+    p90: 0.5
+    source: https://tochka.com/knowledge/novyj-biznes/kak-otkryt-cvetochnyj-magazin/
+    note: закупка цветов при наценке 120-150% в обычные дни по обзору Точки, списания
+  other_opex_rub:
+    p10: 30000
+    p50: 45000
+    p90: 70000
+    source: null
+    note: холодильная камера, коммунальные услуги, эквайринг, допущение команды до задачи S2-Ц8
+capex_rub:
+  p10: 500000
+  p50: 870000
+  p90: 1500000
+  source: https://www.moysklad.ru/poleznoe/shablony/biznes-plan-cvetochnogo-magazina/
+  note: вложения 560 тыс. руб. для павильона по бизнес-плану МойСклад и 870 тыс. руб. по расчёту Т-Банка на март 2026 года
+tax_regime_default: usn_income_6
+benchmarks:
+  revenue_rub_month:
+    p10: 600000
+    p50: 1000000
+    p90: 1500000
+    source: https://www.moysklad.ru/poleznoe/shablony/biznes-plan-cvetochnogo-magazina/
+    note: выручка 1 млн руб. в месяц через год работы по бизнес-планам МойСклад и Т-Банка
