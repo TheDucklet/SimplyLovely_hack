@@ -59,7 +59,7 @@ SimplyLovely_hack/
 | `research/` | Фёдор переносит материалы Ивана и Никиты | параметры ниш, аренда, налоги с источниками |
 | `data/` | не хранится в git | `raw/`, `processed/<city>/`, `scores/` |
 
-Каталог `data/` указан в `.gitignore`. Готовые данные Фёдор выкладывает архивом `geostart_data_<ГГГГ-ММ-ДД>.zip` на Яндекс.Диск команды, ссылка в README. До готовности реальных данных используется генератор синтетических данных. Команда `uv run python -m geostart.pipeline.fixtures --city all` создаёт файлы `data/processed/moscow/` и `data/processed/tula/` с правильными схемами, параметр `--city moscow` ограничивает генерацию одним городом.
+Каталог `data/` указан в `.gitignore`. Готовые данные Фёдор выкладывает архивом `geostart_data_<версия>.zip` на Яндекс.Диск команды, ссылка в README. Архив собирает `python -m geostart.release package`, внутри лежит `data/manifest.json` с версией, сводными показателями и контрольными суммами файлов ([release.md](release.md)). До готовности реальных данных используется генератор синтетических данных. Команда `uv run python -m geostart.pipeline.fixtures --city all` создаёт файлы `data/processed/moscow/` и `data/processed/tula/` с правильными схемами, параметр `--city moscow` ограничивает генерацию одним городом.
 
 ## Конфигурация городов
 

@@ -1,0 +1,24 @@
+city:
+  cells: 0.05
+  boundary_area_km2: 0.03
+  residents: 0.10
+  workers: 0.15
+  addresses: 0.15
+  competitors: 0.25
+  wage_rows: 0.50
+score:
+  cells: 0.05
+  revenue_p50_median: 0.20
+  revenue_p50_p90: 0.25
+  profit_p50_median: 0.30
+  payback_months_p50_median: 0.30
+  risk_share: 0.15
+cells:
+  revenue_change: 0.50
+  changed_share: 0.10
+floors:
+  competitors: 20
+  addresses: 500
+  wage_rows: 4
+  profit_p50_median: 50000
+  payback_months_p50_median: 6

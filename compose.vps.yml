@@ -8,7 +8,7 @@ x-logging: &logging
 
 services:
   api:
-    image: geostart-demo-api
+    image: ${GEOSTART_API_IMAGE:-geostart-demo-api}
     pull_policy: never
     user: "${GEOSTART_UID:-1000}:${GEOSTART_GID:-1000}"
     volumes:
@@ -55,7 +55,7 @@ services:
     restart: unless-stopped
 
   web:
-    image: geostart-demo-web
+    image: ${GEOSTART_WEB_IMAGE:-geostart-demo-web}
     pull_policy: never
     depends_on:
       api:
