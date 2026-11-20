@@ -1,6 +1,7 @@
 import { Suspense, lazy, useCallback, useEffect, useState } from 'react';
 import { api, useMocks } from './api/client';
-import type { CityInfo, Competitor, HexesResponse, NicheInfo } from './api/types';
+import type { CityInfo, Competitor, CurrentUser, HexesResponse, NicheInfo } from './api/types';
+import { AccountMenu } from './components/AccountMenu';
 import { Search } from './components/Search';
 import { Legend } from './components/Legend';
 import { ReportPanel } from './components/ReportPanel';
@@ -34,6 +35,8 @@ export function App() {
   const [reload, setReload] = useState(0);
   const [bankAction, setBankAction] = useState<string | null>(null);
   const [creditMode, setCreditMode] = useState(false);
+  const [user, setUser] = useState<CurrentUser>();
+  const canCheckCredit = user?.permissions.includes('credit_check') ?? false;
   const [methodologyOpen, setMethodologyOpen] = useState(false);
   const reportState = useLocationReport(cityCode, nicheCode);
   const [welcomeOpen, setWelcomeOpen] = useState(() => !welcomeSeen(browserStorage()));
@@ -59,6 +62,19 @@ export function App() {
   }
   const city = cities.find((item) => item.code === cityCode);
   const niche = niches.find((item) => item.code === nicheCode);
+
+  useEffect(() => {
+    let active = true;
+    void api
+      .me()
+      .then((current) => {
+        if (active) setUser(current);
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -139,20 +155,23 @@ export function App() {
           <button className="header-methodology" onClick={() => setMethodologyOpen(true)}>
             Как считается оценка
           </button>
-          <button
-            className="credit-mode-toggle"
-            aria-pressed={creditMode}
-            onClick={() => setCreditMode((enabled) => !enabled)}
-          >
-            Кредитный специалист
-          </button>
+          {canCheckCredit && (
+            <button
+              className="credit-mode-toggle"
+              aria-pressed={creditMode}
+              onClick={() => setCreditMode((enabled) => !enabled)}
+            >
+              Кредитный специалист
+            </button>
+          )}
           {useMocks && <span className="pilot-label">Демонстрация · Москва, кофейня</span>}
           <a className="primary-button button-link header-cta" href="#map">
             Открыть карту
           </a>
+          {user && <AccountMenu user={user} />}
         </div>
       </header>
-      <Landing onCreditMode={() => setCreditMode(true)} />
+      <Landing onCreditMode={() => setCreditMode(canCheckCredit)} />
       <section id="map" className="tool" aria-label="Карта и отчёт">
         <div className="toolbar" aria-label="Настройки карты">
           <label className="select-field">

@@ -117,3 +117,14 @@ export interface LocationReport {
   assumptions: Assumption[];
   data_version: string;
 }
+
+export type Permission =
+  'view_map' | 'location_report' | 'credit_check' | 'access_stats' | 'access_log';
+
+export interface CurrentUser {
+  mode: 'off' | 'oidc';
+  name: string;
+  roles: string[];
+  permissions: Permission[];
+  logout_url: string | null;
+}

@@ -2185,6 +2185,18 @@
             },
             "description": "Successful Response"
           },
+          "401": {
+            "content": {
+              "application/problem+json": {}
+            },
+            "description": "Требуется вход"
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {}
+            },
+            "description": "Недостаточно прав"
+          },
           "404": {
             "content": {
               "application/problem+json": {}
@@ -2221,6 +2233,18 @@
               }
             },
             "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {}
+            },
+            "description": "Требуется вход"
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {}
+            },
+            "description": "Недостаточно прав"
           },
           "404": {
             "content": {
@@ -2264,6 +2288,18 @@
               }
             },
             "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {}
+            },
+            "description": "Требуется вход"
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {}
+            },
+            "description": "Недостаточно прав"
           },
           "404": {
             "content": {
@@ -2318,6 +2354,18 @@
               }
             },
             "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {}
+            },
+            "description": "Требуется вход"
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {}
+            },
+            "description": "Недостаточно прав"
           },
           "404": {
             "content": {
