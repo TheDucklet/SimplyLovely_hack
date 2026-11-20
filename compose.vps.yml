@@ -27,12 +27,31 @@ services:
     logging: *logging
     restart: unless-stopped
 
+  tiles:
+    image: protomaps/go-pmtiles:v1.31.2
+    pull_policy: never
+    command: ["serve", "/data", "--port=8080", "--cache-size=8"]
+    volumes:
+      - ./data/basemap:/data:ro
+    deploy:
+      resources:
+        limits:
+          cpus: "0.2"
+          memory: 32M
+        reservations:
+          memory: 8M
+    memswap_limit: 32M
+    logging: *logging
+    restart: unless-stopped
+
   web:
     image: geostart-demo-web
     pull_policy: never
     depends_on:
       api:
         condition: service_healthy
+      tiles:
+        condition: service_started
     volumes:
       - ./docker/web/nginx.vps.conf:/etc/nginx/conf.d/default.conf:ro
     ports:

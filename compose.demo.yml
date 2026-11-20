@@ -11,15 +11,24 @@ services:
       GEOSTART_WARMUP_CITIES: ${GEOSTART_WARMUP_CITIES:-moscow,tula}
     restart: unless-stopped
 
+  tiles:
+    image: protomaps/go-pmtiles:v1.31.2
+    command: ["serve", "/data", "--port=8080", "--cache-size=16"]
+    volumes:
+      - ./data/basemap:/data:ro
+    restart: unless-stopped
+
   web:
     build:
       context: .
       dockerfile: docker/web/Dockerfile
       args:
-        VITE_MAP_STYLE_URL: ${GEOSTART_MAP_STYLE_URL:-}
+        VITE_MAP_STYLE_URL: ${GEOSTART_MAP_STYLE_URL:-/basemap/style.json}
     depends_on:
       api:
         condition: service_healthy
+      tiles:
+        condition: service_started
     ports:
       - "127.0.0.1:${GEOSTART_DEMO_PORT:-8080}:80"
     restart: unless-stopped
