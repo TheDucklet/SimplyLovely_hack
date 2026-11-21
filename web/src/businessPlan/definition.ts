@@ -1,6 +1,8 @@
 import type { Content, TableCell, TDocumentDefinitions } from 'pdfmake/interfaces';
 import type { LocationReport, MonthlyCosts, RiskLevel } from '../api/types';
 import { decimal, months, rubles } from '../format';
+import type { EconomicsReport } from '../api/economicsTypes';
+import { financialPage, creditAndTax } from './financialPage';
 import { createLocationMap } from './locationMap';
 
 export interface BusinessPlanSnapshot {
@@ -9,6 +11,7 @@ export interface BusinessPlanSnapshot {
   cityName: string;
   nicheName: string;
   isDemo: boolean;
+  economics?: EconomicsReport;
 }
 
 const PAGE_MARGIN = 32;
@@ -236,6 +239,9 @@ export function createBusinessPlanDefinition(snapshot: BusinessPlanSnapshot): TD
       color: MUTED,
       margin: [0, 13, 0, 0],
     },
+    ...(snapshot.economics
+      ? [...creditAndTax(snapshot.economics), ...financialPage(snapshot.economics)]
+      : []),
     {
       text: 'Допущения и источники',
       fontSize: 18,

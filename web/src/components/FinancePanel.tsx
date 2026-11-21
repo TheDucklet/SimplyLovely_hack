@@ -3,6 +3,7 @@ import type { Financing } from '../api/economicsTypes';
 import { useMocks } from '../api/client';
 import type { useEconomics } from '../hooks/useEconomics';
 import { Sensitivity } from './FinanceCharts';
+import { WhatIf } from './WhatIf';
 import { FinanceReport } from './FinanceReport';
 import './finance.css';
 
@@ -145,6 +146,7 @@ export function FinancePanel({
                   <button onClick={economics.retry}>Повторить финансовый расчёт</button>
                 </p>
               )}
+              {economics.value && state.body && <WhatIf base={economics.value} body={state.body} />}
               {economics.value && <FinanceReport report={economics.value} />}
               {sensitivity.pending && <p role="status">Рассчитываем чувствительность…</p>}
               {sensitivity.error && (

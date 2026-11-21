@@ -1,3 +1,57 @@
+.what-if {
+  background: #f0f5fa;
+  border: 1px solid #b2c3d6;
+  border-radius: 8px;
+  padding: 12px;
+}
+.what-if summary {
+  font-size: 17px;
+}
+.scenario-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 12px 0;
+}
+.scenario-fields label {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 4px;
+  font-size: 13px;
+}
+.scenario-fields label:last-child {
+  grid-column: 1/-1;
+}
+.scenario-fields input,
+.scenario-fields select {
+  width: 100%;
+  color: #172f46;
+  border: 1px solid #667b90;
+  border-radius: 4px;
+  padding: 6px;
+  background: white;
+}
+.scenario-fields input::placeholder {
+  color: #505f6b;
+  opacity: 1;
+}
+.scenario-grid,
+.scenario-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) repeat(2, minmax(0, 1fr));
+  gap: 4px 8px;
+  font-size: 13px;
+}
+.scenario-row {
+  grid-column: 1/-1;
+  padding: 6px 0;
+  border-top: 1px solid #bfccda;
+}
+.scenario-row small {
+  grid-column: 2/-1;
+  color: #334c63;
+}
 .finance-block {
   border-top: 2px solid #12447a;
   margin-top: 24px;

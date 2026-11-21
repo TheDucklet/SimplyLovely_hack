@@ -6,7 +6,7 @@ import type { ReportRequest } from '../api/types';
 import { message } from '../format';
 import { economicsRequest } from '../api/economicsRequest';
 
-function useResource<T>(load: ((signal: AbortSignal) => Promise<T>) | null) {
+export function useResource<T>(load: ((signal: AbortSignal) => Promise<T>) | null, delay = 0) {
   const [result, setResult] = useState<{ load: typeof load; value?: T; error?: ApiError }>();
   const [attempt, setAttempt] = useState(0);
   useEffect(() => {
@@ -24,12 +24,12 @@ function useResource<T>(load: ((signal: AbortSignal) => Promise<T>) | null) {
               error: cause instanceof ApiError ? cause : new ApiError(message(cause), 0),
             });
         });
-    }, 0);
+    }, delay);
     return () => {
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [load, attempt]);
+  }, [load, attempt, delay]);
   const current = result?.load === load ? result : undefined;
   return {
     value: current?.value,
@@ -60,5 +60,5 @@ export function useEconomics(point: ReportRequest | null) {
       .filter((issue) => issue.field === name)
       .map((issue) => issue.message)
       .join(' ');
-  return { economics, sensitivity, products, setFinancing, financing, fieldError };
+  return { body, economics, sensitivity, products, setFinancing, financing, fieldError };
 }
