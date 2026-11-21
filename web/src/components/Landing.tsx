@@ -2,7 +2,7 @@ import { HERO_VIEWBOX, LANDING_EXAMPLE, LANDING_FACTS, LANDING_STEPS, heroHexes 
 
 const HEXES = heroHexes();
 
-export function Landing({ onCreditMode }: { onCreditMode: () => void }) {
+export function Landing({ onCreditMode }: { onCreditMode?: () => void }) {
   return (
     <div className="landing">
       <section className="hero" aria-labelledby="hero-title">
@@ -77,13 +77,18 @@ export function Landing({ onCreditMode }: { onCreditMode: () => void }) {
             <p className="eyebrow">ДЛЯ КРЕДИТНОГО СПЕЦИАЛИСТА</p>
             <h2 id="bank-band-title">Сверьте бизнес-план клиента с рынком за минуту</h2>
             <p>
-              Введите выручку из плана, и сервис покажет, попадает ли она в расчётный диапазон для
-              этого адреса.
+              Сравните выручку, вложения и окупаемость из плана с расчётом для выбранного адреса.
             </p>
           </div>
-          <a className="button-link button-large button-inverse" href="#map" onClick={onCreditMode}>
-            Включить режим специалиста
-          </a>
+          {onCreditMode && (
+            <a
+              className="button-link button-large button-inverse"
+              href="#map"
+              onClick={onCreditMode}
+            >
+              Включить режим специалиста
+            </a>
+          )}
         </div>
       </section>
     </div>

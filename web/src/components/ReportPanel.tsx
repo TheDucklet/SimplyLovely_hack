@@ -6,6 +6,7 @@ import { useMocks } from '../api/client';
 import { BusinessPlanButton } from './BusinessPlanButton';
 import { FinancePanel } from './FinancePanel';
 import { AssumptionSource } from './AssumptionSource';
+import { BorrowerReview } from './BorrowerReview';
 import { CreditAssessment } from './CreditAssessment';
 
 const RISK_LABELS: Record<RiskLevel, string> = {
@@ -56,13 +57,21 @@ export function ReportPanel({
     report?.location.address ||
     location.address ||
     `${location.lat.toFixed(5)}, ${location.lon.toFixed(5)}`;
+  const officer = creditMode && !useMocks;
+  const body = state.finance.body;
+  const ready =
+    body?.demand.source === 'geostart' &&
+    body.demand.lat === location.lat &&
+    body.demand.lon === location.lon &&
+    (body.premises?.area_m2 ?? null) === (area === '' ? null : Number(area)) &&
+    (body.premises?.rent_rub_m2_month ?? null) === (rent === '' ? null : Number(rent));
   return (
     <aside className="report-panel" aria-labelledby={titleId}>
       <header className="report-heading">
         <div>
           <span className="eyebrow">ОЦЕНКА МЕСТА</span>
           <h2 id={titleId} ref={title} tabIndex={-1}>
-            {heading}
+            {officer ? 'Проверка бизнес-плана' : heading}
           </h2>
         </div>
         <button
@@ -79,7 +88,7 @@ export function ReportPanel({
       </header>
       <div className="report-content">
         <p className="report-address">{address}</p>
-        {onCompare && report && (
+        {!officer && onCompare && report && (
           <button
             className="start-comparison"
             onClick={onCompare}
@@ -128,16 +137,24 @@ export function ReportPanel({
             Площадь и ставка аренды должны быть больше нуля
           </p>
         )}
+        {officer && (
+          <BorrowerReview
+            key={location.lat + ',' + location.lon}
+            economics={ready && !invalid ? body : null}
+            products={state.finance.products}
+            place={[cityName, nicheName, address].join(' · ')}
+          />
+        )}
         {useMocks && (
           <p className="footnote">В демонстрации показан фиксированный отчёт без пересчёта.</p>
         )}
-        {pending && (
+        {!officer && pending && (
           <div className="report-loading" role="status">
             <span className="spinner" />
             {report ? 'Пересчитываем оценку' : 'Считаем выручку и расходы'}
           </div>
         )}
-        {error && (
+        {!officer && error && (
           <div className="report-error" role="alert">
             <p>{error}</p>
             <button onClick={retry} disabled={pending || invalid}>
@@ -145,7 +162,7 @@ export function ReportPanel({
             </button>
           </div>
         )}
-        {report && (
+        {!officer && report && (
           <div
             aria-busy={pending}
             className={pending ? 'report-results updating' : 'report-results'}
@@ -332,13 +349,15 @@ export function ReportPanel({
             )}
           </div>
         )}
-        <FinancePanel
-          key={location.lat + ',' + location.lon}
-          state={state.finance}
-          cityName={cityName}
-          nicheName={nicheName}
-          invalid={invalid}
-        />
+        {!officer && (
+          <FinancePanel
+            key={location.lat + ',' + location.lon}
+            state={state.finance}
+            cityName={cityName}
+            nicheName={nicheName}
+            invalid={invalid}
+          />
+        )}
       </div>
     </aside>
   );

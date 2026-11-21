@@ -45,8 +45,7 @@ export function creditAndTax({ credit, tax }: EconomicsReport): Content[] {
     },
   ];
 }
-export function financialPage(report: EconomicsReport): Content[] {
-  const { assumptions } = report;
+export function assumptionColumns(assumptions: EconomicsReport['assumptions']): Content {
   const items = assumptions.map((item): Content => {
     const val = typeof item.value === 'number' ? decimal(item.value) : item.value;
     let link: string | undefined;
@@ -71,6 +70,15 @@ export function financialPage(report: EconomicsReport): Content[] {
     };
   });
   const split = Math.ceil(items.length / 2);
+  return {
+    columns: [
+      { width: '*', stack: items.slice(0, split) },
+      { width: '*', stack: items.slice(split) },
+    ],
+    columnGap: 12,
+  };
+}
+export function financialPage(report: EconomicsReport): Content[] {
   const start = new Date(report.start_year, report.start_month - 1, 1);
   const date = (month: number) =>
     new Intl.DateTimeFormat('ru-RU', { month: '2-digit', year: '2-digit' }).format(
@@ -130,12 +138,6 @@ export function financialPage(report: EconomicsReport): Content[] {
         ]),
     ),
     { text: 'Допущения финансовой модели', style: 'sectionTitle' },
-    {
-      columns: [
-        { width: '*', stack: items.slice(0, split) },
-        { width: '*', stack: items.slice(split) },
-      ],
-      columnGap: 12,
-    },
+    assumptionColumns(report.assumptions),
   ];
 }
