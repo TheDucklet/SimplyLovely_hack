@@ -60,6 +60,12 @@ export function App() {
     setActiveSlot('first');
     secondReportState.close();
   }
+  function openCreditMode(): void {
+    if (!canCheckCredit) return;
+    stopComparison();
+    setCreditMode(true);
+    document.getElementById('map')?.scrollIntoView();
+  }
   const city = cities.find((item) => item.code === cityCode);
   const niche = niches.find((item) => item.code === nicheCode);
 
@@ -159,9 +165,9 @@ export function App() {
             <button
               className="credit-mode-toggle"
               aria-pressed={creditMode}
-              onClick={() => setCreditMode((enabled) => !enabled)}
+              onClick={() => (creditMode ? setCreditMode(false) : openCreditMode())}
             >
-              Кредитный специалист
+              {useMocks ? 'Кредитный специалист' : 'Проверка бизнес-плана'}
             </button>
           )}
           {useMocks && <span className="pilot-label">Демонстрация · Москва, кофейня</span>}
@@ -171,7 +177,7 @@ export function App() {
           {user && <AccountMenu user={user} />}
         </div>
       </header>
-      <Landing onCreditMode={() => setCreditMode(canCheckCredit)} />
+      <Landing onCreditMode={canCheckCredit ? openCreditMode : undefined} />
       <section id="map" className="tool" aria-label="Карта и отчёт">
         <div className="toolbar" aria-label="Настройки карты">
           <label className="select-field">
@@ -239,7 +245,9 @@ export function App() {
               для своего дела
             </h1>
             <p className="intro-copy">
-              Оцените будущую выручку и окупаемость бизнеса до того, как подпишете договор аренды.
+              {creditMode && canCheckCredit
+                ? 'Выберите адрес для проверки бизнес-плана заёмщика.'
+                : 'Оцените будущую выручку и окупаемость бизнеса до того, как подпишете договор аренды.'}
             </p>
             <div className="map-instruction">
               <span className="instruction-number">01</span>
@@ -339,7 +347,7 @@ export function App() {
           </section>
           {comparisonEnabled ? (
             <ComparisonPanel
-              creditMode={creditMode}
+              creditMode={creditMode && canCheckCredit}
               first={reportState}
               second={secondReportState}
               activeSlot={activeSlot}
@@ -351,7 +359,7 @@ export function App() {
             />
           ) : reportState.location ? (
             <ReportPanel
-              creditMode={creditMode}
+              creditMode={creditMode && canCheckCredit}
               state={reportState}
               onBankAction={setBankAction}
               onMethodology={() => setMethodologyOpen(true)}
