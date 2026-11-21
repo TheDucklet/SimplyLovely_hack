@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '../api/client';
 import type { LocationReport, ReportRequest } from '../api/types';
 import { message } from '../format';
+import { useEconomics } from './useEconomics';
 
 const RECALCULATE_DELAY_MS = 500;
 export interface SelectedLocation {
@@ -20,6 +21,9 @@ export function useLocationReport(city: string, niche: string) {
   const [area, setArea] = useState('');
   const [rent, setRent] = useState('');
   const [planRevenue, setPlanRevenue] = useState('');
+  const [pointRequest, setPointRequest] = useState<ReportRequest | null>(null);
+  const finance = useEconomics(pointRequest);
+  const resetFinancing = finance.setFinancing;
   const busy = useRef(false);
   const queued = useRef<ReportRequest | null>(null);
   const epoch = useRef(0);
@@ -37,6 +41,9 @@ export function useLocationReport(city: string, niche: string) {
     const key = `${epoch.current}:${JSON.stringify(body)}`;
     if (!force && key === lastRequest.current) return;
     lastRequest.current = key;
+    setPointRequest((previous) =>
+      JSON.stringify(previous) === JSON.stringify(body) ? previous : body,
+    );
     queued.current = body;
     if (busy.current) return;
     busy.current = true;
@@ -69,6 +76,8 @@ export function useLocationReport(city: string, niche: string) {
     epoch.current += 1;
     queued.current = null;
     lastRequest.current = '';
+    setPointRequest(null);
+    resetFinancing(null);
     setLocation(null);
     setReport(null);
     setCalculatedAt(null);
@@ -77,32 +86,32 @@ export function useLocationReport(city: string, niche: string) {
     setArea('');
     setRent('');
     setPlanRevenue('');
-  }, []);
+  }, [resetFinancing]);
   useEffect(() => {
     close();
   }, [city, niche, close]);
   const select = useCallback(
     (point: SelectedLocation) => {
-      if (busy.current) return;
+      if (busy.current || (location?.lat === point.lat && location?.lon === point.lon)) return;
+      resetFinancing(null);
       epoch.current += 1;
       lastRequest.current = '';
       setLocation(point);
       setReport(null);
       setCalculatedAt(null);
       setCompletedRequest(null);
-      setArea('');
-      setRent('');
+
       setPlanRevenue('');
       request({
         city,
         niche,
         lat: point.lat,
         lon: point.lon,
-        area_m2: null,
-        rent_rub_m2_month: null,
+        area_m2: area === '' ? null : Number(area),
+        rent_rub_m2_month: rent === '' ? null : Number(rent),
       });
     },
-    [city, niche, request],
+    [city, niche, request, area, rent, resetFinancing, location],
   );
   const invalid =
     (area !== '' && (!Number.isFinite(Number(area)) || Number(area) <= 0)) ||
@@ -148,6 +157,7 @@ export function useLocationReport(city: string, niche: string) {
     completedRequest.rent_rub_m2_month === (rent === '' ? null : Number(rent));
   return {
     location,
+    finance,
     report,
     calculatedAt,
     reportIsCurrent,
