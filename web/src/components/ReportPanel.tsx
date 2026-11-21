@@ -310,8 +310,15 @@ export function ReportPanel({
                   cityName,
                   nicheName,
                   isDemo: useMocks,
+                  economics: state.finance.economics.value,
                 }}
-                disabled={pending || invalid || !!error || !state.reportIsCurrent}
+                disabled={
+                  pending ||
+                  invalid ||
+                  !!error ||
+                  !state.reportIsCurrent ||
+                  (!useMocks && !state.finance.economics.value)
+                }
               />
             )}
             <p className="report-disclaimer">
