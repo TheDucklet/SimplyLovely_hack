@@ -20,6 +20,7 @@ export class ApiError extends Error {
   constructor(
     message: string,
     public readonly status: number,
+    public readonly errors: ReadonlyArray<{ field: string; message: string }> = [],
   ) {
     super(message);
     this.name = 'ApiError';
@@ -47,7 +48,11 @@ export function loginUrl(): string {
   return `${apiUrl}/api/auth/login?${new URLSearchParams({ next })}`;
 }
 
-async function request<T>(path: string, options?: RequestInit, prefix = '/api/v1'): Promise<T> {
+export async function request<T>(
+  path: string,
+  options?: RequestInit,
+  prefix = '/api/v1',
+): Promise<T> {
   let response: Response;
   try {
     response = await fetch(`${apiUrl}${prefix}${path}`, options);
@@ -66,6 +71,12 @@ async function request<T>(path: string, options?: RequestInit, prefix = '/api/v1
         typeof body === 'object' && body !== null && 'detail' in body ? body.detail : null,
       ),
       response.status,
+      body && typeof body === 'object' && 'errors' in body && Array.isArray(body.errors)
+        ? body.errors.filter(
+            (issue): issue is { field: string; message: string } =>
+              issue && typeof issue.field === 'string' && typeof issue.message === 'string',
+          )
+        : [],
     );
   }
   return response.json() as Promise<T>;

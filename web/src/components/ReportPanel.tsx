@@ -1,9 +1,11 @@
 import { useRef, useEffect } from 'react';
-import type { Assumption, MonthlyCosts, RiskLevel } from '../api/types';
+import type { MonthlyCosts, RiskLevel } from '../api/types';
 import type { useLocationReport } from '../hooks/useLocationReport';
 import { decimal, months, number, rubles } from '../format';
 import { useMocks } from '../api/client';
 import { BusinessPlanButton } from './BusinessPlanButton';
+import { FinancePanel } from './FinancePanel';
+import { AssumptionSource } from './AssumptionSource';
 import { CreditAssessment } from './CreditAssessment';
 
 const RISK_LABELS: Record<RiskLevel, string> = {
@@ -19,21 +21,7 @@ const COST_LABELS: [keyof MonthlyCosts, string][] = [
   ['other', 'Прочие'],
 ];
 const BANK_ACTIONS = ['Открыть счёт', 'Подключить эквайринг', 'Кредит на открытие'];
-function Source({ assumption }: { assumption: Assumption }) {
-  if (!assumption.source) return <span className="unverified">без подтверждённого источника</span>;
-  try {
-    const url = new URL(assumption.source);
-    if (['https:', 'http:'].includes(url.protocol))
-      return (
-        <a href={url.href} target="_blank" rel="noreferrer">
-          {url.hostname}
-        </a>
-      );
-  } catch {
-    return <span>{assumption.source}</span>;
-  }
-  return <span>{assumption.source}</span>;
-}
+
 export function ReportPanel({
   state,
   onBankAction,
@@ -109,10 +97,13 @@ export function ReportPanel({
               step="any"
               placeholder="По модели"
               value={area}
-              aria-invalid={area !== '' && Number(area) <= 0}
+              aria-invalid={
+                (area !== '' && Number(area) <= 0) || !!state.finance.fieldError('premises.area_m2')
+              }
               onChange={(event) => setArea(event.target.value)}
               disabled={useMocks}
             />
+            <small>{state.finance.fieldError('premises.area_m2')}</small>
           </label>
           <label>
             Аренда, ₽/м² в месяц
@@ -122,10 +113,14 @@ export function ReportPanel({
               step="any"
               placeholder="По модели"
               value={rent}
-              aria-invalid={rent !== '' && Number(rent) <= 0}
+              aria-invalid={
+                (rent !== '' && Number(rent) <= 0) ||
+                !!state.finance.fieldError('premises.rent_rub_m2_month')
+              }
               onChange={(event) => setRent(event.target.value)}
               disabled={useMocks}
             />
+            <small>{state.finance.fieldError('premises.rent_rub_m2_month')}</small>
           </label>
         </div>
         {invalid && (
@@ -274,7 +269,7 @@ export function ReportPanel({
                       {({ share: 'доля', rub: '₽' } as Record<string, string>)[assumption.unit] ||
                         assumption.unit}
                     </span>
-                    <Source assumption={assumption} />
+                    <AssumptionSource assumption={assumption} />
                   </li>
                 ))}
               </ul>
@@ -330,6 +325,13 @@ export function ReportPanel({
             )}
           </div>
         )}
+        <FinancePanel
+          key={location.lat + ',' + location.lon}
+          state={state.finance}
+          cityName={cityName}
+          nicheName={nicheName}
+          invalid={invalid}
+        />
       </div>
     </aside>
   );

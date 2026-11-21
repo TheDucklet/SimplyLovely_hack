@@ -7,11 +7,11 @@ export function Landing({ onCreditMode }: { onCreditMode: () => void }) {
     <div className="landing">
       <section className="hero" aria-labelledby="hero-title">
         <div className="hero-copy">
-          <p className="eyebrow">КОФЕЙНИ И ПУНКТЫ ВЫДАЧИ · МОСКВА И ТУЛА</p>
+          <p className="eyebrow">ШЕСТЬ ГОРОДОВ · СЕМЬ НИШ</p>
           <h1 id="hero-title">Узнайте, окупится ли точка, до договора аренды</h1>
           <p className="hero-lead">
-            Выберите адрес на карте и за минуту получите выручку в диапазоне p10-p90, расходы на
-            аренду, зарплаты и налоги и срок окупаемости с источником каждого допущения.
+            Выберите адрес на карте, чтобы оценить спрос, сравнить налоговые режимы и узнать, когда
+            вложения в точку вернутся.
           </p>
           <div className="hero-actions">
             <a className="primary-button button-link button-large" href="#map">
