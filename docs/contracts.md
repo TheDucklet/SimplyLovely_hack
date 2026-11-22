@@ -686,7 +686,7 @@ def evaluate_location(
 }
 ```
 
-Сокращённый ответ показывает один из пяти факторов и один из четырёх стрессов. Суммы и месяцы округлены, полный состав полей описан в OpenAPI.
+Сокращённый ответ показывает один из пяти факторов и стресс повышения ставки. Суммы, месяцы и значения коэффициента покрытия долга округлены. Полный состав полей описан в OpenAPI.
 
 ```json
 {
@@ -694,7 +694,8 @@ def evaluate_location(
   "shift_share": 0.2,
   "base": {
     "profit_steady_month_p50": 218135, "npv_p50": 3155252,
-    "payback_months_p50": 14.51, "probability_no_payback_24": 0.305
+    "payback_months_p50": 14.51, "probability_no_payback_24": 0.305,
+    "dscr_min_p50": 2.2912, "probability_dscr_below_threshold": 0.33
   },
   "factors": [
     {
@@ -706,15 +707,16 @@ def evaluate_location(
   ],
   "stresses": [
     {
-      "code": "revenue_minus_20", "name": "Выручка ниже на 20%",
-      "profit_steady_month_p50": 121022, "npv_p50": 407611,
-      "payback_months_p50": 24.99, "probability_no_payback_24": 0.52
+      "code": "rate_plus_3", "name": "Ставка кредита выше на 3 пункта",
+      "profit_steady_month_p50": 218135, "npv_p50": 3155252,
+      "payback_months_p50": 14.51, "probability_no_payback_24": 0.305,
+      "dscr_min_p50": 2.2029, "probability_dscr_below_threshold": 0.345
     }
   ]
 }
 ```
 
-Метод расчёта медиан, порядок факторов и состав стрессов описаны в разделе [«Анализ чувствительности»](economics.md#анализ-чувствительности).
+Поля `dscr_min_p50` и `probability_dscr_below_threshold` есть в базовом расчёте и каждом стрессе. При нулевом займе оба поля равны `null`. Метод расчёта медиан, порядок факторов и состав стрессов описаны в разделе [«Анализ чувствительности»](economics.md#анализ-чувствительности).
 
 ### Ошибки API v2
 

@@ -1,7 +1,6 @@
 import numpy as np
 
-from geostart.economics.sampling import optional_summary
-from geostart.economics.service import Adjustments, Calculation, calculate, calculation_versions
+from geostart.economics.service import Adjustments, Calculation, calculate, calculation_versions, optional
 from geostart.schemas_v2 import (
     SensitivityFactor,
     SensitivityFactorCode,
@@ -41,26 +40,25 @@ STRESSES: tuple[tuple[SensitivityStressCode, str, Adjustments], ...] = (
 )
 
 
-def median_payback(months: np.ndarray) -> float | None:
-    repaid = months[np.isfinite(months)]
-    if repaid.size and repaid.size * 2 == months.size:
-        return float(repaid.max())
-    return optional_summary(months)[1]
-
-
 def scenario_metrics(calc: Calculation) -> SensitivityMetrics:
     return SensitivityMetrics(
         profit_steady_month_p50=float(np.median(calc.metrics.steady["profit"])),
         npv_p50=float(np.median(calc.metrics.npv)),
-        payback_months_p50=median_payback(calc.metrics.payback_months),
+        payback_months_p50=optional(calc.metrics.payback_months).p50,
     )
 
 
 def scenario_summary(calc: Calculation) -> SensitivitySummary:
-    months = calc.metrics.payback_months
+    metrics = calc.metrics
+    months = metrics.payback_months
+    loan_active = bool((calc.projection.loan > 0).any())
     return SensitivitySummary(
         **scenario_metrics(calc).model_dump(),
         probability_no_payback_24=float(np.mean(~np.isfinite(months) | (months > PAYBACK_LIMIT_MONTHS))),
+        dscr_min_p50=optional(metrics.dscr_min).p50 if loan_active else None,
+        probability_dscr_below_threshold=(
+            metrics.probability_dscr_below_threshold(calc.settings.dscr_threshold) if loan_active else None
+        ),
     )
 
 

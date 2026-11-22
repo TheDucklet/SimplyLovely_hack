@@ -1096,7 +1096,9 @@ def build_report(calc: Calculation) -> EconomicsReport:
             dscr_monthly_min=optional(m.dscr_monthly_min),
             months_below_threshold_p50=float(np.median(m.months_below(threshold))) if loan_active else 0.0,
             dscr_threshold=threshold,
-            probability_dscr_below_threshold=float(np.mean(m.dscr_min < threshold)) if loan_active else 0.0,
+            probability_dscr_below_threshold=m.probability_dscr_below_threshold(threshold)
+            if loan_active
+            else 0.0,
             max_loan_rub=money(m.max_loan),
         ),
         monthly=monthly_rows(calc),

@@ -1,3 +1,4 @@
+from dataclasses import replace
 from pathlib import Path
 from unittest.mock import Mock
 
@@ -8,12 +9,12 @@ from fastapi.testclient import TestClient
 from geostart.api.main import app
 from geostart.config import get_city
 from geostart.economics import service
-from geostart.economics.sensitivity import median_payback
+from geostart.economics.engine import Metrics, PlanSettings, Projection, ScenarioInputs
 from geostart.pipeline.fixtures import write_fixtures
-from geostart.schemas_v2 import EconomicsRequest
 
 client = TestClient(app)
 PATH = "/api/v2/sensitivity"
+ECONOMICS = "/api/v2/economics"
 
 
 @pytest.fixture(scope="module")
@@ -56,6 +57,9 @@ def test_factors_and_stresses_use_sorted_scenario_medians() -> None:
     for factor in factors.values():
         assert factor["low"]["change"] == -0.2
         assert factor["high"]["change"] == 0.2
+        for point in (factor["low"], factor["high"]):
+            assert "dscr_min_p50" not in point
+            assert "probability_dscr_below_threshold" not in point
     base = body["base"]
     assert factors["revenue"]["low"][profit] < base[profit] < factors["revenue"]["high"][profit]
     assert factors["rent"]["high"][profit] < base[profit] < factors["rent"]["low"][profit]
@@ -66,6 +70,8 @@ def test_factors_and_stresses_use_sorted_scenario_medians() -> None:
     assert stresses["revenue_minus_20"][profit] == factors["revenue"]["low"][profit]
     for scenario in (base, *stresses.values()):
         assert 0 <= scenario["probability_no_payback_24"] <= 1
+        assert scenario["dscr_min_p50"] is not None
+        assert 0 <= scenario["probability_dscr_below_threshold"] <= 1
 
 
 def test_identical_requests_reuse_one_demand_calculation_each(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -113,21 +119,53 @@ def test_mock_demand_preserves_requested_shift(monkeypatch: pytest.MonkeyPatch) 
     assert response.json()["shift_share"] == 0.15
 
 
-def test_loan_rate_stress_increases_interest_by_adjusting_loan_terms() -> None:
-    request = EconomicsRequest.model_validate(request_payload())
-    base = service.calculate(request)
-    stress = service.calculate(
-        request, adjustments=service.Adjustments(loan_rate_add=0.03), demand=base.demand
-    )
-    assert stress.settings.loan_terms.rate_annual == pytest.approx(
-        base.settings.loan_terms.rate_annual + 0.03
-    )
-    assert stress.projection.interest.sum() > base.projection.interest.sum()
+def test_rate_stress_matches_economics_credit_with_higher_rate() -> None:
+    payload = request_payload()
+    payload["financing"] = {"loan_share": 0.7, "rate_annual": 0.26}
+    sensitivity = client.post(PATH, json=payload)
+    assert sensitivity.status_code == 200, sensitivity.text
+    body = sensitivity.json()
+    rate_stress = next(stress for stress in body["stresses"] if stress["code"] == "rate_plus_3")
+    for rate, summary in ((0.26, body["base"]), (0.29, rate_stress)):
+        payload["financing"]["rate_annual"] = rate
+        economics = client.post(ECONOMICS, json=payload)
+        assert economics.status_code == 200, economics.text
+        credit = economics.json()["credit"]
+        assert summary["dscr_min_p50"] == pytest.approx(credit["dscr_min"]["p50"])
+        assert summary["probability_dscr_below_threshold"] == credit["probability_dscr_below_threshold"]
+    assert rate_stress["dscr_min_p50"] < body["base"]["dscr_min_p50"]
+    assert rate_stress["probability_dscr_below_threshold"] >= body["base"]["probability_dscr_below_threshold"]
 
 
-@pytest.mark.parametrize(
-    ("months", "expected"),
-    [([10, 13, 15, np.nan], 14), ([10, 13, np.nan, np.nan], 13), ([10, np.nan, np.nan, np.nan], None)],
-)
-def test_median_payback_includes_the_unrepaid_scenarios(months: list[float], expected: float | None) -> None:
-    assert median_payback(np.array(months)) == expected
+@pytest.mark.parametrize("financing", [None, {"loan_amount_rub": 0}])
+def test_credit_fields_are_null_without_a_loan(financing: dict[str, int] | None) -> None:
+    payload = request_payload()
+    payload["financing"] = financing
+    response = client.post(PATH, json=payload)
+    assert response.status_code == 200, response.text
+    body = response.json()
+    for summary in (body["base"], *body["stresses"]):
+        assert summary["dscr_min_p50"] is None
+        assert summary["probability_dscr_below_threshold"] is None
+
+
+def test_payback_median_at_exactly_half_matches_economics(monkeypatch: pytest.MonkeyPatch) -> None:
+    evaluate = service.evaluate
+
+    def half_repaid(inputs: ScenarioInputs, settings: PlanSettings, projection: Projection) -> Metrics:
+        metrics = evaluate(inputs, settings, projection)
+        months = np.full_like(metrics.payback_months, np.nan)
+        months[: len(months) // 2] = 13
+        return replace(metrics, payback_months=months)
+
+    monkeypatch.setattr(service, "evaluate", half_repaid)
+    payload = request_payload()
+    economics = client.post(ECONOMICS, json=payload)
+    sensitivity = client.post(PATH, json=payload)
+    assert economics.status_code == sensitivity.status_code == 200
+    metrics = economics.json()["metrics"]
+    base = sensitivity.json()["base"]
+    assert metrics["probability_no_payback"] == 0.5
+    assert metrics["payback_months"]["p50"] is None
+    assert base["payback_months_p50"] is None
+    assert base["probability_no_payback_24"] == 0.5

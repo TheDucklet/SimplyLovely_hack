@@ -174,6 +174,8 @@ class SensitivityMetrics(BaseModel):
 
 class SensitivitySummary(SensitivityMetrics):
     probability_no_payback_24: float = Field(ge=0, le=1)
+    dscr_min_p50: float | None
+    probability_dscr_below_threshold: float | None = Field(ge=0, le=1)
 
 
 class SensitivityPoint(SensitivityMetrics):

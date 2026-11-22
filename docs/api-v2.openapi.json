@@ -2081,6 +2081,17 @@
             "title": "Code",
             "type": "string"
           },
+          "dscr_min_p50": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dscr Min P50"
+          },
           "name": {
             "title": "Name",
             "type": "string"
@@ -2100,6 +2111,19 @@
             ],
             "title": "Payback Months P50"
           },
+          "probability_dscr_below_threshold": {
+            "anyOf": [
+              {
+                "maximum": 1.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Probability Dscr Below Threshold"
+          },
           "probability_no_payback_24": {
             "maximum": 1.0,
             "minimum": 0.0,
@@ -2116,6 +2140,8 @@
           "npv_p50",
           "payback_months_p50",
           "probability_no_payback_24",
+          "dscr_min_p50",
+          "probability_dscr_below_threshold",
           "code",
           "name"
         ],
@@ -2124,6 +2150,17 @@
       },
       "SensitivitySummary": {
         "properties": {
+          "dscr_min_p50": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dscr Min P50"
+          },
           "npv_p50": {
             "title": "Npv P50",
             "type": "number"
@@ -2138,6 +2175,19 @@
               }
             ],
             "title": "Payback Months P50"
+          },
+          "probability_dscr_below_threshold": {
+            "anyOf": [
+              {
+                "maximum": 1.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Probability Dscr Below Threshold"
           },
           "probability_no_payback_24": {
             "maximum": 1.0,
@@ -2154,7 +2204,9 @@
           "profit_steady_month_p50",
           "npv_p50",
           "payback_months_p50",
-          "probability_no_payback_24"
+          "probability_no_payback_24",
+          "dscr_min_p50",
+          "probability_dscr_below_threshold"
         ],
         "title": "SensitivitySummary",
         "type": "object"

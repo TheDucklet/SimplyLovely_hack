@@ -443,6 +443,9 @@ class Metrics:
     def months_below(self, threshold: float) -> np.ndarray:
         return (self.dscr_monthly < threshold).sum(axis=1)
 
+    def probability_dscr_below_threshold(self, threshold: float) -> float:
+        return float(np.mean(self.dscr_min < threshold))
+
     @property
     def probability_no_payback(self) -> float:
         return float(np.mean(np.isnan(self.payback_months)))
