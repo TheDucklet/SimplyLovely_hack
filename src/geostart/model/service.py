@@ -22,7 +22,7 @@ from geostart.model.assumptions import (
     tax_assumptions,
     wage_assumptions,
 )
-from geostart.model.data import city_directory, scores_directory
+from geostart.model.data import city_directory, competitors_for_niche, scores_directory
 from geostart.model.demand import (
     DEFAULT_SEED,
     GRID_EDGE_SAFETY_FACTOR,
@@ -110,7 +110,7 @@ def load_inputs(city: str, niche: str) -> CityInputs:
 @lru_cache(maxsize=8)
 def cached_inputs(city: str, niche: str, revision: tuple) -> CityInputs:
     get_city(city)
-    get_niche(niche)
+    niche_config = get_niche(niche)
     directory = city_directory(city)
     root = settings.research_dir()
     with (root / "niche_params" / f"{niche}.yaml").open(encoding="utf-8") as stream:
@@ -127,6 +127,8 @@ def cached_inputs(city: str, niche: str, revision: tuple) -> CityInputs:
     )
     features = pd.read_parquet(directory / "hex_features.parquet")
     competitors = pd.read_parquet(directory / "competitors.parquet")
+    if niche_config.competitor_niche is not None:
+        competitors = competitors_for_niche(competitors, niche)
     wages = pd.read_parquet(directory / "wages.parquet")
     profession = parameters["costs"]["wage_profession"]
     salary, salary_fallback = profession_salary(wages, profession)

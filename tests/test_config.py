@@ -14,10 +14,11 @@ def test_cities_from_config_list_six_cities() -> None:
     ]
 
 
-def test_niches_from_config_list_seven_niches() -> None:
+def test_niches_from_config_list_eight_niches() -> None:
     assert [niche.code for niche in load_niches()] == [
         "coffee",
         "pickup_point",
+        "pickup_point_multi",
         "grocery",
         "beauty_salon",
         "fast_food",

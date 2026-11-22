@@ -11,6 +11,7 @@ from geostart.model.demand import (
     cell_demand,
     competitor_attractiveness,
     distances_m,
+    limit_revenue,
     prepare_model,
     sample_parameters,
     simulate_demand,
@@ -43,6 +44,37 @@ def test_cell_demand_uses_jobs_and_pickup_ignores_jobs(city_data) -> None:
     features = features.iloc[:1].assign(residents=100, workers=50)
     assert cell_demand(features, "coffee", PARAMETERS)[0] == 165000
     assert cell_demand(features, "pickup_point", PARAMETERS)[0] == pytest.approx(2205)
+
+
+def test_order_capacity_limits_only_pickup_using_payout_per_order() -> None:
+    revenues = np.array([200000, 500000])
+    orders = {**PARAMETERS, "max_orders_per_day": 100, "payout_per_order_rub": 80}
+    visits = {**orders, "max_units_per_day": 50, "avg_check_rub": 300}
+    np.testing.assert_array_equal(limit_revenue(revenues, "pickup_point", orders), [200000, 240000])
+    np.testing.assert_array_equal(limit_revenue(revenues, "pickup_point_multi", visits), [200000, 240000])
+    np.testing.assert_array_equal(limit_revenue(revenues, "coffee", orders), revenues)
+    np.testing.assert_array_equal(limit_revenue(revenues, "coffee", visits), [200000, 450000])
+    np.testing.assert_array_equal(limit_revenue(revenues, "pickup_point", PARAMETERS), revenues)
+
+
+def test_multi_brand_pickup_shares_the_existing_pickup_competitor_layer(city_data) -> None:
+    features, competitors = city_data
+    features = features.iloc[:1]
+    pickup = competitors.iloc[:1].assign(niche="pickup_point", h3=features.iloc[0].h3, source="osm")
+    standard = prepare_model(features, pickup, "pickup_point", 500)
+    multi = prepare_model(features, pickup, "pickup_point_multi", 500)
+    assert multi.kind.value == "orders"
+    np.testing.assert_array_equal(standard.attraction, multi.attraction)
+    assert multi.revenue(PARAMETERS)[0] == pytest.approx(standard.revenue(PARAMETERS)[0])
+
+
+def test_sample_order_capacity_uses_its_supplied_median() -> None:
+    ranges = {name: {"p10": value, "p50": value, "p90": value} for name, value in PARAMETERS.items()}
+    ranges["max_orders_per_day"] = {"p10": 60, "p50": 110, "p90": 180}
+    samples = sample_parameters("pickup_point", ranges, runs=10000)
+    assert samples.max_orders_per_day.between(60, 180).all()
+    assert samples.max_orders_per_day.median() == pytest.approx(110, abs=2)
+    assert "max_orders_per_day" not in sample_parameters("coffee", ranges, runs=2)
 
 
 def test_outside_alternative_and_colocated_competitor_split_demand(city_data) -> None:

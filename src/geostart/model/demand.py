@@ -10,6 +10,8 @@ import numpy as np
 import pandas as pd
 import yaml
 
+from geostart.model.data import competitors_for_niche
+
 if TYPE_CHECKING:
     from geostart.model.spatial import CellNeighborhood
 
@@ -24,6 +26,7 @@ GRID_EDGE_SAFETY_FACTOR = 0.5
 QUANTILES = (0.1, 0.5, 0.9)
 DISTANCE_TOLERANCE_M = 1e-6
 DAYS_PER_MONTH = 30
+CAPACITY_LEVELS = (0.0, 0.5, 1.0)
 
 
 class DemandKind(StrEnum):
@@ -49,9 +52,9 @@ OPTIONAL_PARAMETERS = {
         "max_cups_per_day",
         "max_units_per_day",
     ),
-    DemandKind.ORDERS: ("max_pickup_distance_m",),
+    DemandKind.ORDERS: ("max_pickup_distance_m", "max_orders_per_day"),
 }
-CAPACITY_PARAMETERS = ("max_units_per_day", "max_cups_per_day")
+VISIT_CAPACITY_PARAMETERS = ("max_units_per_day", "max_cups_per_day")
 
 
 def preparation_distance(samples: pd.DataFrame) -> float:
@@ -136,14 +139,29 @@ def cell_demand(features: pd.DataFrame, niche: str, parameters: Mapping[str, flo
 
 
 def daily_capacity(parameters: Mapping[str, float]) -> float:
-    return next((parameters[name] for name in CAPACITY_PARAMETERS if parameters.get(name, 0) > 0), 0)
+    return next((parameters[name] for name in VISIT_CAPACITY_PARAMETERS if parameters.get(name, 0) > 0), 0)
 
 
 def limit_revenue(revenue: np.ndarray, niche: str, parameters: Mapping[str, float]) -> np.ndarray:
-    capacity = daily_capacity(parameters)
-    if demand_kind(niche) == DemandKind.VISITS and capacity > 0:
-        return np.minimum(revenue, capacity * DAYS_PER_MONTH * parameters["avg_check_rub"])
-    return revenue
+    if demand_kind(niche) == DemandKind.ORDERS:
+        capacity = parameters.get("max_orders_per_day", 0)
+        unit_parameter = "payout_per_order_rub"
+    else:
+        capacity = daily_capacity(parameters)
+        unit_parameter = "avg_check_rub"
+    return (
+        np.minimum(revenue, capacity * DAYS_PER_MONTH * parameters[unit_parameter])
+        if capacity > 0
+        else revenue
+    )
+
+
+def sample_order_capacity(
+    lower: float, central: float, upper: float, runs: int, generator: np.random.Generator
+) -> np.ndarray:
+    if not np.isfinite(central) or not lower <= central <= upper:
+        raise ValueError("Проверьте p50 предела заказов, значение должно быть между p10 и p90")
+    return np.interp(generator.random(runs), CAPACITY_LEVELS, (lower, central, upper))
 
 
 def passing_visits(features: pd.DataFrame, parameters: Mapping[str, float]) -> np.ndarray:
@@ -289,7 +307,7 @@ def prepare_model(
         raise ValueError("Жители и рабочие места должны быть конечными и неотрицательными")
     cells = features["h3"].tolist()
     resolution = h3.get_resolution(cells[0])
-    selected_competitors = competitors.loc[competitors["niche"].eq(selected)].copy()
+    selected_competitors = competitors_for_niche(competitors, selected)
     all_cells = list(dict.fromkeys([*cells, *selected_competitors["h3"].tolist()]))
     if any(h3.get_resolution(cell) != resolution for cell in all_cells):
         raise ValueError("Ячейки должны иметь одинаковое разрешение H3")
@@ -334,7 +352,11 @@ def sample_parameters(
             raise ValueError(f"Проверьте границы p10 и p90 параметра {name}")
         lower_parameters[name] = lower
         upper_parameters[name] = upper
-        samples[name] = generator.uniform(lower, upper, runs)
+        samples[name] = (
+            sample_order_capacity(lower, float(bounds["p50"]), upper, runs, generator)
+            if name == "max_orders_per_day"
+            else generator.uniform(lower, upper, runs)
+        )
     validate_parameters(selected, lower_parameters)
     validate_parameters(selected, upper_parameters)
     frame = pd.DataFrame(samples)

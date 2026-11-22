@@ -32,6 +32,7 @@ class NicheConfig(BaseModel):
     okved: list[str]
     demand_kind: Literal["visits", "orders"] = "visits"
     params_file: str
+    competitor_niche: str | None = None
 
 
 class UnknownCityError(LookupError):
@@ -71,3 +72,7 @@ def get_niche(code: str) -> NicheConfig:
             return niche
     available = ", ".join(niche.code for niche in niches)
     raise UnknownNicheError(f"Ниша {code} не найдена в config/niches.yaml, доступны: {available}")
+
+
+def competitor_niche(code: str) -> str:
+    return get_niche(code).competitor_niche or code

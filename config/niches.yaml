@@ -23,6 +23,14 @@ niches:
     okved: ["47.91", "52.29", "53.20", "82.92"]
     demand_kind: orders
     params_file: research/niche_params/pickup_point.yaml
+  - code: pickup_point_multi
+    name: Мультибрендовый пункт выдачи заказов
+    osm_tags:
+      - {shop: outpost}
+    okved: ["47.91", "52.29", "53.20", "82.92"]
+    demand_kind: orders
+    params_file: research/niche_params/pickup_point_multi.yaml
+    competitor_niche: pickup_point
   - code: grocery
     name: Продукты у дома
     osm_tags:

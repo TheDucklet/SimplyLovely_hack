@@ -166,6 +166,8 @@ def build_competitors(city_code: str) -> pd.DataFrame:
     rng = city_rng(city, salt=1)
     rows = []
     for niche in load_niches():
+        if niche.competitor_niche is not None:
+            continue
         count = COMPETITOR_COUNTS.get(city.code, DEFAULT_COMPETITOR_COUNTS).get(
             niche.code, DEFAULT_NICHE_COMPETITORS
         )

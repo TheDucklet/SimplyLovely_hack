@@ -5,7 +5,7 @@ from math import asin, cos, radians, sin, sqrt
 import h3
 import pandas as pd
 
-from geostart.config import CityConfig
+from geostart.config import CityConfig, competitor_niche
 from geostart.pipeline.fixtures import build_addresses, build_competitors, build_hex_features
 from geostart.schemas import (
     AddressMatch,
@@ -162,9 +162,11 @@ NICHE_ECONOMICS = {
 }
 MOCK_RENT_RUB_M2 = {"moscow": 3_500, "tula": 1_200}
 DEFAULT_MOCK_RENT_RUB_M2 = 1_200
+NICHE_ECONOMICS["pickup_point_multi"] = NICHE_ECONOMICS["pickup_point"]
 DEFAULT_MOCK_WAGE_RUB = {
     "coffee": 42_000,
     "pickup_point": 40_000,
+    "pickup_point_multi": 40_000,
     "grocery": 45_000,
     "beauty_salon": 50_000,
     "fast_food": 45_000,
@@ -181,7 +183,7 @@ FACTOR_LABELS = {
 
 def competitors_by_cell(city_code: str, niche_code: str) -> dict[str, int]:
     competitors = build_competitors(city_code)
-    counts = competitors.loc[competitors["niche"] == niche_code, "h3"].value_counts()
+    counts = competitors.loc[competitors["niche"] == competitor_niche(niche_code), "h3"].value_counts()
     return counts.to_dict()
 
 
@@ -275,7 +277,7 @@ def mock_hexes(city_code: str, niche_code: str) -> HexesResponse:
 
 def mock_competitors(city_code: str, niche_code: str) -> list[Competitor]:
     competitors = build_competitors(city_code)
-    selected = competitors[competitors["niche"] == niche_code]
+    selected = competitors[competitors["niche"] == competitor_niche(niche_code)]
     return [
         Competitor(
             name=row.name,
@@ -322,7 +324,9 @@ def nearby_competitors(
 ) -> list[NearbyCompetitor]:
     competitors = build_competitors(city_code)
     disk = h3.grid_disk(cell, COMPETITION_RING)
-    nearby = competitors[(competitors["niche"] == niche_code) & competitors["h3"].isin(disk)]
+    nearby = competitors[
+        (competitors["niche"] == competitor_niche(niche_code)) & competitors["h3"].isin(disk)
+    ]
     result = [
         NearbyCompetitor(
             name=row.name, lat=row.lat, lon=row.lon, distance_m=round(distance_m(lat, lon, row.lat, row.lon))
