@@ -4,6 +4,7 @@ import pandas as pd
 from dotenv import load_dotenv
 
 from geostart import settings
+from geostart.config import competitor_niche
 
 DATA_FILES = (
     "hex_features.parquet",
@@ -33,6 +34,16 @@ def load_demand_inputs(city: str, data_override: Path | None = None) -> tuple[pd
     directory = city_directory(city, data_override)
     return pd.read_parquet(directory / "hex_features.parquet"), pd.read_parquet(
         directory / "competitors.parquet"
+    )
+
+
+def competitors_for_niche(competitors: pd.DataFrame, niche: str) -> pd.DataFrame:
+    selected = competitors.loc[competitors["niche"].eq(niche)]
+    if not selected.empty:
+        return selected
+    source = competitor_niche(niche)
+    return (
+        competitors.loc[competitors["niche"].eq(source)].assign(niche=niche) if source != niche else selected
     )
 
 

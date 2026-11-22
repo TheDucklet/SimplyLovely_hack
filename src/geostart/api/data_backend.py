@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from geostart.config import CityConfig, load_cities, load_niches
+from geostart.config import CityConfig, competitor_niche, load_cities, load_niches
 from geostart.model import evaluate_location
 from geostart.model.service import city_context
 from geostart.schemas import AddressMatch, Competitor, HexesResponse, HexScore, LocationReport, ReportRequest
@@ -97,10 +97,11 @@ def data_hexes(city_code: str, niche_code: str) -> HexesResponse:
 
 
 def data_competitors(city_code: str, niche_code: str) -> list[Competitor]:
+    source_niche = competitor_niche(niche_code)
     if storage_mode() == "postgres":
-        return reader.db_competitors(city_code, niche_code)
+        return reader.db_competitors(city_code, source_niche)
     competitors = processed_file(city_code, "competitors.parquet")
-    selected = competitors[competitors["niche"] == niche_code]
+    selected = competitors[competitors["niche"] == source_niche]
     return [
         Competitor(
             name=row.name,

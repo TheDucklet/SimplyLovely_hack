@@ -1,7 +1,7 @@
 niche: pickup_point
 currency: RUB
 period: month
-updated: 2026-10-20
+updated: 2026-11-22
 demand:
   orders_per_resident_month:
     p10: 2.8
@@ -63,6 +63,12 @@ demand:
     p90: 0.10
     source: null
     note: "допущение: вес внешней альтернативы около нуля, поскольку доля ПВЗ уже учтена в marketplace_share и покупатель выбирает среди пунктов поблизости"
+  max_orders_per_day:
+    p10: 60
+    p50: 110
+    p90: 180
+    source: "https://www.sravni.ru/registraciya-ip-yur-lic/info/kak-otkryt-pvz-wildberries-v-2026-godu/"
+    note: "предел выдач в день для пункта 30-50 м2 с одним-двумя операторами, нижняя граница от темпа одного оператора 4-5 минут на заказ при 60-70% загрузки смены, верхняя граница от темпа двух операторов на пиковой смене и обзора Сравни.ру от 07.11.2026 с диапазоном 80-150 выдач в день в проходной локации миллионника"
   max_pickup_distance_m:
     p10: 1200
     p50: 2000

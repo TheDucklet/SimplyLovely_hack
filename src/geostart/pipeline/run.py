@@ -362,6 +362,8 @@ def build_osm_competitors(
     masks = {niche.code: niche_mask(located, niche) for niche in niches}
     frames = []
     for niche in niches:
+        if niche.competitor_niche is not None:
+            continue
         mask = masks[niche.code]
         for excluded in niche.exclude_niches:
             if excluded in masks:
