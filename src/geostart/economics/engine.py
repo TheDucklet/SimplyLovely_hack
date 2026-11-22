@@ -8,7 +8,7 @@ from geostart.economics.norms import MONTHS_PER_YEAR
 from geostart.economics.taxes import AUSN_REGIMES, LegalForm, Regime, TaxRules, ausn_active, block_taxes
 from geostart.model.finance import employee_contributions
 
-MODEL_VERSION = "economics-0.2.0"
+MODEL_VERSION = "economics-0.3.0"
 DEFAULT_ASSET_LIFE_MONTHS = 60
 IRR_ITERATIONS = 80
 IRR_LOWER_MONTHLY = -0.99
@@ -442,6 +442,9 @@ class Metrics:
 
     def months_below(self, threshold: float) -> np.ndarray:
         return (self.dscr_monthly < threshold).sum(axis=1)
+
+    def probability_dscr_below_threshold(self, threshold: float) -> float:
+        return float(np.mean(self.dscr_min < threshold))
 
     @property
     def probability_no_payback(self) -> float:

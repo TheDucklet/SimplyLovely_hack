@@ -134,6 +134,25 @@ def test_every_role_gets_location_report(oidc_env: Path) -> None:
     assert client.post("/api/v1/report", json=report_body()).status_code == 200
 
 
+def test_sensitivity_requires_login_and_accepts_an_entrepreneur(oidc_env: Path) -> None:
+    client = TestClient(app)
+    payload = {
+        "city": "tula",
+        "niche": "coffee",
+        "demand": {"source": "revenue", "revenue_month": {"p10": 500000, "p50": 800000, "p90": 1000000}},
+        "operations": {"salary_rub_month": 50000},
+        "start_month": 1,
+        "start_year": 2027,
+    }
+    denied = client.post("/api/v2/sensitivity", json=payload)
+    assert denied.status_code == 401
+    assert denied.headers["content-type"].startswith("application/problem+json")
+    login(client, "demo-entrepreneur")
+    allowed = client.post("/api/v2/sensitivity", json=payload)
+    assert allowed.status_code == 200, allowed.text
+    assert len(allowed.json()["factors"]) == 5
+
+
 def test_access_log_has_pseudonyms_and_no_coordinates(oidc_env: Path) -> None:
     anonymous = TestClient(app)
     assert anonymous.post("/api/v1/report", json=report_body()).status_code == 401

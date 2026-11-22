@@ -10,6 +10,8 @@ RegimeCode = Literal[
 ScheduleCode = Literal["annuity", "differentiated"]
 CheckStatus = Literal["below", "within", "above"]
 Verdict = Literal["confirmed", "needs_review", "not_confirmed"]
+SensitivityFactorCode = Literal["revenue", "rent", "wages", "cogs_share", "capex"]
+SensitivityStressCode = Literal["revenue_minus_20", "rent_plus_15", "rate_plus_3", "combined"]
 
 
 class StrictModel(BaseModel):
@@ -147,6 +149,10 @@ class EconomicsRequest(StrictModel):
     discount_rate_annual: float | None = Field(default=None, ge=0, le=1)
 
 
+class SensitivityRequest(EconomicsRequest):
+    shift_share: float = Field(default=0.2, ge=0.05, le=0.5)
+
+
 class OptionalRange(BaseModel):
     p10: float | None
     p50: float | None
@@ -158,6 +164,42 @@ class Versions(BaseModel):
     norms: str
     data: str
     taxes: str
+
+
+class SensitivityMetrics(BaseModel):
+    profit_steady_month_p50: float
+    npv_p50: float
+    payback_months_p50: float | None
+
+
+class SensitivitySummary(SensitivityMetrics):
+    probability_no_payback_24: float = Field(ge=0, le=1)
+    dscr_min_p50: float | None
+    probability_dscr_below_threshold: float | None = Field(ge=0, le=1)
+
+
+class SensitivityPoint(SensitivityMetrics):
+    change: float
+
+
+class SensitivityFactor(BaseModel):
+    code: SensitivityFactorCode
+    name: str
+    low: SensitivityPoint
+    high: SensitivityPoint
+
+
+class SensitivityStress(SensitivitySummary):
+    code: SensitivityStressCode
+    name: str
+
+
+class SensitivityReport(BaseModel):
+    versions: Versions
+    shift_share: float
+    base: SensitivitySummary
+    factors: list[SensitivityFactor]
+    stresses: list[SensitivityStress]
 
 
 class DemandSummary(BaseModel):
