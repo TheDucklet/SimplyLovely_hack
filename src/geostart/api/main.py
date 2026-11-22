@@ -2,7 +2,7 @@ from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
 
 import psycopg
-from fastapi import APIRouter, FastAPI, HTTPException, Query
+from fastapi import APIRouter, Depends, FastAPI, HTTPException, Query
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
@@ -10,6 +10,12 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from geostart.api import data_backend, mocks, v2
 from geostart.api.validation import http_error_handler, validation_error_handler
+from geostart.auth import routes as auth_routes
+from geostart.auth import stub as idp_stub
+from geostart.auth.access import require
+from geostart.auth.audit import AccessLogMiddleware
+from geostart.auth.roles import Permission
+from geostart.auth.settings import auth_settings
 from geostart.config import (
     CityConfig,
     NicheConfig,
@@ -40,7 +46,8 @@ DATABASE_UNAVAILABLE = (
     "База данных недоступна, проверьте docker compose up -d db и параметры GEOSTART_DB_* в .env"
 )
 
-router = APIRouter(prefix="/api/v1")
+public_router = APIRouter(prefix="/api/v1")
+router = APIRouter(prefix="/api/v1", dependencies=[Depends(require(Permission.VIEW_MAP))])
 
 
 def resolve_city(code: str) -> CityConfig:
@@ -68,7 +75,7 @@ def from_data[ResponseT](load: Callable[[], ResponseT]) -> ResponseT:
         raise HTTPException(status_code=503, detail=DATABASE_UNAVAILABLE) from error
 
 
-@router.get("/health")
+@public_router.get("/health")
 def health() -> HealthResponse:
     if use_mocks():
         return HealthResponse(status="ok", mode="mocks", data_version=mocks.MOCK_DATA_VERSION)
@@ -115,7 +122,7 @@ def search(city: str, q: str = Query(min_length=1)) -> list[AddressMatch]:
     return from_data(lambda: data_backend.data_search(city_code, q))
 
 
-@router.post("/report")
+@router.post("/report", dependencies=[Depends(require(Permission.LOCATION_REPORT))])
 def report(request: ReportRequest) -> LocationReport:
     city_config = resolve_city(request.city)
     resolve_niche(request.niche)
@@ -129,6 +136,7 @@ def report(request: ReportRequest) -> LocationReport:
 
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+    auth_settings()
     if warmup_enabled() and not use_mocks():
         data_backend.warm_model_cache()
     yield
@@ -140,7 +148,12 @@ app.add_middleware(
     CORSMiddleware, allow_origins=cors_origins(), allow_methods=["GET", "POST"], allow_headers=["*"]
 )
 app.add_middleware(GZipMiddleware, minimum_size=GZIP_MINIMUM_BYTES)
+app.add_middleware(AccessLogMiddleware)
 app.add_exception_handler(RequestValidationError, validation_error_handler)
 app.add_exception_handler(StarletteHTTPException, http_error_handler)
+app.include_router(public_router)
 app.include_router(router)
 app.include_router(v2.router)
+app.include_router(auth_routes.router)
+app.include_router(auth_routes.admin_router)
+app.mount("/idp", idp_stub.app)

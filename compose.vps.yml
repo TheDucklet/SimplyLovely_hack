@@ -8,7 +8,7 @@ x-logging: &logging
 
 services:
   api:
-    image: geostart-demo-api
+    image: ${GEOSTART_API_IMAGE:-geostart-demo-api}
     pull_policy: never
     user: "${GEOSTART_UID:-1000}:${GEOSTART_GID:-1000}"
     volumes:
@@ -16,6 +16,16 @@ services:
     environment:
       FORWARDED_ALLOW_IPS: "*"
       GEOSTART_WARMUP_CITIES: ${GEOSTART_WARMUP_CITIES:-moscow,tula}
+      GEOSTART_AUTH_MODE: ${GEOSTART_AUTH_MODE:-oidc}
+      GEOSTART_IDP_STUB: ${GEOSTART_IDP_STUB:-true}
+      GEOSTART_PUBLIC_URL: ${GEOSTART_PUBLIC_URL:-http://fintech.shenti.space}
+      GEOSTART_OIDC_ISSUER: ${GEOSTART_OIDC_ISSUER:-}
+      GEOSTART_OIDC_INTERNAL_URL: ${GEOSTART_OIDC_INTERNAL_URL:-}
+      GEOSTART_OIDC_CLIENT_ID: ${GEOSTART_OIDC_CLIENT_ID:-geostart}
+      GEOSTART_OIDC_CLIENT_SECRET: ${GEOSTART_OIDC_CLIENT_SECRET:-}
+      GEOSTART_OIDC_ROLES_CLAIM: ${GEOSTART_OIDC_ROLES_CLAIM:-roles}
+      GEOSTART_OIDC_ROLE_MAP: ${GEOSTART_OIDC_ROLE_MAP:-}
+      GEOSTART_SESSION_SECRET: ${GEOSTART_SESSION_SECRET:-}
     deploy:
       resources:
         limits:
@@ -27,12 +37,31 @@ services:
     logging: *logging
     restart: unless-stopped
 
+  tiles:
+    image: protomaps/go-pmtiles:v1.31.2
+    pull_policy: never
+    command: ["serve", "/data", "--port=8080", "--cache-size=8"]
+    volumes:
+      - ./data/basemap:/data:ro
+    deploy:
+      resources:
+        limits:
+          cpus: "0.2"
+          memory: 32M
+        reservations:
+          memory: 8M
+    memswap_limit: 32M
+    logging: *logging
+    restart: unless-stopped
+
   web:
-    image: geostart-demo-web
+    image: ${GEOSTART_WEB_IMAGE:-geostart-demo-web}
     pull_policy: never
     depends_on:
       api:
         condition: service_healthy
+      tiles:
+        condition: service_started
     volumes:
       - ./docker/web/nginx.vps.conf:/etc/nginx/conf.d/default.conf:ro
     ports:

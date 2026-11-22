@@ -1,0 +1,131 @@
+{
+  "versions": {
+    "model": "демонстрация",
+    "norms": "демонстрация",
+    "data": "демонстрация",
+    "taxes": "демонстрация"
+  },
+  "shift_share": 0.2,
+  "base": {
+    "profit_steady_month_p50": 180673,
+    "npv_p50": 3155252,
+    "payback_months_p50": 14.5,
+    "probability_no_payback_24": 0.31
+  },
+  "factors": [
+    {
+      "code": "revenue",
+      "name": "Выручка",
+      "low": {
+        "change": -0.2,
+        "profit_steady_month_p50": 41000,
+        "npv_p50": -310000,
+        "payback_months_p50": 29.8
+      },
+      "high": {
+        "change": 0.2,
+        "profit_steady_month_p50": 320000,
+        "npv_p50": 6620000,
+        "payback_months_p50": 9.4
+      }
+    },
+    {
+      "code": "cogs_share",
+      "name": "Доля себестоимости",
+      "low": {
+        "change": -0.2,
+        "profit_steady_month_p50": 245000,
+        "npv_p50": 4800000,
+        "payback_months_p50": 11
+      },
+      "high": {
+        "change": 0.2,
+        "profit_steady_month_p50": 116000,
+        "npv_p50": 1480000,
+        "payback_months_p50": 21
+      }
+    },
+    {
+      "code": "wages",
+      "name": "Зарплаты",
+      "low": {
+        "change": -0.2,
+        "profit_steady_month_p50": 218000,
+        "npv_p50": 4010000,
+        "payback_months_p50": 12
+      },
+      "high": {
+        "change": 0.2,
+        "profit_steady_month_p50": 143000,
+        "npv_p50": 2280000,
+        "payback_months_p50": 18
+      }
+    },
+    {
+      "code": "rent",
+      "name": "Аренда",
+      "low": {
+        "change": -0.2,
+        "profit_steady_month_p50": 204000,
+        "npv_p50": 3650000,
+        "payback_months_p50": 13
+      },
+      "high": {
+        "change": 0.2,
+        "profit_steady_month_p50": 157000,
+        "npv_p50": 2650000,
+        "payback_months_p50": 17
+      }
+    },
+    {
+      "code": "capex",
+      "name": "Вложения",
+      "low": {
+        "change": -0.2,
+        "profit_steady_month_p50": 180673,
+        "npv_p50": 3900000,
+        "payback_months_p50": 12
+      },
+      "high": {
+        "change": 0.2,
+        "profit_steady_month_p50": 180673,
+        "npv_p50": 2400000,
+        "payback_months_p50": 18
+      }
+    }
+  ],
+  "stresses": [
+    {
+      "code": "revenue_minus_20",
+      "name": "Выручка ниже на 20%",
+      "profit_steady_month_p50": 41000,
+      "npv_p50": -310000,
+      "payback_months_p50": 29.8,
+      "probability_no_payback_24": 0.58
+    },
+    {
+      "code": "rent_plus_15",
+      "name": "Аренда выше на 15%",
+      "profit_steady_month_p50": 163000,
+      "npv_p50": 2780000,
+      "payback_months_p50": 16,
+      "probability_no_payback_24": 0.34
+    },
+    {
+      "code": "rate_plus_3",
+      "name": "Ставка кредита выше на 3 п. п.",
+      "profit_steady_month_p50": 178000,
+      "npv_p50": 3090000,
+      "payback_months_p50": 15,
+      "probability_no_payback_24": 0.32
+    },
+    {
+      "code": "combined",
+      "name": "Совместный стресс",
+      "profit_steady_month_p50": 21000,
+      "npv_p50": -800000,
+      "payback_months_p50": null,
+      "probability_no_payback_24": 0.71
+    }
+  ]
+}

@@ -1,9 +1,11 @@
 from collections.abc import Callable
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 
 from geostart.api import mocks
 from geostart.api.data_backend import DataNotReadyError
+from geostart.auth.access import require
+from geostart.auth.roles import Permission
 from geostart.config import UnknownCityError, UnknownNicheError, get_city
 from geostart.economics.sensitivity import evaluate_sensitivity
 from geostart.economics.service import check_plan, credit_products, evaluate_economics, norms_response
@@ -25,11 +27,18 @@ from geostart.settings import use_mocks
 
 MOCK_PROVIDER = "демо-режим без данных города"
 PROBLEM_RESPONSES = {
+    401: {"description": "Требуется вход", "content": {"application/problem+json": {}}},
+    403: {"description": "Недостаточно прав", "content": {"application/problem+json": {}}},
     404: {"description": "Город, ниша или данные не найдены", "content": {"application/problem+json": {}}},
     422: {"description": "Параметры расчёта некорректны", "content": {"application/problem+json": {}}},
 }
 
-router = APIRouter(prefix="/api/v2", tags=["v2"], responses=PROBLEM_RESPONSES)
+router = APIRouter(
+    prefix="/api/v2",
+    tags=["v2"],
+    responses=PROBLEM_RESPONSES,
+    dependencies=[Depends(require(Permission.LOCATION_REPORT))],
+)
 
 
 def guarded[ResultT](load: Callable[[], ResultT]) -> ResultT:
@@ -75,7 +84,11 @@ def sensitivity(request: SensitivityRequest) -> SensitivityReport:
     return guarded(lambda: evaluate_sensitivity(with_mock_demand(request)))
 
 
-@router.post("/credit-check", summary="Проверка бизнес-плана заявки на кредит")
+@router.post(
+    "/credit-check",
+    summary="Проверка бизнес-плана заявки на кредит",
+    dependencies=[Depends(require(Permission.CREDIT_CHECK))],
+)
 def credit_check(request: CreditCheckRequest) -> CreditCheckReport:
     return guarded(
         lambda: check_plan(request.model_copy(update={"economics": with_mock_demand(request.economics)}))

@@ -1,9 +1,12 @@
 import { useRef, useEffect } from 'react';
-import type { Assumption, MonthlyCosts, RiskLevel } from '../api/types';
+import type { MonthlyCosts, RiskLevel } from '../api/types';
 import type { useLocationReport } from '../hooks/useLocationReport';
 import { decimal, months, number, rubles } from '../format';
 import { useMocks } from '../api/client';
 import { BusinessPlanButton } from './BusinessPlanButton';
+import { FinancePanel } from './FinancePanel';
+import { AssumptionSource } from './AssumptionSource';
+import { BorrowerReview } from './BorrowerReview';
 import { CreditAssessment } from './CreditAssessment';
 
 const RISK_LABELS: Record<RiskLevel, string> = {
@@ -19,21 +22,7 @@ const COST_LABELS: [keyof MonthlyCosts, string][] = [
   ['other', 'Прочие'],
 ];
 const BANK_ACTIONS = ['Открыть счёт', 'Подключить эквайринг', 'Кредит на открытие'];
-function Source({ assumption }: { assumption: Assumption }) {
-  if (!assumption.source) return <span className="unverified">без подтверждённого источника</span>;
-  try {
-    const url = new URL(assumption.source);
-    if (['https:', 'http:'].includes(url.protocol))
-      return (
-        <a href={url.href} target="_blank" rel="noreferrer">
-          {url.hostname}
-        </a>
-      );
-  } catch {
-    return <span>{assumption.source}</span>;
-  }
-  return <span>{assumption.source}</span>;
-}
+
 export function ReportPanel({
   state,
   onBankAction,
@@ -68,13 +57,21 @@ export function ReportPanel({
     report?.location.address ||
     location.address ||
     `${location.lat.toFixed(5)}, ${location.lon.toFixed(5)}`;
+  const officer = creditMode && !useMocks;
+  const body = state.finance.body;
+  const ready =
+    body?.demand.source === 'geostart' &&
+    body.demand.lat === location.lat &&
+    body.demand.lon === location.lon &&
+    (body.premises?.area_m2 ?? null) === (area === '' ? null : Number(area)) &&
+    (body.premises?.rent_rub_m2_month ?? null) === (rent === '' ? null : Number(rent));
   return (
     <aside className="report-panel" aria-labelledby={titleId}>
       <header className="report-heading">
         <div>
           <span className="eyebrow">ОЦЕНКА МЕСТА</span>
           <h2 id={titleId} ref={title} tabIndex={-1}>
-            {heading}
+            {officer ? 'Проверка бизнес-плана' : heading}
           </h2>
         </div>
         <button
@@ -91,7 +88,7 @@ export function ReportPanel({
       </header>
       <div className="report-content">
         <p className="report-address">{address}</p>
-        {onCompare && report && (
+        {!officer && onCompare && report && (
           <button
             className="start-comparison"
             onClick={onCompare}
@@ -109,10 +106,13 @@ export function ReportPanel({
               step="any"
               placeholder="По модели"
               value={area}
-              aria-invalid={area !== '' && Number(area) <= 0}
+              aria-invalid={
+                (area !== '' && Number(area) <= 0) || !!state.finance.fieldError('premises.area_m2')
+              }
               onChange={(event) => setArea(event.target.value)}
               disabled={useMocks}
             />
+            <small>{state.finance.fieldError('premises.area_m2')}</small>
           </label>
           <label>
             Аренда, ₽/м² в месяц
@@ -122,10 +122,14 @@ export function ReportPanel({
               step="any"
               placeholder="По модели"
               value={rent}
-              aria-invalid={rent !== '' && Number(rent) <= 0}
+              aria-invalid={
+                (rent !== '' && Number(rent) <= 0) ||
+                !!state.finance.fieldError('premises.rent_rub_m2_month')
+              }
               onChange={(event) => setRent(event.target.value)}
               disabled={useMocks}
             />
+            <small>{state.finance.fieldError('premises.rent_rub_m2_month')}</small>
           </label>
         </div>
         {invalid && (
@@ -133,16 +137,24 @@ export function ReportPanel({
             Площадь и ставка аренды должны быть больше нуля
           </p>
         )}
+        {officer && (
+          <BorrowerReview
+            key={location.lat + ',' + location.lon}
+            economics={ready && !invalid ? body : null}
+            products={state.finance.products}
+            place={[cityName, nicheName, address].join(' · ')}
+          />
+        )}
         {useMocks && (
           <p className="footnote">В демонстрации показан фиксированный отчёт без пересчёта.</p>
         )}
-        {pending && (
+        {!officer && pending && (
           <div className="report-loading" role="status">
             <span className="spinner" />
             {report ? 'Пересчитываем оценку' : 'Считаем выручку и расходы'}
           </div>
         )}
-        {error && (
+        {!officer && error && (
           <div className="report-error" role="alert">
             <p>{error}</p>
             <button onClick={retry} disabled={pending || invalid}>
@@ -150,7 +162,7 @@ export function ReportPanel({
             </button>
           </div>
         )}
-        {report && (
+        {!officer && report && (
           <div
             aria-busy={pending}
             className={pending ? 'report-results updating' : 'report-results'}
@@ -274,7 +286,7 @@ export function ReportPanel({
                       {({ share: 'доля', rub: '₽' } as Record<string, string>)[assumption.unit] ||
                         assumption.unit}
                     </span>
-                    <Source assumption={assumption} />
+                    <AssumptionSource assumption={assumption} />
                   </li>
                 ))}
               </ul>
@@ -315,8 +327,15 @@ export function ReportPanel({
                   cityName,
                   nicheName,
                   isDemo: useMocks,
+                  economics: state.finance.economics.value,
                 }}
-                disabled={pending || invalid || !!error || !state.reportIsCurrent}
+                disabled={
+                  pending ||
+                  invalid ||
+                  !!error ||
+                  !state.reportIsCurrent ||
+                  (!useMocks && !state.finance.economics.value)
+                }
               />
             )}
             <p className="report-disclaimer">
@@ -329,6 +348,15 @@ export function ReportPanel({
               </button>
             )}
           </div>
+        )}
+        {!officer && (
+          <FinancePanel
+            key={location.lat + ',' + location.lon}
+            state={state.finance}
+            cityName={cityName}
+            nicheName={nicheName}
+            invalid={invalid}
+          />
         )}
       </div>
     </aside>

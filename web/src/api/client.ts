@@ -1,6 +1,7 @@
 import type {
   AddressMatch,
   CityInfo,
+  CurrentUser,
   Competitor,
   HealthResponse,
   HexesResponse,
@@ -19,6 +20,7 @@ export class ApiError extends Error {
   constructor(
     message: string,
     public readonly status: number,
+    public readonly errors: ReadonlyArray<{ field: string; message: string }> = [],
   ) {
     super(message);
     this.name = 'ApiError';
@@ -41,13 +43,26 @@ function errorDetail(value: unknown): string {
   return 'Не удалось выполнить запрос. Повторите попытку';
 }
 
-async function request<T>(path: string, options?: RequestInit): Promise<T> {
+export function loginUrl(): string {
+  const next = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+  return `${apiUrl}/api/auth/login?${new URLSearchParams({ next })}`;
+}
+
+export async function request<T>(
+  path: string,
+  options?: RequestInit,
+  prefix = '/api/v1',
+): Promise<T> {
   let response: Response;
   try {
-    response = await fetch(`${apiUrl}/api/v1${path}`, options);
+    response = await fetch(`${apiUrl}${prefix}${path}`, options);
   } catch (error) {
     if (error instanceof DOMException && error.name === 'AbortError') throw error;
     throw new ApiError('Нет связи с сервером. Проверьте подключение и запуск API', 0);
+  }
+  if (response.status === 401) {
+    window.location.assign(loginUrl());
+    throw new ApiError('Требуется вход, открываем страницу входа банка', 401);
   }
   if (!response.ok) {
     const body: unknown = await response.json().catch(() => null);
@@ -56,6 +71,12 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
         typeof body === 'object' && body !== null && 'detail' in body ? body.detail : null,
       ),
       response.status,
+      body && typeof body === 'object' && 'errors' in body && Array.isArray(body.errors)
+        ? body.errors.filter(
+            (issue): issue is { field: string; message: string } =>
+              issue && typeof issue.field === 'string' && typeof issue.message === 'string',
+          )
+        : [],
     );
   }
   return response.json() as Promise<T>;
@@ -67,7 +88,17 @@ async function fixture<T>(name: string): Promise<T> {
   return (await load()) as T;
 }
 
+const offlineUser: CurrentUser = {
+  mode: 'off',
+  name: '',
+  roles: [],
+  permissions: ['view_map', 'location_report', 'credit_check'],
+  logout_url: null,
+};
+
 export const api = {
+  me: (): Promise<CurrentUser> =>
+    useMocks ? Promise.resolve(offlineUser) : request('/me', undefined, '/api/auth'),
   health: (): Promise<HealthResponse> => (useMocks ? fixture('health') : request('/health')),
   cities: (): Promise<CityInfo[]> => (useMocks ? fixture('cities') : request('/cities')),
   niches: (): Promise<NicheInfo[]> => (useMocks ? fixture('niches') : request('/niches')),

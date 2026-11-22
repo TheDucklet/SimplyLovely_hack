@@ -1,0 +1,90 @@
+.credit-screen {
+  border-top: none;
+  padding: 0;
+  margin: 12px 0 24px;
+}
+.credit-screen fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+.credit-screen legend {
+  font-weight: 700;
+  font-size: 18px;
+}
+.plan-inputs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 14px;
+  margin: 12px 0;
+}
+.plan-inputs label {
+  display: grid;
+  align-content: end;
+  gap: 4px;
+  font-size: 13px;
+}
+.plan-inputs input,
+.plan-inputs select {
+  min-width: 0;
+  width: 100%;
+  min-height: 36px;
+  border: 1px solid #687c91;
+  color: #203147;
+  border-radius: 5px;
+  background: white;
+  padding: 6px;
+}
+.credit-screen .review-submit {
+  background: #134782;
+  color: white;
+  padding: 9px 15px;
+}
+.credit-conclusion {
+  margin-top: 18px;
+  border-top: 1px solid #bccbd9;
+  padding-top: 12px;
+}
+.credit-conclusion header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.credit-conclusion h3.verdict {
+  padding: 5px 10px;
+  border-radius: 6px;
+  font-size: 18px;
+  scroll-margin-top: 12px;
+}
+.verdict.confirmed {
+  background: #e1f1e9;
+  color: #205338;
+}
+.verdict.needs_review {
+  background: #fff0ce;
+  color: #714410;
+}
+.verdict.not_confirmed {
+  background: #fae4df;
+  color: #842c27;
+}
+.credit-conclusion ul {
+  padding-left: 18px;
+}
+.credit-conclusion th,
+.credit-conclusion td {
+  white-space: normal;
+  min-width: 52px;
+}
+.credit-conclusion a {
+  color: #124d81;
+  text-decoration: underline;
+}
+@media (min-width: 901px) {
+  .workspace:not(.is-comparing) .report-panel:has(.credit-screen) {
+    width: min(620px, 54vw);
+  }
+}

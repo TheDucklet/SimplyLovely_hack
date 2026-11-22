@@ -24,15 +24,16 @@
 | адрес клиента | nginx стенда берёт его из `CF-Connecting-IP`, при отсутствии заголовка из адреса соединения, и передаёт в `X-Forwarded-For` и `X-Real-IP`, uvicorn доверяет заголовкам через `FORWARDED_ALLOW_IPS` |
 | частота запросов | с одного адреса не больше 2 отчётов в секунду с запасом 20 и 10 остальных запросов API в секунду с запасом 60, сверх нормы ответ 429 |
 | CORS | интерфейс и API отдаются с одного адреса, настройка CORS не нужна |
-| авторизация | нет, сервис не хранит данных пользователей и не ставит куки |
+| вход | заглушка единого входа `/idp` с четырьмя демонстрационными ролями, сессия в куке HttpOnly, журнал обращений в `data/audit/`, устройство в [auth.md](auth.md) |
 
 ## Подготовка образов (Фёдор)
 
-На итоговом `main` в корне клона:
+После слияния в `main` образы собирает CI и публикует в `ghcr.io/theducklet/geostart-api` и `geostart-web`, порядок описан в [release.md](release.md). Архив образов нужен, если сервер не видит реестр. Его собирают на итоговом `main` в корне клона:
 
 ```
 docker compose -f compose.demo.yml build
-docker save geostart-demo-api geostart-demo-web | gzip > geostart_images_<ГГГГ-ММ-ДД>.tar.gz
+docker pull protomaps/go-pmtiles:v1.31.2
+docker save geostart-demo-api geostart-demo-web protomaps/go-pmtiles:v1.31.2 | gzip > geostart_images_<ГГГГ-ММ-ДД>.tar.gz
 ```
 
 Архив весит около 420 МБ. Вместе с ним Никита получает архив данных `geostart_data_2026-10-16_v2.zip` (3,7 МБ).
@@ -75,8 +76,9 @@ docker compose -f compose.vps.yml up -d --wait
 | Команда | Ожидаемый результат |
 | --- | --- |
 | `curl -s http://127.0.0.1:8081/api/v1/health` | `{"status":"ok","mode":"data","data_version":"2026-10-16"}` |
-| `docker compose -f compose.vps.yml ps` | оба контейнера в состоянии `healthy` |
-| `docker stats --no-stream` | `api` до 640 МБ, `web` до 48 МБ |
+| `docker compose -f compose.vps.yml ps` | `api` и `web` в состоянии `healthy`, `tiles` в состоянии `running` |
+| `curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8081/basemap/tiles/geostart/10/618/320.mvt` | `200` |
+| `docker stats --no-stream` | `api` до 640 МБ, `web` до 48 МБ, `tiles` до 32 МБ |
 | `ss -ltn \| grep 8081` | слушает только `127.0.0.1:8081` |
 | открыть `http://fintech.shenti.space` | карта Москвы с ячейками, внизу версия данных 2026-10-16 |
 
@@ -84,7 +86,13 @@ docker compose -f compose.vps.yml up -d --wait
 
 ## Обновление и остановка
 
-Новую версию кода Фёдор присылает новым архивом образов. Никита выполняет `git pull`, загружает образы командой из шага 3 и повторяет `docker compose -f compose.vps.yml up -d --wait`. Новый архив данных распаковывается поверх `data/`, после чего достаточно `docker compose -f compose.vps.yml restart api`.
+Обновление выполняется одной командой в каталоге клона после `git pull`:
+
+```
+scripts/deploy_stand.sh --tag main --data ~/geostart_data_<версия>.zip
+```
+
+Скрипт загружает образы из реестра, сверяет и распаковывает архив данных, перезапускает стенд, проверяет страницу, API, подложку и вход и при ошибке возвращает прежнюю версию. Параметр `--data` нужен только при новом архиве данных, вместо реестра можно передать архив образов параметром `--images`. Для реестра на сервере один раз выполняется `docker login ghcr.io` с токеном GitHub с правом `read:packages`, подробности в [release.md](release.md).
 
 Остановка стенда:
 
