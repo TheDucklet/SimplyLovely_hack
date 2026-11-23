@@ -13,6 +13,7 @@ import { MapboxOverlay } from '@deck.gl/mapbox';
 import { H3HexagonLayer } from '@deck.gl/geo-layers';
 import { ScatterplotLayer } from '@deck.gl/layers';
 import type { PickingInfo } from '@deck.gl/core';
+import { useMocks } from '../api/client';
 import { cellToLatLng } from 'h3-js';
 import type { CityInfo, Competitor, HexScore } from '../api/types';
 import type { SelectedLocation } from '../hooks/useLocationReport';
@@ -107,7 +108,8 @@ export function MapView({
         'NavigationControl.ZoomOut': 'Отдалить карту',
       },
     });
-    instance.setStyle(MAP_STYLE_URL, { transformStyle: (_, next) => withoutLabels(next) });
+    if (!useMocks)
+      instance.setStyle(MAP_STYLE_URL, { transformStyle: (_, next) => withoutLabels(next) });
     const labels = new Map({
       container: labelsContainer.current,
       style: EMPTY_STYLE,
@@ -116,7 +118,8 @@ export function MapView({
       interactive: false,
       attributionControl: false,
     });
-    labels.setStyle(MAP_STYLE_URL, { transformStyle: (_, next) => onlyLabels(next) });
+    if (!useMocks)
+      labels.setStyle(MAP_STYLE_URL, { transformStyle: (_, next) => onlyLabels(next) });
     instance.on('move', () =>
       labels.jumpTo({
         center: instance.getCenter(),

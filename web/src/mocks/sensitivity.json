@@ -1,131 +1,141 @@
 {
   "versions": {
-    "model": "демонстрация",
-    "norms": "демонстрация",
-    "data": "демонстрация",
-    "taxes": "демонстрация"
+    "model": "economics-0.3.0",
+    "norms": "2026-11-20",
+    "data": "2026-11-20",
+    "taxes": "2026-10-18"
   },
   "shift_share": 0.2,
   "base": {
-    "profit_steady_month_p50": 180673,
-    "npv_p50": 3155252,
-    "payback_months_p50": 14.5,
-    "probability_no_payback_24": 0.31
+    "profit_steady_month_p50": -13296.206674349029,
+    "npv_p50": -5481906.248478931,
+    "payback_months_p50": null,
+    "probability_no_payback_24": 0.845,
+    "dscr_min_p50": null,
+    "probability_dscr_below_threshold": null
   },
   "factors": [
     {
       "code": "revenue",
       "name": "Выручка",
       "low": {
-        "change": -0.2,
-        "profit_steady_month_p50": 41000,
-        "npv_p50": -310000,
-        "payback_months_p50": 29.8
+        "profit_steady_month_p50": -116313.3383948959,
+        "npv_p50": -8779624.943922572,
+        "payback_months_p50": null,
+        "change": -0.2
       },
       "high": {
-        "change": 0.2,
-        "profit_steady_month_p50": 320000,
-        "npv_p50": 6620000,
-        "payback_months_p50": 9.4
-      }
-    },
-    {
-      "code": "cogs_share",
-      "name": "Доля себестоимости",
-      "low": {
-        "change": -0.2,
-        "profit_steady_month_p50": 245000,
-        "npv_p50": 4800000,
-        "payback_months_p50": 11
-      },
-      "high": {
-        "change": 0.2,
-        "profit_steady_month_p50": 116000,
-        "npv_p50": 1480000,
-        "payback_months_p50": 21
+        "profit_steady_month_p50": 106910.65311103122,
+        "npv_p50": -2482243.3839717433,
+        "payback_months_p50": null,
+        "change": 0.2
       }
     },
     {
       "code": "wages",
       "name": "Зарплаты",
       "low": {
-        "change": -0.2,
-        "profit_steady_month_p50": 218000,
-        "npv_p50": 4010000,
-        "payback_months_p50": 12
+        "profit_steady_month_p50": 56408.63526705725,
+        "npv_p50": -3335542.7297316967,
+        "payback_months_p50": null,
+        "change": -0.2
       },
       "high": {
-        "change": 0.2,
-        "profit_steady_month_p50": 143000,
-        "npv_p50": 2280000,
-        "payback_months_p50": 18
+        "profit_steady_month_p50": -68698.7417134115,
+        "npv_p50": -7611407.13715609,
+        "payback_months_p50": null,
+        "change": 0.2
+      }
+    },
+    {
+      "code": "cogs_share",
+      "name": "Себестоимость",
+      "low": {
+        "profit_steady_month_p50": 45186.74107229167,
+        "npv_p50": -4097540.213665843,
+        "payback_months_p50": null,
+        "change": -0.2
+      },
+      "high": {
+        "profit_steady_month_p50": -65311.38659208339,
+        "npv_p50": -6850130.290469214,
+        "payback_months_p50": null,
+        "change": 0.2
       }
     },
     {
       "code": "rent",
       "name": "Аренда",
       "low": {
-        "change": -0.2,
-        "profit_steady_month_p50": 204000,
-        "npv_p50": 3650000,
-        "payback_months_p50": 13
+        "profit_steady_month_p50": 25928.798838151,
+        "npv_p50": -4622747.565864294,
+        "payback_months_p50": null,
+        "change": -0.2
       },
       "high": {
-        "change": 0.2,
-        "profit_steady_month_p50": 157000,
-        "npv_p50": 2650000,
-        "payback_months_p50": 17
+        "profit_steady_month_p50": -48709.79426848963,
+        "npv_p50": -6227741.825947229,
+        "payback_months_p50": null,
+        "change": 0.2
       }
     },
     {
       "code": "capex",
       "name": "Вложения",
       "low": {
-        "change": -0.2,
-        "profit_steady_month_p50": 180673,
-        "npv_p50": 3900000,
-        "payback_months_p50": 12
+        "profit_steady_month_p50": -13296.206674349029,
+        "npv_p50": -4808609.564304069,
+        "payback_months_p50": null,
+        "change": -0.2
       },
       "high": {
-        "change": 0.2,
-        "profit_steady_month_p50": 180673,
-        "npv_p50": 2400000,
-        "payback_months_p50": 18
+        "profit_steady_month_p50": -13296.206674349029,
+        "npv_p50": -6062495.137924972,
+        "payback_months_p50": null,
+        "change": 0.2
       }
     }
   ],
   "stresses": [
     {
-      "code": "revenue_minus_20",
-      "name": "Выручка ниже на 20%",
-      "profit_steady_month_p50": 41000,
-      "npv_p50": -310000,
-      "payback_months_p50": 29.8,
-      "probability_no_payback_24": 0.58
-    },
-    {
-      "code": "rent_plus_15",
-      "name": "Аренда выше на 15%",
-      "profit_steady_month_p50": 163000,
-      "npv_p50": 2780000,
-      "payback_months_p50": 16,
-      "probability_no_payback_24": 0.34
-    },
-    {
-      "code": "rate_plus_3",
-      "name": "Ставка кредита выше на 3 п. п.",
-      "profit_steady_month_p50": 178000,
-      "npv_p50": 3090000,
-      "payback_months_p50": 15,
-      "probability_no_payback_24": 0.32
-    },
-    {
-      "code": "combined",
-      "name": "Совместный стресс",
-      "profit_steady_month_p50": 21000,
-      "npv_p50": -800000,
+      "profit_steady_month_p50": -116313.3383948959,
+      "npv_p50": -8779624.943922572,
       "payback_months_p50": null,
-      "probability_no_payback_24": 0.71
+      "probability_no_payback_24": 0.945,
+      "dscr_min_p50": null,
+      "probability_dscr_below_threshold": null,
+      "code": "revenue_minus_20",
+      "name": "Выручка ниже на 20%"
+    },
+    {
+      "profit_steady_month_p50": -40429.423955989645,
+      "npv_p50": -6003573.1794996895,
+      "payback_months_p50": null,
+      "probability_no_payback_24": 0.865,
+      "dscr_min_p50": null,
+      "probability_dscr_below_threshold": null,
+      "code": "rent_plus_15",
+      "name": "Аренда выше на 15%"
+    },
+    {
+      "profit_steady_month_p50": -13296.206674349029,
+      "npv_p50": -5481906.248478931,
+      "payback_months_p50": null,
+      "probability_no_payback_24": 0.845,
+      "dscr_min_p50": null,
+      "probability_dscr_below_threshold": null,
+      "code": "rate_plus_3",
+      "name": "Ставка кредита выше на 3 пункта"
+    },
+    {
+      "profit_steady_month_p50": -148115.55089583335,
+      "npv_p50": -9426583.051268548,
+      "payback_months_p50": null,
+      "probability_no_payback_24": 0.95,
+      "dscr_min_p50": null,
+      "probability_dscr_below_threshold": null,
+      "code": "combined",
+      "name": "Все три сразу"
     }
   ]
 }

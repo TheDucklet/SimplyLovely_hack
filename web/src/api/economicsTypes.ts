@@ -382,6 +382,8 @@ export interface SensitivityOutcome {
   payback_months_p50: number | null;
 }
 export interface SensitivityCase extends SensitivityOutcome {
+  dscr_min_p50: number | null;
+  probability_dscr_below_threshold: number | null;
   probability_no_payback_24: number;
 }
 export interface SensitivityFactor {

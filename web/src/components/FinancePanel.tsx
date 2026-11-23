@@ -120,8 +120,8 @@ export function FinancePanel({
           {cityName} · {nicheName}
         </p>
       </header>
-      {useMocks ? (
-        <p>В автономном примере доступен отчёт по месту. Для финансового расчёта запустите API.</p>
+      {useMocks && !state.body ? (
+        <p>Для автономной финансовой модели выберите адрес «Тестовая улица, 315».</p>
       ) : (
         <>
           <CreditForm state={state} />
