@@ -1,3 +1,11 @@
+import type { RiskLevel } from './api/types';
+
+export const riskLabels: Record<RiskLevel, string> = {
+  low: 'Низкий риск',
+  medium: 'Средний риск',
+  high: 'Высокий риск',
+};
+
 const numberFormatter = new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 0 });
 const decimalFormatter = new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 3 });
 

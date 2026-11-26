@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import type { EconomicsReport, MonthRow, YearRow } from '../api/economicsTypes';
-import { decimal, months, rubles } from '../format';
+import { decimal, months, rubles, riskLabels } from '../format';
 import { CashFlow } from './FinanceCharts';
 import { AssumptionSource } from './AssumptionSource';
 
@@ -91,9 +91,6 @@ const monthly: [keyof MonthRow, string][] = [
 
 export function FinanceReport({ report }: { report: EconomicsReport }) {
   const { metrics, credit, tax, investment } = report;
-  const risk = { low: 'Низкий риск', medium: 'Средний риск', high: 'Высокий риск' }[
-    metrics.risk_level
-  ];
   return (
     <>
       <p>
@@ -102,7 +99,9 @@ export function FinanceReport({ report }: { report: EconomicsReport }) {
       </p>
       <CashFlow band={report.cash_band} payback={metrics.payback_months.p50} />
       <h4>Показатели проекта</h4>
-      <span className={'risk-badge risk-' + metrics.risk_level}>{risk}</span>
+      <span className={'risk-badge risk-' + metrics.risk_level}>
+        {riskLabels[metrics.risk_level]}
+      </span>
       <Values
         items={[
           ['Чистая приведённая стоимость (NPV)', rubles(metrics.npv.p50)],

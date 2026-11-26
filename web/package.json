@@ -12,6 +12,7 @@
   "scripts": {
     "dev": "vite --host 127.0.0.1",
     "build": "tsc -b && vite build",
+    "build:widget": "tsc -b && vite build --config widget/vite.config.ts",
     "lint": "eslint . && prettier --check . && npm test",
     "test": "node --test",
     "format": "prettier --write .",

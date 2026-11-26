@@ -8,6 +8,7 @@ export default ts.config(
   {
     ignores: [
       'dist',
+      'widget/dist',
       'node_modules',
       'src/mocks/*.json',
       '*.tsbuildinfo',
