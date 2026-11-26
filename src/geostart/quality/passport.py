@@ -31,7 +31,9 @@ def coverage(pipeline: dict, names: dict[str, str]) -> dict[str, str]:
     cities = pipeline["cities"]
     all_cities = ", ".join(names[code] for code in cities)
     with_mos_ru = ", ".join(names[code] for code, city in cities.items() if "mos_ru_catering" in city)
-    rent = sorted(path.stem for path in (REPOSITORY_ROOT / "research" / "rent").glob("*.csv"))
+    rent = sorted(
+        path.stem for path in (REPOSITORY_ROOT / "research" / "rent").glob("*.csv") if path.stem in names
+    )
     return {
         "osm": all_cities,
         "mos_ru_catering": with_mos_ru,
