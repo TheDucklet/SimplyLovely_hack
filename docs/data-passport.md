@@ -89,7 +89,7 @@
 | Где взять | каталог research/ репозитория |
 | Лицензия и условия | собственные материалы команды, у каждого числа указан открытый источник |
 | Что берём | параметры ниш, ставки аренды по выборкам объявлений Циан, налоги 2026 года, кредитные продукты, нормативы финансовой модели |
-| Файлы | `research/niche_params/*.yaml`, `research/rent/*.csv`, `research/taxes/2026.yaml`, `research/credit/products.yaml`, `research/economics/norms.yaml` |
+| Файлы | `research/niche_params/*.yaml`, `research/rent/*.csv`, `research/coffee/*.csv`, `research/taxes/2026.yaml`, `research/credit/products.yaml`, `research/economics/norms.yaml` |
 | Покрытие | параметры ниш по всем городам, ставки аренды по городам Москва, Новосибирск, Санкт-Петербург, Тула, Ярославль, Екатеринбург |
 | Версия | дата в поле date или source каждой записи, история в git |
 | Как обновить | правка файла в research/, затем `python -m geostart.release rebuild --city all --skip-pipeline` |

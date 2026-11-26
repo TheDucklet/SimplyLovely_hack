@@ -109,6 +109,8 @@ docker compose -f compose.demo.yml up -d --build --wait
 | [docs/data-sources.md](docs/data-sources.md) | источники данных и способы оценки признаков |
 | [docs/decisions.md](docs/decisions.md) | журнал решений |
 | [docs/security.md](docs/security.md) | защита данных и развёртывание в контуре банка |
+| [docs/compliance.md](docs/compliance.md) | правовой черновик по 152-ФЗ, 115-ФЗ и модели угроз |
+| [docs/nikita-completion.md](docs/nikita-completion.md) | состав и ограничения перенесённых материалов Никиты |
 | [docs/auth.md](docs/auth.md) | вход через OIDC, роли, заглушка единого входа и журнал обращений |
 | [docs/product/](docs/product/README.md) | проблема, рынок, конкуренты, метрики, доказательства по гипотезам, опрос и план пилота (материалы Никиты) |
 | [docs/demo.md](docs/demo.md) | демо-стенд в Docker, запуск и работа без интернета |
