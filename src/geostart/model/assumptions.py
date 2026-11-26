@@ -29,7 +29,7 @@ PARAMETER_NAMES = {
     "transit_visits_per_stop_month": "Покупки прохожих на остановку в месяц",
     "max_pickup_distance_m": "Расширенный радиус получения заказа",
     "max_cups_per_day": "Пропускная способность кофейни, чашек в день",
-    "max_orders_per_day": "Пропускная способность пункта выдачи, заказов в день",
+    "max_orders_per_day": "Предел выдач пункта выдачи, заказов в день",
 }
 PROFESSION_NAMES = {
     "barista": "бариста",

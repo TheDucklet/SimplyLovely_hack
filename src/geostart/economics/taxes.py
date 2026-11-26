@@ -9,7 +9,14 @@ from geostart.economics.norms import MONTHS_PER_YEAR
 
 PATENT_RATE = 0.06
 MOSCOW = "moscow"
-TULA = "tula"
+CITY_NAMES = {
+    "moscow": "Москве",
+    "saint_petersburg": "Санкт-Петербурге",
+    "tula": "Туле",
+    "yaroslavl": "Ярославле",
+    "novosibirsk": "Новосибирске",
+    "yekaterinburg": "Екатеринбурге",
+}
 
 
 class Regime(StrEnum):
@@ -167,6 +174,7 @@ def patent_cost(
     if not rules or niche not in rules["max_annual_revenue_limit"]["applies_to"]:
         return None
     with_hall = hall_share > 0
+    city_ru = CITY_NAMES.get(city, city)
     if city == MOSCOW:
         kind = "with_hall" if with_hall else "no_hall"
         bound = "min" if central is False else "max"
@@ -177,14 +185,24 @@ def patent_cost(
         return PatentCost(
             np.full(len(area_m2), float(item["value"])), f"Патент в Москве {place}", item.get("source")
         )
-    if city == TULA:
-        if with_hall:
-            item = rules[f"tula_{niche}_with_hall_annual_per_m2"]
+    kind = "with_hall" if with_hall else "no_hall"
+    bound = "min" if central is False else "max"
+    keys = (
+        f"{city}_{niche}_annual",
+        f"{city}_{niche}_{kind}_annual",
+        f"{city}_{niche}_{kind}_annual_{bound}",
+        f"{city}_{niche}_{kind}_annual_per_object",
+        f"{city}_{niche}_{kind}_annual_per_m2",
+    )
+    for key in keys:
+        item = rules.get(key)
+        if item is None:
+            continue
+        if key.endswith("_per_m2"):
             annual = float(item["value"]) * area_m2 * hall_share
-            return PatentCost(annual, "Патент в Туле по площади зала", item.get("source"))
-        item = rules[f"tula_{niche}_no_hall_annual_per_object"]
+            return PatentCost(annual, f"Патент в {city_ru} по площади зала", item.get("source"))
         return PatentCost(
-            np.full(len(area_m2), float(item["value"])), "Патент в Туле без зала", item.get("source")
+            np.full(len(area_m2), float(item["value"])), f"Патент в {city_ru} за объект", item.get("source")
         )
     return None
 

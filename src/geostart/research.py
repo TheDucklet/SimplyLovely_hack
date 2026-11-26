@@ -4,6 +4,7 @@ from typing import Any
 from geostart.config import load_cities
 
 CITY_SECTIONS = ("demand", "costs", "benchmarks")
+RANGE_KEYS = {"p10", "p50", "p90"}
 
 
 def split_city_suffix(key: str, city_codes: Iterable[str]) -> tuple[str, str | None]:
@@ -33,4 +34,7 @@ def city_parameters(raw: Mapping[str, Any], city: str) -> dict[str, Any]:
     for section in CITY_SECTIONS:
         if isinstance(parameters.get(section), Mapping):
             parameters[section] = resolve_block(parameters[section], city, city_codes)
+    for key, value in list(parameters.items()):
+        if isinstance(value, Mapping) and RANGE_KEYS.issubset(value):
+            parameters[key] = resolve_block(value, city, city_codes)
     return parameters

@@ -35,6 +35,11 @@ def test_base_value_is_kept_when_city_has_no_override() -> None:
     assert tula["demand"]["visits_per_resident_month"]["p50"] == 2.2
 
 
+def test_top_level_range_override_is_resolved_by_city() -> None:
+    raw = {"capex_rub": {"p50": 2_800_000}, "capex_rub_tula": {"p50": 2_500_000}}
+    assert city_parameters(raw, "tula")["capex_rub"]["p50"] == 2_500_000
+
+
 def test_research_files_resolve_for_every_city() -> None:
     for niche in ("coffee", "pickup_point"):
         raw = yaml.safe_load((research_dir() / "niche_params" / f"{niche}.yaml").read_text(encoding="utf-8"))

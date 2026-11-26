@@ -251,6 +251,15 @@ def test_moscow_patent_uses_central_rate_when_district_is_unknown(taxes: dict) -
     assert patent_cost(taxes, "tula", "pickup_point", np.ones(1), 0.0, None) is None
 
 
+def test_patent_cost_reads_generic_city_keys(taxes: dict) -> None:
+    saint_petersburg = patent_cost(taxes, "saint_petersburg", "coffee", np.ones(2), 0.6, None)
+    tula = patent_cost(taxes, "tula", "bakery", np.ones(2), 0.6, None)
+    assert saint_petersburg is not None
+    assert tula is not None
+    assert np.all(saint_petersburg.annual > 0)
+    assert np.all(tula.annual > 0)
+
+
 def test_flat_projection_payback_and_npv(taxes: dict) -> None:
     inputs = flat_inputs()
     settings = flat_settings(taxes)
