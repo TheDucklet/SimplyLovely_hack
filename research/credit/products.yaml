@@ -1,27 +1,247 @@
-version: "2026-11-18"
-note: "кредитные продукты для расчёта, условия собираются в задаче S2-Ц3, значения без источника отмечены source null"
-
+version: '2026-11-22'
+note: 'Кредитные продукты и программы поддержки для расчёта. Значения без публичного
+  подтверждения имеют source: null и пояснение в note.'
 products:
   vtb_express:
-    name: "ВТБ, экспресс-кредит для малого бизнеса"
+    name: ВТБ, экспресс-кредит для малого бизнеса
     rate_annual:
       value: 0.26
-      source: "https://www.sravni.ru/biznes-kredity/bank/vtb/"
-      note: "ставка от 26% годовых в карточке продукта, на странице ВТБ для ИП указано от 25,5%, итоговая ставка определяется банком индивидуально (проверено 18.11.2026)"
+      source: https://www.sravni.ru/biznes-kredity/bank/vtb/
+      note: ставка от 26% годовых в карточке продукта, на странице ВТБ для ИП указано
+        от 25,5%, итоговая ставка определяется банком индивидуально (проверено 18.11.2026)
     max_term_months:
       value: 36
-      source: "https://www.sravni.ru/biznes-kredity/bank/vtb/"
-      note: "срок до 36 месяцев"
+      source: https://www.sravni.ru/biznes-kredity/bank/vtb/
+      note: срок до 36 месяцев
     max_amount_rub:
       value: 10000000
-      source: "https://www.vtb.ru/malyj-biznes/kredity-i-garantii/express-online/kredit-dlya-ip/"
-      note: "лимит для ИП до 10 млн руб. без залога"
+      source: https://www.vtb.ru/malyj-biznes/kredity-i-garantii/express-online/kredit-dlya-ip/
+      note: лимит для ИП до 10 млн руб. без залога
     min_business_age_months:
       value: 12
-      source: "https://www.vtb.ru/malyj-biznes/kredity-i-garantii/express-online/kredit-dlya-ip/"
-      note: "срок существования бизнеса не меньше 12 месяцев, новой точке действующего предпринимателя подходит, новому бизнесу нет"
+      source: https://www.vtb.ru/malyj-biznes/kredity-i-garantii/express-online/kredit-dlya-ip/
+      note: срок существования бизнеса не меньше 12 месяцев, новой точке действующего
+        предпринимателя подходит, новому бизнесу нет
     grace_months:
       value: 0
       source: null
-      note: "льготный период не указан"
+      note: льготный период не указан
+    schedule: annuity
+  vtb_capital:
+    name: ВТБ, финансирование капитальных затрат
+    rate_annual:
+      value: 0.083
+      source: https://www.sravni.ru/biznes-kredity/bank/vtb/
+      note: ставка от 8,3% годовых по коммерческим кредитам банка, отдельной ставки
+        для инвестиционного продукта страница не показывает, банк устанавливает её
+        по кредитоспособности и залогу
+    max_term_months:
+      value: 144
+      source: https://www.sravni.ru/biznes-kredity/bank/vtb/
+      note: срок до 12 лет по кредитам банка, продукт финансирует приобретение, строительство
+        и реконструкцию помещений и расширение бизнеса
+    max_amount_rub:
+      value: 500000000
+      source: https://www.sravni.ru/biznes-kredity/bank/vtb/
+      note: максимальная выдача до 500 млн руб. под залог недвижимости, оборудования
+        или товаров в обороте с поручительством фонда поддержки малого предпринимательства
+    min_business_age_months:
+      value: 6
+      source: https://www.sravni.ru/biznes-kredity/bank/vtb/
+      note: срок деятельности бизнеса от 6 месяцев для юридических лиц и предпринимателей
+        по общим программам банка
+    grace_months:
+      value: 0
+      source: null
+      note: льготный период в условиях продукта не указан, погашение идёт по графику
+    schedule: annuity
+  vtb_overdraft:
+    name: ВТБ, овердрафт для покрытия кассового разрыва
+    rate_annual:
+      value: 0.26
+      source: null
+      note: ставка по овердрафту банк устанавливает индивидуально, публичного значения
+        для нового магазина нет, в расчёте подставлена ставка экспресс-кредита как
+        верхняя оценка
+    max_term_months:
+      value: 12
+      source: null
+      note: срок действия лимита в публичном описании не указан, принято допущение
+        12 месяцев по типовой практике овердрафта
+    max_amount_rub:
+      value: 3000000
+      source: null
+      note: лимит овердрафта определяется оборотом по расчётному счёту, при выручке
+        новой точки 1-2 млн руб. в месяц реальный лимит редко превышает 2-3 млн руб.,
+        значение принято как допущение
+    min_business_age_months:
+      value: 6
+      source: https://www.sravni.ru/biznes-kredity/bank/vtb/
+      note: срок деятельности от 6 месяцев по общим требованиям банка к предпринимателю
+    grace_months:
+      value: 0
+      source: null
+      note: льготный период не указан, проценты начисляются на фактическую задолженность
+    schedule: annuity
+  msp_1764_investment:
+    name: Программа 1764 Минэкономразвития, инвестиционное кредитование
+    rate_annual:
+      value: 0.1675
+      source: https://www.sravni.ru/biznes-kredity/info/lgotnye-kredity-dlya-biznesa/
+      note: ключевая ставка Банка России 14% плюс 2,75 процентного пункта по условиям
+        программы, ставка действует первые 5 лет инвестиционного кредита, пересчитана
+        по ключевой ставке 14% на 22.11.2026
+    max_term_months:
+      value: 120
+      source: https://www.sravni.ru/biznes-kredity/info/lgotnye-kredity-dlya-biznesa/
+      note: до 10 лет на инвестиционные цели, для оборотных целей срок до 3 лет и
+        ставка ключевая плюс 2,75 с действием 1 год
+    max_amount_rub:
+      value: 200000000
+      source: https://www.sravni.ru/biznes-kredity/info/lgotnye-kredity-dlya-biznesa/
+      note: для микропредприятий до 200 млн руб., для малых и средних до 500 млн руб.,
+        пакет до 2 млрд руб. на средний бизнес, значение соответствует микропредприятию
+        с новым магазином
+    min_business_age_months:
+      value: 0
+      source: https://www.sravni.ru/biznes-kredity/info/lgotnye-kredity-dlya-biznesa/
+      note: требований к возрасту бизнеса программа не содержит, нужны нахождение
+        в реестре МСП, выручка до 2 млрд руб., до 250 работников и недоимка не более
+        50 тыс. руб.
+    grace_months:
+      value: 0
+      source: null
+      note: льготный период в описании программы не указан
+    schedule: annuity
+  msp_1764_wc:
+    name: Программа 1764, развитие предпринимательской деятельности
+    rate_annual:
+      value: 0.175
+      source: https://www.sravni.ru/biznes-kredity/info/lgotnye-kredity-dlya-biznesa/
+      note: ключевая ставка Банка России 14% плюс 3,5 процентного пункта на весь срок
+        кредита, ставка пересчитана по ключевой ставке 14% на 22.11.2026
+    max_term_months:
+      value: 36
+      source: https://www.sravni.ru/biznes-kredity/info/lgotnye-kredity-dlya-biznesa/
+      note: срок до 3 лет
+    max_amount_rub:
+      value: 10000000
+      source: https://www.sravni.ru/biznes-kredity/info/lgotnye-kredity-dlya-biznesa/
+      note: сумма от 500 тыс. до 10 млн руб. для микропредприятий и самозанятых
+    min_business_age_months:
+      value: 0
+      source: https://www.sravni.ru/biznes-kredity/info/lgotnye-kredity-dlya-biznesa/
+      note: требований к возрасту бизнеса нет, нужны нахождение в реестре МСП и отсутствие
+        недоимки больше 50 тыс. руб., продукт подходит новой точке действующего предпринимателя
+    grace_months:
+      value: 0
+      source: null
+      note: льготный период в описании программы не указан
+    schedule: annuity
+  msp_micro_loan_mlk:
+    name: Микрозайм государственной микрофинансовой организации региона
+    rate_annual:
+      value: 0.14
+      source: https://мойбизнес.рф/support/lgotnye-mikrozaymy-dlya-malogo-i-srednego-biznesa/
+      note: ставка не выше ключевой ставки Банка России, на 22.11.2026 ключевая ставка
+        14%, конкретную ставку устанавливает региональная микрофинансовая организация
+    max_term_months:
+      value: 36
+      source: https://мойбизнес.рф/support/lgotnye-mikrozaymy-dlya-malogo-i-srednego-biznesa/
+      note: срок до 3 лет
+    max_amount_rub:
+      value: 5000000
+      source: https://мойбизнес.рф/support/lgotnye-mikrozaymy-dlya-malogo-i-srednego-biznesa/
+      note: до 5 млн руб. для субъектов малого и среднего бизнеса, до 500 тыс. руб.
+        для самозанятых
+    min_business_age_months:
+      value: 0
+      source: https://мойбизнес.рф/support/lgotnye-mikrozaymy-dlya-malogo-i-srednego-biznesa/
+      note: требований к возрасту бизнеса нет, нужны налоговое резидентство России,
+        отсутствие банкротства, недоимка не более 50 тыс. руб. и долгов по зарплате
+        не более 3 месяцев
+    grace_months:
+      value: 0
+      source: null
+      note: льготный период в условиях не указан, заявки принимают региональные микрофинансовые
+        организации
+    schedule: annuity
+  msp_umbrella_guarantee:
+    name: Поручительство Корпорации МСП по программе «Зонт»
+    rate_annual:
+      value: 0.0
+      source: https://www.sravni.ru/biznes-kredity/info/lgotnye-kredity-dlya-biznesa/
+      note: поручительство не выдаёт денег и не имеет процентной ставки, в расчёте
+        кредита не участвует, значение ноль показывает отсутствие платы за поручительство,
+        график условный и в расчёте не применяется
+    max_term_months:
+      value: 180
+      source: https://www.sravni.ru/biznes-kredity/info/lgotnye-kredity-dlya-biznesa/
+      note: срок поручительства до 15 лет, комиссия за поручительство корпорации для
+        малого бизнеса не взимается
+    max_amount_rub:
+      value: 1000000000
+      source: https://www.sravni.ru/biznes-kredity/info/lgotnye-kredity-dlya-biznesa/
+      note: до 1 млрд руб. на одну компанию при покрытии до 50% суммы займа, для Москвы
+        и Санкт-Петербурга лимит региональной гарантии до 100 млн руб.
+    min_business_age_months:
+      value: 0
+      source: https://www.sravni.ru/biznes-kredity/info/lgotnye-kredity-dlya-biznesa/
+      note: требований к возрасту бизнеса нет, нужны нахождение в реестре МСП и соответствие
+        банковскому кредиту
+    grace_months:
+      value: 0
+      source: null
+      note: льготный период не применим, поручительство действует одновременно с кредитом
+    schedule: annuity
+  start_grant_moscow:
+    name: Грант для молодых предпринимателей в Москве
+    rate_annual:
+      value: 0.0
+      source: https://www.sravni.ru/biznes-kredity/info/podderzhka-malogo-biznesa-ot-gosudarstva/
+      note: грант не возвращают, поэтому в расчёте потока он проходит как приток собственных
+        средств без процентной нагрузки
+    max_term_months:
+      value: 0
+      source: null
+      note: возврата нет, срок погашения не применим
+    max_amount_rub:
+      value: 0
+      source: https://www.sravni.ru/biznes-kredity/info/podderzhka-malogo-biznesa-ot-gosudarstva/
+      note: грант и социальный контракт в Москве не выдают, в столице доступны только
+        региональные субсидии из бюджета города, поэтому для магазина в Москве значение
+        ноль
+    min_business_age_months:
+      value: 0
+      source: https://www.sravni.ru/biznes-kredity/info/podderzhka-malogo-biznesa-ot-gosudarstva/
+      note: официально бизнес до 12 месяцев, для Москвы условие недостижимо
+    grace_months:
+      value: 0
+      source: null
+      note: условие не применимо
+    schedule: annuity
+  start_grant_region:
+    name: Грант для молодых предпринимателей вне Москвы
+    rate_annual:
+      value: 0.0
+      source: https://www.sravni.ru/biznes-kredity/info/podderzhka-malogo-biznesa-ot-gosudarstva/
+      note: грант не возвращают, в потоке проходит как приток собственных средств
+    max_term_months:
+      value: 0
+      source: null
+      note: возврата нет, срок погашения не применим
+    max_amount_rub:
+      value: 500000
+      source: https://www.sravni.ru/biznes-kredity/info/podderzhka-malogo-biznesa-ot-gosudarstva/
+      note: для предпринимателей 14-25 лет от 100 тыс. до 500 тыс. руб. по приказу
+        Минэкономразвития России от 24.03.2022 № 149, в Арктике до 1 млн руб., софинансирование
+        не менее 25% и обучение не менее 16 часов
+    min_business_age_months:
+      value: 12
+      source: https://www.sravni.ru/biznes-kredity/info/podderzhka-malogo-biznesa-ot-gosudarstva/
+      note: бизнес зарегистрирован не раньше чем за 12 месяцев до обращения
+    grace_months:
+      value: 0
+      source: null
+      note: условие не применимо
     schedule: annuity

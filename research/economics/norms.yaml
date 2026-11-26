@@ -1,340 +1,648 @@
-version: "2026-11-20"
+version: '2026-11-22'
 currency: RUB
-note: "нормативы финансового движка, значения без источника отмечены source null и уточняются в задаче S2-Ц8"
-
+note: нормативы финансового движка за 2026 год, у значения без публичного источника
+  стоит source null и в note объяснено допущение команды
 common:
   key_rate_annual:
     value: 0.14
     unit: share_year
-    source: "https://expert.ru/news/tsb-sokhranil-klyuchevuyu-stavku-na-urovne-14"
-    note: "ключевая ставка Банка России по решению от 23.10.2026"
+    source: https://expert.ru/news/tsb-sokhranil-klyuchevuyu-stavku-na-urovne-14
+    note: ключевая ставка Банка России по решению от 23.10.2026
   risk_premium_annual:
     value: 0.06
     unit: share_year
     source: null
-    note: "премия за риск малого бизнеса к ключевой ставке для ставки дисконтирования, допущение команды"
+    note: премия за риск малого бизнеса к ключевой ставке для ставки дисконтирования,
+      допущение команды
   inflation_annual:
     value: 0.065
     unit: share_year
-    source: "https://rulaws.ru/acts/Informatsiya-Banka-Rossii-ot-23.10.2026/"
-    note: "середина прогноза Банка России по инфляции на 2026 год 6,0-7,0%"
+    source: https://rulaws.ru/acts/Informatsiya-Banka-Rossii-ot-23.10.2026/
+    note: середина прогноза Банка России по инфляции на 2026 год 6,0-7,0%
   rent_indexation_annual:
     value: 0.065
     unit: share_year
+    source: https://rulaws.ru/acts/Informatsiya-Banka-Rossii-ot-23.10.2026/
+    note: индексация аренды раз в год на прогноз инфляции Банка России 6,0-7,0% на
+      2026 год, в обзорах Nikoliers по стрит-ритейлу индексация указана раз в год
+      без привязки к индексу
+  rent_contract_term_months:
+    value: 36
+    unit: months
     source: null
-    note: "ежегодная индексация аренды на уровень инфляции, допущение команды"
+    note: типовой срок договора аренды помещения стрит-ритейла для горизонта расчёта,
+      публичного замера срока нет, допущение команды
   wage_growth_annual:
-    value: 0.065
+    value: 0.09
     unit: share_year
-    source: null
-    note: "рост зарплат на уровень инфляции, допущение команды"
+    source: https://rulaws.ru/acts/Informatsiya-Banka-Rossii-ot-23.10.2026/
+    note: номинальный рост зарплат, прогноз Банка России на 2026 год даёт рост реальной
+      заработной платы 3,0-4,0% при инфляции 6,0-7,0%, сумма 9,0-11,0%, взята нижняя
+      граница
   opex_indexation_annual:
-    value: 0.065
+    value: 0.07
     unit: share_year
-    source: "https://rulaws.ru/acts/Informatsiya-Banka-Rossii-ot-23.10.2026/"
-    note: "прочие расходы растут на прогноз инфляции Банка России"
+    source: https://rulaws.ru/acts/Informatsiya-Banka-Rossii-ot-23.10.2026/
+    note: прочие расходы растут на верхнюю границу прогноза инфляции Банка России
+      7,0% на 2026 год
   loan_rate_annual:
     value: 0.19
     unit: share_year
     source: null
-    note: "ставка кредита по умолчанию, ключевая ставка плюс 5 пунктов до сбора условий ВТБ в задаче S2-Ц3"
+    note: ставка кредита по умолчанию, ключевая ставка плюс 5 пунктов до сбора условий
+      ВТБ в задаче S2-Ц3
   loan_term_months:
     value: 36
     unit: months
     source: null
-    note: "срок кредита по умолчанию, допущение команды"
+    note: срок кредита по умолчанию, допущение команды
   dscr_threshold:
     value: 1.25
     unit: ratio
     source: null
-    note: "минимальный коэффициент покрытия долга для расчёта предельного кредита, допущение команды"
-
+    note: минимальный коэффициент покрытия долга для расчёта предельного кредита,
+      допущение команды
 niches:
   coffee:
-    unit_name: "чек"
-    unit_value_parameter: "avg_check_rub"
+    unit_name: чек
+    unit_value_parameter: avg_check_rub
     ramp_up_share:
-      value: [0.5, 0.65, 0.78, 0.88, 0.95, 1.0]
+      value:
+      - 0.5
+      - 0.65
+      - 0.78
+      - 0.88
+      - 0.95
+      - 1.0
       unit: share_of_steady_revenue
       source: null
-      note: "доля плановой выручки в первые месяцы после открытия, допущение команды"
+      note: доля плановой выручки в первый месяц 0,50, выход на план к седьмому месяцу,
+        обзоры открытий дают 40-60% плана в первые месяцы, точной выборки кофеен с
+        датой открытия нет, поэтому source null
     seasonality:
-      value: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+      value:
+      - 0.948
+      - 0.928
+      - 1.028
+      - 1.018
+      - 1.048
+      - 0.968
+      - 0.928
+      - 0.928
+      - 1.018
+      - 1.058
+      - 1.048
+      - 1.078
       unit: multiplier_by_calendar_month
       source: null
-      note: "сезонность не учтена до исследования S2-Ц8"
-    working_capital_cogs_months:
-      value: 1.0
-      unit: months_of_cogs
-      source: null
-      note: "первичный запас зерна, молока и расходников, допущение команды"
-    security_deposit_months:
-      value: 1.0
-      unit: months_of_rent
-      source: null
-      note: "обеспечительный платёж по договору аренды, возвращается в конце горизонта, допущение команды"
-    hall_share_of_area:
-      value: 0.6
-      unit: share
-      source: null
-      note: "доля зала обслуживания в площади кофейни для стоимости патента в Туле, допущение команды"
-    capex_structure:
-      source: null
-      note: "доли статей вложений кофейни и срок полезного использования, допущение команды до задачи S2-Ц8"
-      items:
-        renovation: {name: "Ремонт помещения", share: 0.35, life_months: 60}
-        equipment: {name: "Кофейное и холодильное оборудование", share: 0.45, life_months: 60}
-        furniture: {name: "Мебель и вывеска", share: 0.10, life_months: 60}
-        other: {name: "Прочие стартовые расходы", share: 0.10, life_months: 12}
-  pickup_point:
-    unit_name: "заказ"
-    unit_value_parameter: "payout_per_order_rub"
-    ramp_up_share:
-      value: [0.3, 0.45, 0.6, 0.72, 0.82, 0.9, 0.95, 1.0]
-      unit: share_of_steady_revenue
-      source: null
-      note: "доля плановой выручки в первые месяцы после открытия пункта, допущение команды"
-    seasonality:
-      value: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
-      unit: multiplier_by_calendar_month
-      source: null
-      note: "сезонность не учтена до исследования S2-Ц8"
-    working_capital_cogs_months:
-      value: 0.0
-      unit: months_of_cogs
-      source: null
-      note: "пункт выдачи не держит товарных запасов"
-    security_deposit_months:
-      value: 0.0
-      unit: months_of_rent
-      source: "https://www.sostav.ru/blogs/284331/78854"
-      note: "обеспечительный платёж уже входит во вложения пункта выдачи по обзору Sostav.ru от 03.03.2026"
-    hall_share_of_area:
-      value: 0.0
-      unit: share
-      source: null
-      note: "у пункта выдачи нет зала обслуживания"
-    capex_structure:
-      source: null
-      note: "доли статей вложений пункта выдачи и срок полезного использования, допущение команды до задачи S2-Ц8"
-      items:
-        renovation: {name: "Ремонт по стандарту маркетплейса", share: 0.45, life_months: 60}
-        furniture: {name: "Стеллажи, мебель и примерочные", share: 0.25, life_months: 60}
-        equipment: {name: "Оргтехника и видеонаблюдение", share: 0.20, life_months: 36}
-        other: {name: "Прочие стартовые расходы", share: 0.10, life_months: 12}
-  pickup_point_multi:
-    unit_name: "заказ"
-    unit_value_parameter: "payout_per_order_rub"
-    ramp_up_share:
-      value: [0.3, 0.45, 0.6, 0.72, 0.82, 0.9, 0.95, 1.0]
-      unit: share_of_steady_revenue
-      source: null
-      note: "доля плановой выручки в первые месяцы после открытия пункта, допущение команды"
-    seasonality:
-      value: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
-      unit: multiplier_by_calendar_month
-      source: null
-      note: "сезонность не учтена до исследования S2-Ц8"
-    working_capital_cogs_months:
-      value: 0.0
-      unit: months_of_cogs
-      source: null
-      note: "пункт выдачи не держит товарных запасов"
-    security_deposit_months:
-      value: 0.0
-      unit: months_of_rent
-      source: "https://www.sostav.ru/blogs/284331/78854"
-      note: "обеспечительный платёж уже входит во вложения пункта выдачи по обзору Sostav.ru от 03.03.2026"
-    hall_share_of_area:
-      value: 0.0
-      unit: share
-      source: null
-      note: "у пункта выдачи нет зала обслуживания"
-    capex_structure:
-      source: null
-      note: "доли статей вложений пункта выдачи и срок полезного использования, допущение команды до задачи S2-Ц8"
-      items:
-        renovation: {name: "Ремонт по стандарту маркетплейса", share: 0.45, life_months: 60}
-        furniture: {name: "Стеллажи, мебель и примерочные", share: 0.25, life_months: 60}
-        equipment: {name: "Оргтехника и видеонаблюдение", share: 0.20, life_months: 36}
-        other: {name: "Прочие стартовые расходы", share: 0.10, life_months: 12}
-  grocery:
-    unit_name: "чек"
-    unit_value_parameter: "avg_check_rub"
-    ramp_up_share:
-      value: [0.6, 0.75, 0.85, 0.92, 0.97, 1.0]
-      unit: share_of_steady_revenue
-      source: null
-      note: "доля плановой выручки магазина у дома в первые месяцы, допущение команды до задачи S2-Ц8"
-    seasonality:
-      value: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
-      unit: multiplier_by_calendar_month
-      source: null
-      note: "сезонность не учтена до исследования S2-Ц8"
-    working_capital_cogs_months:
-      value: 0.7
-      unit: months_of_cogs
-      source: null
-      note: "товарный запас магазина у дома, допущение команды до задачи S2-Ц8"
-    security_deposit_months:
-      value: 1.0
-      unit: months_of_rent
-      source: null
-      note: "обеспечительный платёж по договору аренды, возвращается в конце горизонта, допущение команды до задачи S2-Ц8"
-    hall_share_of_area:
-      value: 0.0
-      unit: share
-      source: null
-      note: "доля зала обслуживания для стоимости патента, допущение команды до задачи S2-Ц8"
-    capex_structure:
-      source: null
-      note: "доли статей вложений и срок полезного использования, допущение команды до задачи S2-Ц8"
-      items:
-        renovation: {name: "Ремонт торгового зала", share: 0.3, life_months: 60}
-        equipment: {name: "Холодильное и кассовое оборудование", share: 0.45, life_months: 60}
-        furniture: {name: "Стеллажи и вывеска", share: 0.15, life_months: 60}
-        other: {name: "Прочие стартовые расходы", share: 0.1, life_months: 12}
-  beauty_salon:
-    unit_name: "визит"
-    unit_value_parameter: "avg_check_rub"
-    ramp_up_share:
-      value: [0.35, 0.5, 0.62, 0.73, 0.82, 0.9, 0.95, 1.0]
-      unit: share_of_steady_revenue
-      source: null
-      note: "салон набирает постоянных клиентов медленнее магазина, допущение команды до задачи S2-Ц8"
-    seasonality:
-      value: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
-      unit: multiplier_by_calendar_month
-      source: null
-      note: "сезонность не учтена до исследования S2-Ц8"
+      note: среднее 1,0, весна и осень выше, январь и июль-август ниже из-за праздников
+        и отпусков, направление взято из обзора Nikoliers о падении to-go трафика
+        в третьем квартале 2026 года на 7,3% год к году, помесячного замера кофеен
+        нет, source null
     working_capital_cogs_months:
       value: 0.5
       unit: months_of_cogs
       source: null
-      note: "запас расходных материалов, допущение команды до задачи S2-Ц8"
+      note: запас зерна, молока и расходников на 15 дней, поставки молока идут дважды
+        в неделю, зерно раз в месяц, допущение команды
     security_deposit_months:
       value: 1.0
       unit: months_of_rent
       source: null
-      note: "обеспечительный платёж по договору аренды, возвращается в конце горизонта, допущение команды до задачи S2-Ц8"
+      note: обеспечительный платёж по договору аренды, возвращается в конце горизонта,
+        допущение команды
+    hall_share_of_area:
+      value: 0.6
+      unit: share
+      source: null
+      note: доля зала обслуживания в площади кофейни для стоимости патента в Туле,
+        допущение команды
+    capex_structure:
+      source: null
+      note: доли статей вложений кофейни, срок ремонта, оборудования и мебели 60 месяцев,
+        прочих стартовых расходов 12 месяцев, допущение команды
+      items:
+        renovation:
+          name: Ремонт помещения
+          share: 0.35
+          life_months: 60
+        equipment:
+          name: Кофейное и холодильное оборудование
+          share: 0.45
+          life_months: 60
+        furniture:
+          name: Мебель и вывеска
+          share: 0.1
+          life_months: 60
+        other:
+          name: Прочие стартовые расходы
+          share: 0.1
+          life_months: 12
+  pickup_point:
+    unit_name: заказ
+    unit_value_parameter: payout_per_order_rub
+    ramp_up_share:
+      value:
+      - 0.3
+      - 0.45
+      - 0.6
+      - 0.72
+      - 0.82
+      - 0.9
+      - 0.95
+      - 1.0
+      unit: share_of_steady_revenue
+      source: https://www.sravni.ru/registraciya-ip-yur-lic/info/kak-otkryt-pvz-wildberries-v-2026-godu/
+      note: доля плановой выручки в первые восемь месяцев, выход на план к девятому
+        месяцу, обзор Sravni.ru от 07.11.2026 называет старт в 40-60% плана и стабильный
+        трафик к девятому месяцу
+    seasonality:
+      value:
+      - 0.893
+      - 0.922
+      - 0.992
+      - 0.992
+      - 1.012
+      - 1.021
+      - 0.972
+      - 0.962
+      - 1.012
+      - 1.031
+      - 1.081
+      - 1.111
+      unit: multiplier_by_calendar_month
+      source: https://www.sravni.ru/registraciya-ip-yur-lic/info/kak-otkryt-pvz-wildberries-v-2026-godu/
+      note: декабрьская выдача выше плана на 11%, январь ниже на 11%, лето ниже на
+        2-4% по обзору Sravni.ru от 07.11.2026, значения приведены к среднему 1,0
+    working_capital_cogs_months:
+      value: 0.0
+      unit: months_of_cogs
+      source: null
+      note: пункт выдачи не держит товарных запасов
+    security_deposit_months:
+      value: 0.0
+      unit: months_of_rent
+      source: https://www.sravni.ru/registraciya-ip-yur-lic/info/kak-otkryt-pvz-wildberries-v-2026-godu/
+      note: обеспечительный взнос 50 000 рублей стандартного формата уже входит во
+        вложения пункта по обзору Sravni.ru от 07.11.2026, отдельного депозита по
+        аренде код не добавляет
     hall_share_of_area:
       value: 0.0
       unit: share
       source: null
-      note: "доля зала обслуживания для стоимости патента, допущение команды до задачи S2-Ц8"
+      note: у пункта выдачи нет зала обслуживания
     capex_structure:
-      source: null
-      note: "доли статей вложений и срок полезного использования, допущение команды до задачи S2-Ц8"
+      source: https://www.sravni.ru/registraciya-ip-yur-lic/info/kak-otkryt-pvz-wildberries-v-2026-godu/
+      note: структура вложений стандартного пункта по обзору Sravni.ru от 07.11.2026,
+        ремонт 120-250 тыс., мебель 70-120 тыс., оборудование 60-130 тыс., видеонаблюдение
+        25-50 тыс., прочее 20-30 тыс. рублей, доли пересчитаны по серединам диапазонов,
+        ремонт и мебель служат 60 месяцев, оборудование 36 месяцев
       items:
-        renovation: {name: "Ремонт и сантехника", share: 0.4, life_months: 60}
-        equipment: {name: "Кресла, мойки и инструмент", share: 0.4, life_months: 60}
-        furniture: {name: "Мебель и вывеска", share: 0.1, life_months: 60}
-        other: {name: "Прочие стартовые расходы", share: 0.1, life_months: 12}
-  fast_food:
-    unit_name: "чек"
-    unit_value_parameter: "avg_check_rub"
+        renovation:
+          name: Ремонт по стандарту маркетплейса
+          share: 0.45
+          life_months: 60
+        furniture:
+          name: Стеллажи, мебель и примерочные
+          share: 0.25
+          life_months: 60
+        equipment:
+          name: Оргтехника и видеонаблюдение
+          share: 0.2
+          life_months: 36
+        other:
+          name: Прочие стартовые расходы
+          share: 0.1
+          life_months: 12
+  grocery:
+    unit_name: чек
+    unit_value_parameter: avg_check_rub
     ramp_up_share:
-      value: [0.6, 0.75, 0.88, 0.95, 1.0]
+      value:
+      - 0.6
+      - 0.75
+      - 0.85
+      - 0.92
+      - 0.97
+      - 1.0
       unit: share_of_steady_revenue
       source: null
-      note: "доля плановой выручки точки фастфуда в первые месяцы, допущение команды до задачи S2-Ц8"
+      note: магазин у дома собирает поток жителей дома к третьему месяцу, выход на
+        план к седьмому месяцу, публичного замера нет, source null
     seasonality:
-      value: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+      value:
+      - 1.0
+      - 1.0
+      - 0.98
+      - 0.98
+      - 0.99
+      - 0.99
+      - 1.0
+      - 1.0
+      - 1.0
+      - 1.0
+      - 1.02
+      - 1.03
       unit: multiplier_by_calendar_month
       source: null
-      note: "сезонность не учтена до исследования S2-Ц8"
+      note: слабый рост в декабре и ноябре, летом ниже из-за отъезда жителей, среднее
+        1,0, source null
     working_capital_cogs_months:
-      value: 0.3
+      value: 0.7
       unit: months_of_cogs
       source: null
-      note: "запас продуктов и упаковки, допущение команды до задачи S2-Ц8"
+      note: запас товара на складе магазина 21 день при обороте около 14 дней, запас
+        держится дольше оборота из-за страхового запаса по скоропорту, допущение команды
     security_deposit_months:
       value: 1.0
       unit: months_of_rent
       source: null
-      note: "обеспечительный платёж по договору аренды, возвращается в конце горизонта, допущение команды до задачи S2-Ц8"
+      note: обеспечительный платёж в один месячный платёж, возвращается в конце горизонта,
+        отраслевой стандарт для помещений стрит-ритейла, публичного замера нет
+    hall_share_of_area:
+      value: 0.0
+      unit: share
+      source: null
+      note: доля зала обслуживания в площади для стоимости патента и для расчёта потока
+        посетителей зала, значения по площадям ниши из research/niche_params
+    capex_structure:
+      source: null
+      note: доли статей вложений магазина у дома, срок ремонта, оборудования и мебели
+        60 месяцев, прочих стартовых расходов 12 месяцев, допущение команды
+      items:
+        renovation:
+          name: Ремонт торгового зала
+          share: 0.3
+          life_months: 60
+        equipment:
+          name: Холодильное и кассовое оборудование
+          share: 0.45
+          life_months: 60
+        furniture:
+          name: Стеллажи и вывеска
+          share: 0.15
+          life_months: 60
+        other:
+          name: Прочие стартовые расходы
+          share: 0.1
+          life_months: 12
+  beauty_salon:
+    unit_name: визит
+    unit_value_parameter: avg_check_rub
+    ramp_up_share:
+      value:
+      - 0.35
+      - 0.5
+      - 0.62
+      - 0.73
+      - 0.82
+      - 0.9
+      - 0.95
+      - 1.0
+      unit: share_of_steady_revenue
+      source: null
+      note: салон набирает постоянных клиентов медленнее магазина, выход на план к
+        девятому месяцу, публичного замера нет, source null
+    seasonality:
+      value:
+      - 0.988
+      - 1.037
+      - 1.185
+      - 1.007
+      - 0.988
+      - 0.909
+      - 0.859
+      - 0.889
+      - 1.037
+      - 1.007
+      - 0.988
+      - 1.106
+      unit: multiplier_by_calendar_month
+      source: null
+      note: март выше на 19% к 8 Марта, декабрь выше на 11%, июль-август ниже на 11-14%
+        в сезон отпусков, среднее 1,0, замера по салонам нет, source null
+    working_capital_cogs_months:
+      value: 0.5
+      unit: months_of_cogs
+      source: null
+      note: запас краски, шампуней и расходников на 15 дней, поставки у салонов идут
+        раз в две недели, допущение команды
+    security_deposit_months:
+      value: 1.0
+      unit: months_of_rent
+      source: null
+      note: обеспечительный платёж в один месячный платёж, возвращается в конце горизонта,
+        отраслевой стандарт для помещений стрит-ритейла, публичного замера нет
+    hall_share_of_area:
+      value: 0.0
+      unit: share
+      source: null
+      note: доля зала обслуживания в площади для стоимости патента и для расчёта потока
+        посетителей зала, значения по площадям ниши из research/niche_params
+    capex_structure:
+      source: null
+      note: доли статей вложений салона, срок ремонта, оборудования и мебели 60 месяцев,
+        прочих стартовых расходов 12 месяцев, допущение команды
+      items:
+        renovation:
+          name: Ремонт и сантехника
+          share: 0.4
+          life_months: 60
+        equipment:
+          name: Кресла, мойки и инструмент
+          share: 0.4
+          life_months: 60
+        furniture:
+          name: Мебель и вывеска
+          share: 0.1
+          life_months: 60
+        other:
+          name: Прочие стартовые расходы
+          share: 0.1
+          life_months: 12
+  fast_food:
+    unit_name: чек
+    unit_value_parameter: avg_check_rub
+    ramp_up_share:
+      value:
+      - 0.6
+      - 0.75
+      - 0.88
+      - 0.95
+      - 1.0
+      unit: share_of_steady_revenue
+      source: null
+      note: точка фастфуда выходит на план к шестому месяцу, публичного замера нет,
+        source null
+    seasonality:
+      value:
+      - 0.943
+      - 0.993
+      - 1.012
+      - 1.012
+      - 1.042
+      - 0.993
+      - 0.943
+      - 0.943
+      - 1.012
+      - 1.022
+      - 0.993
+      - 1.092
+      unit: multiplier_by_calendar_month
+      source: null
+      note: май и декабрь выше на 4-9%, июль-август и январь ниже на 6%, среднее 1,0,
+        замера по точкам фастфуда нет, source null
+    working_capital_cogs_months:
+      value: 0.3
+      unit: months_of_cogs
+      source: null
+      note: запас продуктов и упаковки на 9 дней, поставкискоропорта и сухих продуктов
+        идут дважды в неделю, допущение команды
+    security_deposit_months:
+      value: 1.0
+      unit: months_of_rent
+      source: null
+      note: обеспечительный платёж в один месячный платёж, возвращается в конце горизонта,
+        отраслевой стандарт для помещений стрит-ритейла, публичного замера нет
     hall_share_of_area:
       value: 0.4
       unit: share
       source: null
-      note: "доля зала обслуживания для стоимости патента, допущение команды до задачи S2-Ц8"
+      note: доля зала обслуживания в площади для стоимости патента и для расчёта потока
+        посетителей зала, значения по площадям ниши из research/niche_params
     capex_structure:
       source: null
-      note: "доли статей вложений и срок полезного использования, допущение команды до задачи S2-Ц8"
+      note: доли статей вложений точки фастфуда, срок ремонта, оборудования и мебели
+        60 месяцев, прочих стартовых расходов 12 месяцев, допущение команды
       items:
-        renovation: {name: "Ремонт и вентиляция", share: 0.3, life_months: 60}
-        equipment: {name: "Кухонное оборудование", share: 0.5, life_months: 60}
-        furniture: {name: "Мебель и вывеска", share: 0.1, life_months: 60}
-        other: {name: "Прочие стартовые расходы", share: 0.1, life_months: 12}
+        renovation:
+          name: Ремонт и вентиляция
+          share: 0.3
+          life_months: 60
+        equipment:
+          name: Кухонное оборудование
+          share: 0.5
+          life_months: 60
+        furniture:
+          name: Мебель и вывеска
+          share: 0.1
+          life_months: 60
+        other:
+          name: Прочие стартовые расходы
+          share: 0.1
+          life_months: 12
   bakery:
-    unit_name: "чек"
-    unit_value_parameter: "avg_check_rub"
+    unit_name: чек
+    unit_value_parameter: avg_check_rub
     ramp_up_share:
-      value: [0.55, 0.7, 0.82, 0.9, 0.96, 1.0]
+      value:
+      - 0.55
+      - 0.7
+      - 0.82
+      - 0.9
+      - 0.96
+      - 1.0
       unit: share_of_steady_revenue
       source: null
-      note: "доля плановой выручки пекарни в первые месяцы, допущение команды до задачи S2-Ц8"
+      note: пекарня набирает постоянных покупателей хлеба к третьему месяцу, выход
+        на план к седьмому месяцу, публичного замера нет, source null
     seasonality:
-      value: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+      value:
+      - 0.95
+      - 1.0
+      - 1.02
+      - 1.0
+      - 1.0
+      - 0.98
+      - 0.97
+      - 0.97
+      - 1.0
+      - 1.02
+      - 1.02
+      - 1.08
       unit: multiplier_by_calendar_month
       source: null
-      note: "сезонность не учтена до исследования S2-Ц8"
+      note: рост в декабре и перед Пасхой, летом ниже, среднее 1,0, source null
     working_capital_cogs_months:
       value: 0.3
       unit: months_of_cogs
       source: null
-      note: "запас муки, сырья и упаковки, допущение команды до задачи S2-Ц8"
+      note: запас муки, начинки и упаковки на 9 дней, смесь длительного хранения закупается
+        дважды в месяц, допущение команды
     security_deposit_months:
       value: 1.0
       unit: months_of_rent
       source: null
-      note: "обеспечительный платёж по договору аренды, возвращается в конце горизонта, допущение команды до задачи S2-Ц8"
+      note: обеспечительный платёж в один месячный платёж, возвращается в конце горизонта,
+        отраслевой стандарт для помещений стрит-ритейла, публичного замера нет
     hall_share_of_area:
       value: 0.3
       unit: share
       source: null
-      note: "доля зала обслуживания для стоимости патента, допущение команды до задачи S2-Ц8"
+      note: доля зала обслуживания в площади для стоимости патента и для расчёта потока
+        посетителей зала, значения по площадям ниши из research/niche_params
     capex_structure:
       source: null
-      note: "доли статей вложений и срок полезного использования, допущение команды до задачи S2-Ц8"
+      note: доли статей вложений пекарни, срок ремонта, печей и витрин 60 месяцев,
+        прочих стартовых расходов 12 месяцев, допущение команды
       items:
-        renovation: {name: "Ремонт и вентиляция", share: 0.25, life_months: 60}
-        equipment: {name: "Печи, тестомесы и витрины", share: 0.55, life_months: 60}
-        furniture: {name: "Мебель и вывеска", share: 0.1, life_months: 60}
-        other: {name: "Прочие стартовые расходы", share: 0.1, life_months: 12}
+        renovation:
+          name: Ремонт и вентиляция
+          share: 0.25
+          life_months: 60
+        equipment:
+          name: Печи, тестомесы и витрины
+          share: 0.55
+          life_months: 60
+        furniture:
+          name: Мебель и вывеска
+          share: 0.1
+          life_months: 60
+        other:
+          name: Прочие стартовые расходы
+          share: 0.1
+          life_months: 12
   flowers:
-    unit_name: "чек"
-    unit_value_parameter: "avg_check_rub"
+    unit_name: чек
+    unit_value_parameter: avg_check_rub
     ramp_up_share:
-      value: [0.5, 0.65, 0.78, 0.88, 0.95, 1.0]
+      value:
+      - 0.5
+      - 0.65
+      - 0.78
+      - 0.88
+      - 0.95
+      - 1.0
       unit: share_of_steady_revenue
       source: null
-      note: "доля плановой выручки цветочного магазина в первые месяцы, допущение команды до задачи S2-Ц8"
+      note: цветочный магазин набирает постоянных клиентов к третьему месяцу, выход
+        на план к седьмому месяцу, публичного замера нет, source null
     seasonality:
-      value: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+      value:
+      - 0.894
+      - 1.365
+      - 1.459
+      - 0.941
+      - 0.894
+      - 0.847
+      - 0.8
+      - 0.894
+      - 1.176
+      - 0.941
+      - 0.8
+      - 0.988
       unit: multiplier_by_calendar_month
       source: null
-      note: "сезонность не учтена до исследования S2-Ц8, у цветов выручка резко растёт в феврале, марте и сентябре"
+      note: февраль выше на 36% и март на 46% к 14 февраля и 8 Марта, сентябрь выше
+        на 18% к 1 сентября, июль и ноябрь ниже на 20%, среднее 1,0, помесячного замера
+        выручки цветочных магазинов нет, source null
     working_capital_cogs_months:
       value: 0.25
       unit: months_of_cogs
       source: null
-      note: "запас цветов на несколько дней из-за короткого срока хранения, допущение команды до задачи S2-Ц8"
+      note: запас цветов на 7,5 дней при поставках дважды в неделю, срез хранится
+        в холодильной камере и списывается по естественной убыли, допущение команды
     security_deposit_months:
       value: 1.0
       unit: months_of_rent
       source: null
-      note: "обеспечительный платёж по договору аренды, возвращается в конце горизонта, допущение команды до задачи S2-Ц8"
+      note: обеспечительный платёж в один месячный платёж, возвращается в конце горизонта,
+        отраслевой стандарт для помещений стрит-ритейла, публичного замера нет
     hall_share_of_area:
       value: 0.0
       unit: share
       source: null
-      note: "доля зала обслуживания для стоимости патента, допущение команды до задачи S2-Ц8"
+      note: доля зала обслуживания в площади для стоимости патента и для расчёта потока
+        посетителей зала, значения по площадям ниши из research/niche_params
     capex_structure:
       source: null
-      note: "доли статей вложений и срок полезного использования, допущение команды до задачи S2-Ц8"
+      note: доли статей вложений цветочного магазина, срок ремонта, холодильной камеры
+        и витрин 60 месяцев, прочих стартовых расходов 12 месяцев, допущение команды
       items:
-        renovation: {name: "Ремонт павильона", share: 0.3, life_months: 60}
-        equipment: {name: "Холодильная камера и витрины", share: 0.45, life_months: 60}
-        furniture: {name: "Мебель и вывеска", share: 0.15, life_months: 60}
-        other: {name: "Прочие стартовые расходы", share: 0.1, life_months: 12}
+        renovation:
+          name: Ремонт павильона
+          share: 0.3
+          life_months: 60
+        equipment:
+          name: Холодильная камера и витрины
+          share: 0.45
+          life_months: 60
+        furniture:
+          name: Мебель и вывеска
+          share: 0.15
+          life_months: 60
+        other:
+          name: Прочие стартовые расходы
+          share: 0.1
+          life_months: 12
+  pickup_point_multi:
+    unit_name: заказ
+    unit_value_parameter: payout_per_order_rub
+    ramp_up_share:
+      value:
+      - 0.3
+      - 0.45
+      - 0.6
+      - 0.72
+      - 0.82
+      - 0.9
+      - 0.95
+      - 1.0
+      unit: share_of_steady_revenue
+      source: null
+      note: доля плановой выручки в первые месяцы после открытия пункта, допущение
+        команды
+    seasonality:
+      value:
+      - 1.0
+      - 1.0
+      - 1.0
+      - 1.0
+      - 1.0
+      - 1.0
+      - 1.0
+      - 1.0
+      - 1.0
+      - 1.0
+      - 1.0
+      - 1.0
+      unit: multiplier_by_calendar_month
+      source: null
+      note: сезонность не учтена до исследования S2-Ц8
+    working_capital_cogs_months:
+      value: 0.0
+      unit: months_of_cogs
+      source: null
+      note: пункт выдачи не держит товарных запасов
+    security_deposit_months:
+      value: 0.0
+      unit: months_of_rent
+      source: https://www.sostav.ru/blogs/284331/78854
+      note: обеспечительный платёж уже входит во вложения пункта выдачи по обзору
+        Sostav.ru от 03.03.2026
+    hall_share_of_area:
+      value: 0.0
+      unit: share
+      source: null
+      note: у пункта выдачи нет зала обслуживания
+    capex_structure:
+      source: null
+      note: доли статей вложений пункта выдачи и срок полезного использования, допущение
+        команды до задачи S2-Ц8
+      items:
+        renovation:
+          name: Ремонт по стандарту маркетплейса
+          share: 0.45
+          life_months: 60
+        furniture:
+          name: Стеллажи, мебель и примерочные
+          share: 0.25
+          life_months: 60
+        equipment:
+          name: Оргтехника и видеонаблюдение
+          share: 0.2
+          life_months: 36
+        other:
+          name: Прочие стартовые расходы
+          share: 0.1
+          life_months: 12
