@@ -1,7 +1,7 @@
 import { useRef, useEffect } from 'react';
-import type { MonthlyCosts, RiskLevel } from '../api/types';
+import type { MonthlyCosts } from '../api/types';
 import type { useLocationReport } from '../hooks/useLocationReport';
-import { decimal, months, number, rubles } from '../format';
+import { decimal, months, number, rubles, riskLabels } from '../format';
 import { useMocks } from '../api/client';
 import { BusinessPlanButton } from './BusinessPlanButton';
 import { FinancePanel } from './FinancePanel';
@@ -9,11 +9,6 @@ import { AssumptionSource } from './AssumptionSource';
 import { BorrowerReview } from './BorrowerReview';
 import { CreditAssessment } from './CreditAssessment';
 
-const RISK_LABELS: Record<RiskLevel, string> = {
-  low: 'Низкий риск',
-  medium: 'Средний риск',
-  high: 'Высокий риск',
-};
 const COST_LABELS: [keyof MonthlyCosts, string][] = [
   ['rent', 'Аренда'],
   ['payroll', 'Зарплаты'],
@@ -177,7 +172,7 @@ export function ReportPanel({
             </div>
             <span className={`risk-badge risk-${report.risk_level}`}>
               <i />
-              {RISK_LABELS[report.risk_level]}
+              {riskLabels[report.risk_level]}
             </span>
             {creditMode && (
               <CreditAssessment

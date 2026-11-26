@@ -1,0 +1,31 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+:host > div {
+  all: initial;
+  display: block;
+  direction: ltr;
+  color: #1e3045;
+  background: white;
+  font:
+    16px/1.5 system-ui,
+    sans-serif;
+  overflow-wrap: anywhere;
+}
+article {
+  border: 1px solid #b2c3d6;
+  border-radius: 12px;
+  padding: clamp(12px, 3%, 24px);
+}
+h2 {
+  margin: 0;
+  font-size: 1.5em;
+}
+button {
+  font: inherit;
+  cursor: pointer;
+}
+[role='alert'] {
+  color: #802c25;
+}
