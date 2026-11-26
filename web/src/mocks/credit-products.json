@@ -1,0 +1,32 @@
+[
+  {
+    "code": "vtb_express",
+    "name": "ВТБ, экспресс-кредит для малого бизнеса",
+    "rate_annual": {
+      "value": 0.26,
+      "source": "https://www.sravni.ru/biznes-kredity/bank/vtb/",
+      "note": "ставка от 26% годовых в карточке продукта, на странице ВТБ для ИП указано от 25,5%, итоговая ставка определяется банком индивидуально (проверено 18.11.2026)"
+    },
+    "max_term_months": {
+      "value": 36.0,
+      "source": "https://www.sravni.ru/biznes-kredity/bank/vtb/",
+      "note": "срок до 36 месяцев"
+    },
+    "max_amount_rub": {
+      "value": 10000000.0,
+      "source": "https://www.vtb.ru/malyj-biznes/kredity-i-garantii/express-online/kredit-dlya-ip/",
+      "note": "лимит для ИП до 10 млн руб. без залога"
+    },
+    "min_business_age_months": {
+      "value": 12.0,
+      "source": "https://www.vtb.ru/malyj-biznes/kredity-i-garantii/express-online/kredit-dlya-ip/",
+      "note": "срок существования бизнеса не меньше 12 месяцев, новой точке действующего предпринимателя подходит, новому бизнесу нет"
+    },
+    "grace_months": {
+      "value": 0.0,
+      "source": null,
+      "note": "льготный период не указан"
+    },
+    "schedule": "annuity"
+  }
+]

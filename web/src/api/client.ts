@@ -82,7 +82,7 @@ export async function request<T>(
   return response.json() as Promise<T>;
 }
 
-async function fixture<T>(name: string): Promise<T> {
+export async function fixture<T>(name: string): Promise<T> {
   const load = fixtures[`../mocks/${name}.json`];
   if (!load) throw new ApiError('Не удалось загрузить данные демонстрации', 404);
   return (await load()) as T;
