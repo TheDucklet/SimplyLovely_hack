@@ -61,6 +61,7 @@ jobs:
       - uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: local/${{ matrix.name }}:ci
+          scanners: vuln
           format: table
           exit-code: '1'
           ignore-unfixed: true
