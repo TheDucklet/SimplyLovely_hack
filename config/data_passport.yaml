@@ -45,7 +45,7 @@ sources:
     url: каталог research/ репозитория
     license: собственные материалы команды, у каждого числа указан открытый источник
     content: параметры ниш, ставки аренды по выборкам объявлений Циан, налоги 2026 года, кредитные продукты, нормативы финансовой модели
-    files: [research/niche_params/*.yaml, research/rent/*.csv, research/taxes/2026.yaml, research/credit/products.yaml, research/economics/norms.yaml]
+    files: [research/niche_params/*.yaml, research/rent/*.csv, research/coffee/*.csv, research/taxes/2026.yaml, research/credit/products.yaml, research/economics/norms.yaml]
     version: дата в поле date или source каждой записи, история в git
     update: правка файла в research/, затем `python -m geostart.release rebuild --city all --skip-pipeline`
     frequency: перед выпуском версии и при изменении налогов или условий кредитов
