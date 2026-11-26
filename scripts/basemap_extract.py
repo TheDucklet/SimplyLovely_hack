@@ -16,7 +16,7 @@ from shapely.geometry import shape
 from geostart.config import load_cities
 from geostart.settings import data_dir
 
-BUILD = "20261117"
+BUILD = "20261126"
 SOURCE_URL = f"https://build.protomaps.com/{BUILD}.pmtiles"
 MAX_ZOOM = 14
 MARGIN_DEG = 0.02

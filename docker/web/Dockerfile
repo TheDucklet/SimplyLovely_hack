@@ -10,6 +10,7 @@ ENV VITE_API_URL=/ \
 RUN npm run build
 
 FROM nginx:1.27-alpine
+RUN apk upgrade --no-cache
 COPY docker/web/nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /web/dist /usr/share/nginx/html
 COPY docker/web/basemap /usr/share/nginx/html/basemap

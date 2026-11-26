@@ -7,7 +7,10 @@
     "node": ">=20.19.0"
   },
   "overrides": {
-    "@mapbox/jsonlint-lines-primitives": "2.0.2"
+    "@mapbox/jsonlint-lines-primitives": "2.0.2",
+    "fast-xml-parser": "^5.12.1",
+    "fflate": "^0.8.2",
+    "image-size": "^2.0.2"
   },
   "scripts": {
     "dev": "vite --host 127.0.0.1",
