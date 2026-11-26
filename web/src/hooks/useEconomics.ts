@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ApiError, useMocks } from '../api/client';
+import { hasDemoFinance } from '../mocks/location';
 import { financeApi } from '../api/economics';
 import type { Financing } from '../api/economicsTypes';
 import type { ReportRequest } from '../api/types';
@@ -45,7 +46,8 @@ export function useResource<T>(load: ((signal: AbortSignal) => Promise<T>) | nul
 export function useEconomics(point: ReportRequest | null) {
   const [financing, setFinancing] = useState<Financing | null>(null);
   const body = useMemo(
-    () => (point && !useMocks ? economicsRequest(point, financing) : null),
+    () =>
+      point && (!useMocks || hasDemoFinance(point)) ? economicsRequest(point, financing) : null,
     [point, financing],
   );
   const economics = useResource(

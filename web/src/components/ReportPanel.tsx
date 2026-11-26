@@ -2,6 +2,7 @@ import { useRef, useEffect } from 'react';
 import type { MonthlyCosts } from '../api/types';
 import type { useLocationReport } from '../hooks/useLocationReport';
 import { decimal, months, number, rubles, riskLabels } from '../format';
+import { hasDemoFinance } from '../mocks/location';
 import { useMocks } from '../api/client';
 import { BusinessPlanButton } from './BusinessPlanButton';
 import { FinancePanel } from './FinancePanel';
@@ -52,7 +53,7 @@ export function ReportPanel({
     report?.location.address ||
     location.address ||
     `${location.lat.toFixed(5)}, ${location.lon.toFixed(5)}`;
-  const officer = creditMode && !useMocks;
+  const officer = creditMode && (!useMocks || hasDemoFinance(location));
   const body = state.finance.body;
   const ready =
     body?.demand.source === 'geostart' &&
@@ -329,7 +330,7 @@ export function ReportPanel({
                   invalid ||
                   !!error ||
                   !state.reportIsCurrent ||
-                  (!useMocks && !state.finance.economics.value)
+                  ((!useMocks || hasDemoFinance(location)) && !state.finance.economics.value)
                 }
               />
             )}

@@ -167,7 +167,7 @@ export function App() {
               aria-pressed={creditMode}
               onClick={() => (creditMode ? setCreditMode(false) : openCreditMode())}
             >
-              {useMocks ? 'Кредитный специалист' : 'Проверка бизнес-плана'}
+              Проверка бизнес-плана
             </button>
           )}
           {useMocks && <span className="pilot-label">Демонстрация · Москва, кофейня</span>}

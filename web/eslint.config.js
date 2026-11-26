@@ -5,7 +5,17 @@ import refresh from 'eslint-plugin-react-refresh';
 import ts from 'typescript-eslint';
 
 export default ts.config(
-  { ignores: ['dist', 'widget/dist', 'node_modules', 'src/mocks', '*.tsbuildinfo'] },
+  {
+    ignores: [
+      'dist',
+      'widget/dist',
+      'node_modules',
+      'src/mocks/*.json',
+      '*.tsbuildinfo',
+      'playwright-report',
+      'test-results',
+    ],
+  },
   js.configs.recommended,
   ...ts.configs.recommended,
   {
