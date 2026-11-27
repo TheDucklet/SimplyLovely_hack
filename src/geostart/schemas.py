@@ -121,3 +121,4 @@ class LocationReport(BaseModel):
     competitors: list[NearbyCompetitor]
     assumptions: list[Assumption]
     data_version: str
+    explanation: str | None = None
