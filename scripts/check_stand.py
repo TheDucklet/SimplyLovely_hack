@@ -42,7 +42,7 @@ def check_endpoint(
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Проверка доступности публичного стенда ГеоСтарта")
-    parser.add_argument("--url", default=os.getenv("GEOSTART_PUBLIC_URL", "http://fintech.shenti.space"))
+    parser.add_argument("--url", default=os.getenv("GEOSTART_PUBLIC_URL", "http://127.0.0.1:8080"))
     parser.add_argument("--timeout", type=float, default=20.0)
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args()

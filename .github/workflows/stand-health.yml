@@ -10,10 +10,11 @@ permissions:
 
 jobs:
   check:
+    if: ${{ vars.GEOSTART_PUBLIC_URL != '' }}
     runs-on: ubuntu-latest
     timeout-minutes: 2
     env:
-      GEOSTART_PUBLIC_URL: ${{ vars.GEOSTART_PUBLIC_URL || 'http://fintech.shenti.space' }}
+      GEOSTART_PUBLIC_URL: ${{ vars.GEOSTART_PUBLIC_URL }}
     steps:
       - uses: actions/checkout@v4
       - run: python scripts/check_stand.py --url "$GEOSTART_PUBLIC_URL" --json
