@@ -8,6 +8,7 @@
 открытые источники → pipeline → data/processed/<city> → model → data/scores → api → web
 research/ (параметры ниш, аренда, налоги) → model
 research/ (нормативы, параметры ниш, налоги) + выручка model, траты геоплатформы банка или внешняя оценка → economics → api v2
+ВТБ Бизнес → шлюз интеграции → API v2 ГеоСтарта → ВТБ Бизнес → CRM ВТБ
 ```
 
 | Компонент | Каталог | Владелец | Вход | Выход |
@@ -16,10 +17,15 @@ research/ (нормативы, параметры ниш, налоги) + выр
 | Модель | `src/geostart/model/` | Роман | `data/processed/`, `research/` | `data/scores/<city>_<niche>.parquet`, `LocationReport` |
 | Финансовый движок | `src/geostart/economics/` | Фёдор | `research/economics/norms.yaml`, параметры ниш, налоги, выручка модели или внешняя оценка | `EconomicsReport`, `CreditCheckReport` |
 | API | `src/geostart/api/` | Фёдор | `data/processed/`, `data/scores/`, функции модели и движка | HTTP `/api/v1` и `/api/v2` |
+| Интеграция банка | `docs/integration.md` | Фёдор совместно с ВТБ | OIDC, агрегаты геоплатформы, CRM-события | схема шлюза и правила пилота |
 | Интерфейс | `web/` | Алексей | HTTP `/api/v1` | карта и отчёт в браузере |
 | Продукт | `docs/product/` | Никита, переносит Фёдор | интервью, опрос, открытые источники | проблема, рынок, метрики, опрос |
 
 Модели ответов второй версии лежат в `src/geostart/schemas_v2.py:EconomicsReport`. Общие модели ответов первой версии (`CityInfo`, `HexesResponse`, `LocationReport` и другие) лежат в `src/geostart/schemas.py:LocationReport` и используются моделью и API одновременно, поэтому формат ответа задаётся в одном месте. Чтение конфигурации городов и ниш выполняет `src/geostart/config.py:load_cities` и `load_niches`, пути к каталогам задаёт `src/geostart/settings.py`.
+
+## Интеграция с ВТБ Бизнес
+
+Целевая последовательность вызовов, формат агрегатов геоплатформы, корреляция отчёта с CRM, требования OIDC и порядок обновления нормативов описаны в [docs/integration.md](integration.md). Шлюз интеграции принадлежит ВТБ и передаёт ГеоСтарту только данные, необходимые для расчёта. Сервис не обращается к геоплатформе и CRM напрямую.
 
 ## Режимы API
 
