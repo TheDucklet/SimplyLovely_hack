@@ -48,7 +48,7 @@ class ReviewStatus(StrEnum):
 LOCATED = {ReviewStatus.VERIFIED, ReviewStatus.LOCATED}
 
 
-def load_sample(path: Path) -> pd.DataFrame:
+def load_sample(path: Path, *, verified_input: bool = False) -> pd.DataFrame:
     frame = pd.read_csv(path, dtype={"inn": "string"})
     missing = REQUIRED_COLUMNS - set(frame)
     if missing:
@@ -62,7 +62,10 @@ def load_sample(path: Path) -> pd.DataFrame:
     if frame[["lat", "lon"]].notna().any(axis=1).ne(has_coordinates).any():
         raise ValueError("Для каждой точки нужны обе координаты")
     if "review_status" not in frame:
-        frame["review_status"] = np.where(has_coordinates, ReviewStatus.LOCATED, ReviewStatus.UNVERIFIED)
+        status = ReviewStatus.VERIFIED if verified_input else ReviewStatus.LOCATED
+        frame["review_status"] = np.where(has_coordinates, status, ReviewStatus.UNVERIFIED)
+    elif verified_input:
+        raise ValueError("Если в CSV есть review_status, уберите параметр --verified-input")
     selected = frame.review_status.isin(LOCATED)
     if (
         not frame.review_status.isin(list(ReviewStatus)).all()
@@ -205,22 +208,29 @@ def main() -> None:
     parser.add_argument("--input", type=Path, required=True)
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument("--plot", type=Path)
+    parser.add_argument(
+        "--verified-input",
+        action="store_true",
+        help="Для CSV без review_status с подтверждённой выручкой каждой точки с координатами",
+    )
     args = parser.parse_args()
-    source = load_sample(args.input)
+    source = load_sample(args.input, verified_input=args.verified_input)
     forecasts = score(source)
     predicted = forecasts.loc[forecasts.forecast_error.isna()]
     verified = predicted.loc[predicted.review_status.eq(ReviewStatus.VERIFIED)]
+    diagnostic = predicted.loc[predicted.review_status.eq(ReviewStatus.LOCATED)]
+    verified_source = source.loc[source.review_status.eq(ReviewStatus.VERIFIED)]
     cities = ("moscow", "tula")
     years = sorted(source.year.unique())
     summary = {
         "source_statuses": source.review_status.value_counts().to_dict(),
         "outside_model_boundary_rows": int(forecasts.forecast_error.notna().sum()),
         "verified": grouped_metrics(verified, cities, years),
-        "located_diagnostic": grouped_metrics(predicted, cities, years),
+        "located_diagnostic": grouped_metrics(diagnostic, cities, years),
         "cogs_all_company_reports": compare_cogs(source, cities),
-        "cogs_verified": compare_cogs(verified, cities),
+        "cogs_verified": compare_cogs(verified_source, cities),
         "trial_adjustment": trial_adjustment(verified),
-        "diagnostic_trial_adjustment": trial_adjustment(predicted),
+        "diagnostic_trial_adjustment": trial_adjustment(diagnostic),
     }
     args.output_dir.mkdir(parents=True, exist_ok=True)
     (args.output_dir / "metrics.json").write_text(

@@ -1,4 +1,6 @@
 import importlib.util
+import json
+import sys
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -59,3 +61,55 @@ def test_score_keeps_boundary_failure_and_reuses_forecast(monkeypatch):
     assert result.loc[1, "model_p50"] == 240
     assert pd.isna(result.loc[2, "model_p50"])
     assert result.loc[2, "forecast_error"].startswith(calibration.OUTSIDE_CITY)
+
+
+@pytest.mark.parametrize(
+    ("input_statuses", "options", "verified_count", "diagnostic_count"),
+    [
+        (None, [], 0, 2),
+        (None, ["--verified-input"], 2, 0),
+        (["verified", "located"], [], 1, 1),
+    ],
+)
+def test_cli_counts_verified_and_located_separately(
+    tmp_path, monkeypatch, input_statuses, options, verified_count, diagnostic_count
+):
+    rows = pd.DataFrame(
+        {
+            "inn": ["7700000001", "7700000002"],
+            "name": ["A", "B"],
+            "city": ["Москва", "Тула"],
+            "address": ["A", "B"],
+            "year": [2024, 2025],
+            "lat": [55.77, 54.20],
+            "lon": [37.56, 37.62],
+            "revenue_rub": [200, 360],
+            "cogs_rub": [60, 100],
+            "selling_expenses_rub": [20, 30],
+            "report_url": ["https://example.com/report-a", "https://example.com/report-b"],
+            "address_url": ["https://example.com/address-a", "https://example.com/address-b"],
+        }
+    )
+    if input_statuses is not None:
+        rows["review_status"] = input_statuses
+    sample = tmp_path / "sample.csv"
+    rows.to_csv(sample, index=False)
+    monkeypatch.setattr(
+        calibration,
+        "evaluate_location",
+        lambda *_args: SimpleNamespace(revenue_month=SimpleNamespace(p10=10.0, p50=20.0, p90=30.0)),
+    )
+    monkeypatch.setattr(
+        sys, "argv", [str(SCRIPT), "--input", str(sample), "--output-dir", str(tmp_path), *options]
+    )
+
+    calibration.main()
+
+    result = json.loads((tmp_path / "metrics.json").read_text(encoding="utf-8"))
+    assert result["verified"][0]["rows"] == verified_count
+    assert result["located_diagnostic"][0]["rows"] == diagnostic_count
+    if verified_count == 2:
+        assert result["verified"][0]["coverage"] == 1.0
+        change = result["trial_adjustment"]["leave_one_organization_out"]
+        assert change["mape"] == pytest.approx((0.8 + 4 / 9) / 2)
+        assert change["coverage"] == 0.5
