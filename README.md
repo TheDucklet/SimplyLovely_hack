@@ -119,6 +119,7 @@ docker compose -f compose.demo.yml up -d --build --wait
 | [docs/quality.md](docs/quality.md) | проверки полноты и диапазонов данных и отчёт о качестве |
 | [docs/release.md](docs/release.md) | пересчёт данных с порогами расхождений, архив данных, образы в CI, выкладка на стенд |
 | [docs/vps.md](docs/vps.md) | публичный стенд на VPS, лимиты ресурсов, запуск без sudo |
+| [docs/submission.md](docs/submission.md) | комплект сдачи второго спринта, статус публичного стенда и ключевые результаты |
 | [docs/storage.md](docs/storage.md) | хранилище PostgreSQL с PostGIS, роли, загрузка |
 | [docs/rules.md](docs/rules.md) | правила текста и кода команды |
 
