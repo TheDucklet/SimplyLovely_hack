@@ -112,6 +112,7 @@ docker compose -f compose.demo.yml up -d --build --wait
 | [docs/compliance.md](docs/compliance.md) | правовой черновик по 152-ФЗ, 115-ФЗ и модели угроз |
 | [docs/nikita-completion.md](docs/nikita-completion.md) | состав и ограничения перенесённых материалов Никиты |
 | [docs/auth.md](docs/auth.md) | вход через OIDC, роли, заглушка единого входа и журнал обращений |
+| [docs/integration.md](docs/integration.md) | схема интеграции с ВТБ Бизнес, геоплатформой и CRM |
 | [docs/product/](docs/product/README.md) | проблема, рынок, конкуренты, метрики, доказательства по гипотезам, опрос и план пилота (материалы Никиты) |
 | [docs/demo.md](docs/demo.md) | демо-стенд в Docker, запуск и работа без интернета |
 | [docs/data-passport.md](docs/data-passport.md) | паспорт источников данных с лицензиями, версиями и способом обновления |
