@@ -1,3 +1,5 @@
+import pandas as pd
+
 from geostart.schemas import AddressMatch, Competitor, HexesResponse, HexScore
 from geostart.storage.connection import DatabaseRole, connect
 
@@ -58,9 +60,66 @@ FROM geo.data_versions AS v
 WHERE v.city = %(city)s
 """
 
+MODEL_FEATURES_QUERY = """
+SELECT h3, lat, lon, district, residents, workers, offices_n, education_n,
+    malls_n, transit_stops_n, metro_dist_m
+FROM geo.hex_features
+WHERE city = %(city)s
+ORDER BY h3
+"""
+
+MODEL_COMPETITORS_QUERY = """
+SELECT poi_id, niche, name, brand, lat, lon, h3, source, seats
+FROM geo.competitors
+WHERE city = %(city)s
+ORDER BY poi_id
+"""
+
+MODEL_ADDRESSES_QUERY = """
+SELECT address, lat, lon, h3
+FROM geo.addresses
+WHERE city = %(city)s
+ORDER BY address
+"""
+
 
 class CityNotLoadedError(LookupError):
     pass
+
+
+def db_model_frames(city_code: str) -> dict[str, pd.DataFrame]:
+    with connect(DatabaseRole.API) as connection:
+        features = connection.execute(MODEL_FEATURES_QUERY, {"city": city_code}).fetchall()
+        competitors = connection.execute(MODEL_COMPETITORS_QUERY, {"city": city_code}).fetchall()
+        addresses = connection.execute(MODEL_ADDRESSES_QUERY, {"city": city_code}).fetchall()
+    if not features or not competitors or not addresses:
+        raise CityNotLoadedError(
+            f"Данные города {city_code} не загружены в базу, запустите "
+            f"uv run python -m geostart.storage load --city {city_code}"
+        )
+    return {
+        "features": pd.DataFrame(
+            features,
+            columns=[
+                "h3",
+                "lat",
+                "lon",
+                "district",
+                "residents",
+                "workers",
+                "offices_n",
+                "education_n",
+                "malls_n",
+                "transit_stops_n",
+                "metro_dist_m",
+            ],
+        ),
+        "competitors": pd.DataFrame(
+            competitors,
+            columns=["poi_id", "niche", "name", "brand", "lat", "lon", "h3", "source", "seats"],
+        ),
+        "addresses": pd.DataFrame(addresses, columns=["address", "lat", "lon", "h3"]),
+    }
 
 
 def escape_like(token: str) -> str:
