@@ -53,6 +53,8 @@ from geostart.schemas import (
     NearbyCompetitor,
     ReportLocation,
 )
+from geostart.settings import storage_mode
+from geostart.storage import reader
 
 ASSUMPTION_NAMES = {
     "area_m2": ("Площадь помещения", "м²"),
@@ -125,8 +127,13 @@ def cached_inputs(city: str, niche: str, revision: tuple) -> CityInputs:
     districts = (
         pd.read_csv(district_path).set_index("district").okrug.to_dict() if district_path.is_file() else {}
     )
-    features = pd.read_parquet(directory / "hex_features.parquet")
-    competitors = pd.read_parquet(directory / "competitors.parquet")
+    if storage_mode() == "postgres":
+        frames = reader.db_model_frames(city)
+        features = frames["features"]
+        competitors = frames["competitors"]
+    else:
+        features = pd.read_parquet(directory / "hex_features.parquet")
+        competitors = pd.read_parquet(directory / "competitors.parquet")
     if niche_config.competitor_niche is not None:
         competitors = competitors_for_niche(competitors, niche)
     wages = pd.read_parquet(directory / "wages.parquet")
@@ -189,7 +196,9 @@ def cached_context(city: str, niche: str, revision: tuple) -> CityContext:
         samples,
         nearby_indices(inputs.features, inputs.competitors, niche),
         {cell: index for index, cell in enumerate(cells)},
-        pd.read_parquet(inputs.directory / "addresses.parquet"),
+        reader.db_model_frames(city)["addresses"]
+        if storage_mode() == "postgres"
+        else pd.read_parquet(inputs.directory / "addresses.parquet"),
         CellNeighborhood.build(cells, preparation_distance(samples)),
     )
 
