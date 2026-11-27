@@ -226,6 +226,12 @@ export function ReportPanel({
               Медиана прибыли рассчитана по сценариям и может отличаться от разницы показанных
               выручки и расходов.
             </p>
+            {report.explanation && (
+              <section className="report-section report-explanation">
+                <h3>Пояснение расчёта</h3>
+                <p>{report.explanation}</p>
+              </section>
+            )}
             <section className="report-section">
               <h3>Что влияет на выручку</h3>
               <p className="section-note">Эффект факторов в рублях в месяц по оценке модели</p>

@@ -116,6 +116,7 @@ export interface LocationReport {
   competitors: NearbyCompetitor[];
   assumptions: Assumption[];
   data_version: string;
+  explanation: string | null;
 }
 
 export type Permission =

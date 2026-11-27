@@ -6,6 +6,7 @@ from pathlib import Path
 import pandas as pd
 
 from geostart.config import CityConfig, competitor_niche, load_cities, load_niches
+from geostart.explanations import generate_explanation
 from geostart.model import evaluate_location
 from geostart.model.service import city_context
 from geostart.schemas import AddressMatch, Competitor, HexesResponse, HexScore, LocationReport, ReportRequest
@@ -146,7 +147,7 @@ def data_search(city_code: str, query: str) -> list[AddressMatch]:
 
 
 def data_report(city: CityConfig, request: ReportRequest) -> LocationReport:
-    return evaluate_location(
+    report = evaluate_location(
         city=city.code,
         niche=request.niche,
         lat=request.lat,
@@ -154,6 +155,7 @@ def data_report(city: CityConfig, request: ReportRequest) -> LocationReport:
         area_m2=request.area_m2,
         rent_rub_m2_month=request.rent_rub_m2_month,
     )
+    return report.model_copy(update={"explanation": generate_explanation(report)})
 
 
 def warm_model_cache() -> dict[str, float]:
